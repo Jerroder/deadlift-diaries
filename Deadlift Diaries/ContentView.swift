@@ -8,48 +8,65 @@
 import SwiftUI
 import SwiftData
 
-struct ContentView: View {
-    @Environment(\.modelContext) private var modelContext
-    @Query private var items: [Item]
+struct ProgramView: View {
+    @State private var zStacks: [Int] = []
+    @State private var textFieldText: String = "" // @TODO: change to an array
 
     var body: some View {
-        NavigationSplitView {
-            List {
-                ForEach(items) { item in
-                    NavigationLink {
-                        Text("Item at \(item.timestamp, format: Date.FormatStyle(date: .numeric, time: .standard))")
-                    } label: {
-                        Text(item.timestamp, format: Date.FormatStyle(date: .numeric, time: .standard))
+        NavigationView {
+            ScrollView {
+                LazyVStack() {
+                    ForEach(zStacks, id: \.self) { _ in
+                        ZStack {
+                            TextField("Program name", text: $textFieldText)
+                                .padding()
+                                .background(Color(UIColor.secondarySystemBackground).cornerRadius(10))
+                                .font(.headline)
+                        }.frame(maxWidth: .infinity)
                     }
-                }
-                .onDelete(perform: deleteItems)
+                }.frame(maxWidth: .infinity).padding()
             }
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    EditButton()
+
+            .navigationBarTitle("Programs", displayMode: .inline)
+            .navigationBarItems(
+                leading: Button(action: {
+                    print("Edit button tapped!")
+                }) {
+                    Text("Edit")
+                },
+                trailing: Button(action: addStack) {
+                    Image(systemName: "plus")
                 }
-                ToolbarItem {
-                    Button(action: addItem) {
-                        Label("Add Item", systemImage: "plus")
-                    }
-                }
-            }
-        } detail: {
-            Text("Select an item")
+            )
         }
     }
-
-    private func addItem() {
+    
+    private func addStack() {
         withAnimation {
-            let newItem = Item(timestamp: Date())
-            modelContext.insert(newItem)
+            zStacks.append(zStacks.count)
         }
     }
+}
 
-    private func deleteItems(offsets: IndexSet) {
-        withAnimation {
-            for index in offsets {
-                modelContext.delete(items[index])
+struct TimerView: View {
+    var body: some View {
+        Text("Timer").font(.title)
+    }
+}
+
+struct ContentView: View {
+    @Environment(\.modelContext) private var modelContext
+
+    var body: some View {
+        TabView {
+            ProgramView().tabItem {
+                Image(systemName: "calendar")
+                Text("Programs")
+            }
+            
+            TimerView().tabItem {
+                Image(systemName: "timer")
+                Text("Timer")
             }
         }
     }
@@ -57,5 +74,4 @@ struct ContentView: View {
 
 #Preview {
     ContentView()
-        .modelContainer(for: Item.self, inMemory: true)
 }
