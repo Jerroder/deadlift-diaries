@@ -9,20 +9,25 @@ import SwiftUI
 import SwiftData
 
 struct ProgramView: View {
-    @State private var zStacks: [Int] = []
-    @State private var textFieldText: String = "" // @TODO: change to an array
+    @State private var textFields: [String] = []
 
     var body: some View {
         NavigationView {
             ScrollView {
-                LazyVStack() {
-                    ForEach(zStacks, id: \.self) { _ in
+                LazyVStack {
+                    ForEach(textFields.indices, id: \.self) { index in
                         ZStack {
-                            TextField("Program name", text: $textFieldText)
-                                .padding()
-                                .background(Color(UIColor.secondarySystemBackground).cornerRadius(10))
-                                .font(.headline)
-                        }.frame(maxWidth: .infinity)
+                            RoundedRectangle(cornerRadius: /*@START_MENU_TOKEN@*//*@PLACEHOLDER=Corner Radius@*/10.0/*@END_MENU_TOKEN@*/)
+                                .fill(Color(UIColor.secondarySystemBackground))
+                            VStack {
+                                TextField("Program name", text: $textFields[index])
+                                    .padding()
+                                    .background(Color(UIColor.secondarySystemBackground).cornerRadius(/*@START_MENU_TOKEN@*//*@PLACEHOLDER=Corner Radius@*/10.0/*@END_MENU_TOKEN@*/))
+                                    .font(.headline)
+                                Text("sdfsdfsdfsdf")
+                                    .padding()
+                            }.frame(maxWidth: .infinity)
+                        }
                     }
                 }.frame(maxWidth: .infinity).padding()
             }
@@ -34,16 +39,16 @@ struct ProgramView: View {
                 }) {
                     Text("Edit")
                 },
-                trailing: Button(action: addStack) {
+                trailing: Button(action: addString) {
                     Image(systemName: "plus")
                 }
             )
         }
     }
-    
-    private func addStack() {
+
+    private func addString() {
         withAnimation {
-            zStacks.append(zStacks.count)
+            textFields.append("")
         }
     }
 }
