@@ -19,7 +19,7 @@ struct WorkoutView: View {
             }
         }
         .listStyle(PlainListStyle()) // Maybe not wanted
-        .navigationBarTitle("Week \(week.weekNumber)", displayMode: .inline)
+        .navigationBarTitle("Week \(week.weekNumber)", displayMode: .large)
         .navigationBarItems(
             trailing:
                 HStack {

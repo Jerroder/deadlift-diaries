@@ -23,7 +23,7 @@ struct ProgramView: View {
                 }
             }
             .background(Color(colorScheme == .light ? UIColor.secondarySystemBackground : UIColor.systemBackground))
-            .navigationBarTitle("Programs", displayMode: .inline)
+            .navigationBarTitle("Programs", displayMode: .large)
             .navigationBarItems(
                 leading: Button(action: {
                     print("Edit button tapped!")

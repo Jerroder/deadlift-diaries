@@ -19,7 +19,7 @@ struct WeekView: View {
             }
         }
         .listStyle(PlainListStyle()) // Maybe not wanted
-        .navigationBarTitle(program.name.isEmpty ? "Program details" : program.name, displayMode: .inline)
+        .navigationBarTitle(program.name.isEmpty ? "Program details" : program.name, displayMode: .large)
         .navigationBarItems(
             trailing:
                 HStack {
