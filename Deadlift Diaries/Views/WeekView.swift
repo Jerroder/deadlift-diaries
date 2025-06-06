@@ -12,30 +12,26 @@ struct WeekView: View {
 
     var body: some View {
         VStack(alignment: .leading) {
-            Text("Program: \(program.name)")
-                .font(.title)
-
-            Text("Description: \(program.description)")
-                .font(.subheadline)
             List {
                 ForEach(program.weeks, id: \.id) { week in
                     DisplayWeeks(week: week)
                 }
             }
-
-            Spacer()
         }
-        .padding()
-        .navigationBarTitle("Program Details", displayMode: .inline)
+        .listStyle(PlainListStyle()) // Maybe not wanted
+        .navigationBarTitle(program.name.isEmpty ? "Program details" : program.name, displayMode: .inline)
         .navigationBarItems(
-            leading: Button(action: {
-                print("Edit button tapped!")
-            }) {
-                Text("Edit")
-            },
-            trailing: Button(action: addWeek) {
-                Image(systemName: "plus")
-            }
+            trailing:
+                HStack {
+                    Button(action: {
+                        print("Edit button tapped!")
+                    }) {
+                        Text("Edit")
+                    }
+                    Button(action: addWeek) {
+                        Image(systemName: "plus")
+                    }
+                }
         )
     }
     
@@ -52,11 +48,10 @@ struct DisplayWeeks: View {
 
     var body: some View {
         VStack {
-            Text("Week Number: \(week.weekNumber)")
+            Text("Week \(week.weekNumber)")
             
             NavigationLink(destination: WorkoutView(week: week)) {
                 VStack(alignment: .leading) {
-                    Text("Week: \(week.weekNumber)")
                     Text("Next Workout: \(week.workouts.first?.name ?? "No workouts")")
                 }
                 .padding()
@@ -65,5 +60,6 @@ struct DisplayWeeks: View {
             }
         }
         .padding(.vertical, 8)
+        // .listRowSeparator(.hidden) // @TODO: figure out how to remove the top separator or add title
     }
 }

@@ -10,6 +10,7 @@ import SwiftUI
 struct ProgramView: View {
     @State private var programs: [Program] = []
     @FocusState private var focusedField: UUID?
+    @Environment(\.colorScheme) var colorScheme
 
     var body: some View {
         NavigationView {
@@ -17,8 +18,11 @@ struct ProgramView: View {
                 ForEach($programs, id: \.id) { $program in
                     DisplayPrograms(program: $program, focusedField: $focusedField)
                 }
+                .onTapGesture {
+                    focusedField = nil
+                }
             }
-            .listStyle(PlainListStyle())
+            .background(Color(colorScheme == .light ? UIColor.secondarySystemBackground : UIColor.systemBackground))
             .navigationBarTitle("Programs", displayMode: .inline)
             .navigationBarItems(
                 leading: Button(action: {
@@ -47,26 +51,23 @@ struct DisplayPrograms: View {
     @FocusState.Binding var focusedField: UUID?
 
     var body: some View {
-        VStack {
-            TextField("Program Name", text: $program.name)
-                .focused($focusedField, equals: program.id)
-            
-            NavigationLink(destination: WeekView(program: program)) {
-                VStack(alignment: .leading) {
-                    Text("Week: \(program.weeks.first?.weekNumber ?? 0)")
-                    Text("Next Workout: \(program.weeks.first?.workouts.first?.name ?? "No workouts")")
+        Section {
+            VStack {
+                TextField("Program Name", text: $program.name)
+                    .focused($focusedField, equals: program.id)
+                
+                NavigationLink(destination: WeekView(program: program)) {
+                    VStack(alignment: .leading) {
+                        Text(program.weeks.first?.weekNumber != nil ? "\(program.weeks.count) \(program.weeks.count == 1 ? "week" : "weeks")" : "")
+                        Text("Next Workout: \(program.weeks.first?.workouts.first?.name ?? "No workouts")")
+                    }
+                    // .padding() // Is compact view better?
+                    .background(Color.clear)
+                    .cornerRadius(5)
                 }
-                .padding()
-                .background(Color.clear)
-                .cornerRadius(5)
             }
-            
-            Divider()
+            .padding(.vertical, 8)
+            // .listRowSeparator(.hidden) // @TODO: figure out how to remove the top separator or add title
         }
-        .padding(.vertical, 8)
-        .onTapGesture {
-            focusedField = nil
-        }
-        .listRowSeparator(.hidden)
     }
 }
