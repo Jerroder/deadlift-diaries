@@ -7,15 +7,14 @@
 
 import Foundation
 
-class Program {
-    let id: UUID
+class Program: Identifiable, ObservableObject {
+    let id = UUID()
     var name: String
     var description: String
-    var duration: TimeInterval
-    var weeks: [Week]
+    var duration: TimeInterval?
+    @Published var weeks: [Week]
 
-    init(name: String, description: String, duration: TimeInterval, weeks: [Week]) {
-        self.id = UUID() // Generate a unique identifier
+    init(name: String, description: String, duration: TimeInterval? = nil, weeks: [Week]) {
         self.name = name
         self.description = description
         self.duration = duration

@@ -5,10 +5,12 @@
 //  Created by Jerroder on 2025-05-26.
 //
 
+import Foundation
 
-class Week {
+class Week: Identifiable, ObservableObject {
+    let id = UUID()
     var weekNumber: Int
-    var workouts: [Workout]
+    @Published var workouts: [Workout]
 
     init(weekNumber: Int, workouts: [Workout]) {
         self.weekNumber = weekNumber

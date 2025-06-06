@@ -5,17 +5,17 @@
 //  Created by Jerroder on 2025-05-26.
 //
 
+import Foundation
 
-class Workout {
+class Workout: Identifiable, ObservableObject {
+    let id = UUID()
     var name: String
     var description: String
-    var duration: Double
-    var exercises: [Exercise]
+    @Published var exercises: [Exercise]
 
-    init(name: String, description: String, duration: Double, exercises: [Exercise]) {
+    init(name: String, description: String, exercises: [Exercise]) {
         self.name = name
         self.description = description
-        self.duration = duration
         self.exercises = exercises
     }
 }
