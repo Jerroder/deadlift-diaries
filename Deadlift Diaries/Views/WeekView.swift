@@ -9,6 +9,8 @@ import SwiftUI
 import SwiftData
 
 struct WeekView: View {
+    @Environment(\.colorScheme) var colorScheme
+
     @Bindable var program: Program
 
     var body: some View {
@@ -19,7 +21,7 @@ struct WeekView: View {
                 }
             }
         }
-        // .listStyle(PlainListStyle()) // Maybe wanted
+        .background(Color(colorScheme == .light ? UIColor.secondarySystemBackground : UIColor.systemBackground))
         .navigationTitle(program.name.isEmpty ? "Program details" : program.name)
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
@@ -62,6 +64,5 @@ struct DisplayWeeks: View {
             }
         }
         .padding(.vertical, 8)
-        // .listRowSeparator(.hidden) // @TODO: figure out how to remove the top separator or add title
     }
 }

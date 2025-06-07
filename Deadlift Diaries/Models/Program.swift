@@ -9,18 +9,31 @@ import Foundation
 import SwiftData
 
 @Model
-class Program {
-    var id: UUID
+final class Program {
+    @Attribute(.unique) var id: UUID
+
     var name: String
     var desc: String
     var duration: TimeInterval?
-    var weeks: [Week]
+    var orderIndex: Int
 
-    init(name: String, description: String, duration: TimeInterval? = nil, weeks: [Week]) {
+    @Relationship(deleteRule: .cascade) var weeks: [Week]
+
+    init(name: String, description: String, duration: TimeInterval? = nil, weeks: [Week], orderIndex: Int = Int.max) {
         self.id = UUID()
         self.name = name
         self.desc = description
         self.duration = duration
         self.weeks = weeks
+        self.orderIndex = orderIndex
+    }
+}
+
+@Model
+final class ProgramList {
+    var programs: [Program]
+
+    init(programs: [Program] = []) {
+        self.programs = programs
     }
 }

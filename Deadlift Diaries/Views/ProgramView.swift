@@ -10,10 +10,13 @@ import SwiftData
 
 struct ProgramView: View {
     @Environment(\.modelContext) private var modelContext
-
-    @Query private var programs: [Program] = []
-    @FocusState private var focusedField: UUID?
     @Environment(\.colorScheme) var colorScheme
+
+    @Query(sort: \Program.orderIndex) private var programs: [Program]
+    @FocusState private var focusedField: UUID?
+    
+    @State private var isEditing = false
+    @State private var selectedItems = Set<UUID>()
 
     var body: some View {
         NavigationStack {
@@ -21,6 +24,7 @@ struct ProgramView: View {
                 ForEach(programs) { program in
                     DisplayPrograms(program: program, focusedField: $focusedField)
                 }
+                .onDelete(perform: deleteProgram)
                 .onTapGesture {
                     focusedField = nil
                 }
@@ -30,9 +34,11 @@ struct ProgramView: View {
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
                     Button(action: {
-                        print("Edit button tapped!")
+                        withAnimation {
+                            isEditing.toggle()
+                        }
                     }) {
-                        Text("Edit")
+                        Text(isEditing ? "Done" : "Edit")
                     }
                 }
                 ToolbarItem(placement: .navigationBarTrailing) {
@@ -41,15 +47,36 @@ struct ProgramView: View {
                     }
                 }
             }
+            .environment(\.editMode, .constant(isEditing ? EditMode.active : EditMode.inactive))
         }
     }
 
     private func addProgram() {
-        let newProgram = Program(name: "", description: "A new fitness plan", weeks: [])
+        let newProgram = Program(name: "", description: "A new fitness plan", weeks: [], orderIndex: programs.count)
         withAnimation {
             modelContext.insert(newProgram)
         }
         focusedField = newProgram.id
+    }
+
+    private func deleteProgram(at offsets: IndexSet) {
+        withAnimation {
+            let programsToDelete = offsets.map { programs[$0] }
+            
+            for program in programsToDelete {
+                modelContext.delete(program)
+            }
+            
+            do {
+                try modelContext.save()
+            } catch {
+                print("Failed to save context after deletion: \(error)")
+            }
+
+            for index in programs.indices {
+                programs[index].orderIndex = index
+            }
+        }
     }
 }
 
@@ -68,13 +95,11 @@ struct DisplayPrograms: View {
                         Text(program.weeks.first?.weekNumber != nil ? "\(program.weeks.count) \(program.weeks.count == 1 ? "week" : "weeks")" : "")
                         Text("Next Workout: \(program.weeks.first?.workouts.first?.name ?? "No workouts")")
                     }
-                    // .padding() // Is compact view better?
                     .background(Color.clear)
                     .cornerRadius(5)
                 }
             }
             .padding(.vertical, 4)
-            // .listRowSeparator(.hidden) // @TODO: figure out how to remove the top separator or add title
         }
     }
 }

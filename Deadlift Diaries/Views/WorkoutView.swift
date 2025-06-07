@@ -19,7 +19,7 @@ struct WorkoutView: View {
                 }
             }
         }
-        .listStyle(PlainListStyle()) // Maybe not wanted
+        .listStyle(PlainListStyle())
         .navigationTitle("Week \(week.weekNumber)")
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {

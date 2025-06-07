@@ -9,8 +9,9 @@ import Foundation
 import SwiftData
 
 @Model
-class Exercise  {
-    var id: UUID
+final class Exercise  {
+    @Attribute(.unique) var id: UUID
+
     var name: String
     var desc: String
     var duration: Double
