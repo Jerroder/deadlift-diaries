@@ -6,13 +6,16 @@
 //
 
 import Foundation
+import SwiftData
 
-class Week: Identifiable, ObservableObject {
-    let id = UUID()
+@Model
+class Week {
+    var id: UUID
     var weekNumber: Int
-    @Published var workouts: [Workout]
+    var workouts: [Workout]
 
     init(weekNumber: Int, workouts: [Workout]) {
+        self.id = UUID()
         self.weekNumber = weekNumber
         self.workouts = workouts
     }

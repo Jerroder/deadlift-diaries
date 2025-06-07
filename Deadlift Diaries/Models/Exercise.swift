@@ -6,18 +6,21 @@
 //
 
 import Foundation
+import SwiftData
 
-class Exercise: Identifiable, ObservableObject {
-    let id = UUID()
+@Model
+class Exercise  {
+    var id: UUID
     var name: String
-    var description: String
+    var desc: String
     var duration: Double
     var sets: Int
     var reps: Int
-    
+
     init(name: String, description: String, duration: Double, sets: Int, reps: Int) {
+        self.id = UUID()
         self.name = name
-        self.description = description
+        self.desc = description
         self.duration = duration
         self.sets = sets
         self.reps = reps

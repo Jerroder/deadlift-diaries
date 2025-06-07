@@ -6,9 +6,10 @@
 //
 
 import SwiftUI
+import SwiftData
 
 struct WorkoutView: View {
-    @ObservedObject var week: Week
+    @Bindable var week: Week
 
     var body: some View {
         VStack(alignment: .leading) {
@@ -19,9 +20,9 @@ struct WorkoutView: View {
             }
         }
         .listStyle(PlainListStyle()) // Maybe not wanted
-        .navigationBarTitle("Week \(week.weekNumber)", displayMode: .large)
-        .navigationBarItems(
-            trailing:
+        .navigationTitle("Week \(week.weekNumber)")
+        .toolbar {
+            ToolbarItem(placement: .navigationBarTrailing) {
                 HStack {
                     Button(action: {
                         print("Edit button tapped!")
@@ -32,7 +33,8 @@ struct WorkoutView: View {
                         Image(systemName: "plus")
                     }
                 }
-        )
+            }
+        }
     }
     
     private func addWorkout() {
@@ -44,7 +46,7 @@ struct WorkoutView: View {
 }
 
 struct DisplayWorkouts: View {
-    @ObservedObject var workout: Workout
+    @Bindable var workout: Workout
 
     var body: some View {
         VStack(alignment: .leading) {

@@ -6,16 +6,19 @@
 //
 
 import Foundation
+import SwiftData
 
-class Workout: Identifiable, ObservableObject {
-    let id = UUID()
+@Model
+class Workout {
+    var id: UUID
     var name: String
-    var description: String
-    @Published var exercises: [Exercise]
+    var desc: String
+    var exercises: [Exercise]
 
     init(name: String, description: String, exercises: [Exercise]) {
+        self.id = UUID()
         self.name = name
-        self.description = description
+        self.desc = description
         self.exercises = exercises
     }
 }

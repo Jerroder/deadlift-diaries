@@ -6,9 +6,10 @@
 //
 
 import SwiftUI
+import SwiftData
 
 struct ExerciseItemView: View {
-    @ObservedObject var exercise: Exercise
+    @Bindable var exercise: Exercise
 
     var body: some View {
         Text("Exercise: \(exercise.name), Sets: \(exercise.sets), Reps: \(exercise.reps)")

@@ -9,8 +9,6 @@ import SwiftUI
 import SwiftData
 
 struct ContentView: View {
-    @Environment(\.modelContext) private var modelContext
-
     var body: some View {
         TabView {
             ProgramView().tabItem {
@@ -27,5 +25,8 @@ struct ContentView: View {
 }
 
 #Preview {
+    let config = ModelConfiguration(isStoredInMemoryOnly: true)
+    let container = try! ModelContainer(for: Program.self, configurations: config)
     ContentView()
+        .modelContainer(container)
 }

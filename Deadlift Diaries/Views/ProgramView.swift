@@ -6,48 +6,55 @@
 //
 
 import SwiftUI
+import SwiftData
 
 struct ProgramView: View {
-    @State private var programs: [Program] = []
+    @Environment(\.modelContext) private var modelContext
+
+    @Query private var programs: [Program] = []
     @FocusState private var focusedField: UUID?
     @Environment(\.colorScheme) var colorScheme
 
     var body: some View {
-        NavigationView {
+        NavigationStack {
             List {
-                ForEach($programs, id: \.id) { $program in
-                    DisplayPrograms(program: $program, focusedField: $focusedField)
+                ForEach(programs) { program in
+                    DisplayPrograms(program: program, focusedField: $focusedField)
                 }
                 .onTapGesture {
                     focusedField = nil
                 }
             }
             .background(Color(colorScheme == .light ? UIColor.secondarySystemBackground : UIColor.systemBackground))
-            .navigationBarTitle("Programs", displayMode: .large)
-            .navigationBarItems(
-                leading: Button(action: {
-                    print("Edit button tapped!")
-                }) {
-                    Text("Edit")
-                },
-                trailing: Button(action: addProgram) {
-                    Image(systemName: "plus")
+            .navigationTitle("Programs")
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button(action: {
+                        print("Edit button tapped!")
+                    }) {
+                        Text("Edit")
+                    }
                 }
-            )
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button(action: addProgram) {
+                        Image(systemName: "plus")
+                    }
+                }
+            }
         }
     }
 
     private func addProgram() {
         let newProgram = Program(name: "", description: "A new fitness plan", weeks: [])
         withAnimation {
-            programs.append(newProgram)
+            modelContext.insert(newProgram)
         }
         focusedField = newProgram.id
     }
 }
 
 struct DisplayPrograms: View {
-    @Binding var program: Program
+    @Bindable var program: Program
     @FocusState.Binding var focusedField: UUID?
 
     var body: some View {
@@ -66,7 +73,7 @@ struct DisplayPrograms: View {
                     .cornerRadius(5)
                 }
             }
-            .padding(.vertical, 8)
+            .padding(.vertical, 4)
             // .listRowSeparator(.hidden) // @TODO: figure out how to remove the top separator or add title
         }
     }

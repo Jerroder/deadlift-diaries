@@ -6,9 +6,10 @@
 //
 
 import SwiftUI
+import SwiftData
 
 struct WeekView: View {
-    @ObservedObject var program: Program
+    @Bindable var program: Program
 
     var body: some View {
         VStack(alignment: .leading) {
@@ -18,10 +19,10 @@ struct WeekView: View {
                 }
             }
         }
-        .listStyle(PlainListStyle()) // Maybe not wanted
-        .navigationBarTitle(program.name.isEmpty ? "Program details" : program.name, displayMode: .large)
-        .navigationBarItems(
-            trailing:
+        // .listStyle(PlainListStyle()) // Maybe wanted
+        .navigationTitle(program.name.isEmpty ? "Program details" : program.name)
+        .toolbar {
+            ToolbarItem(placement: .navigationBarTrailing) {
                 HStack {
                     Button(action: {
                         print("Edit button tapped!")
@@ -32,9 +33,10 @@ struct WeekView: View {
                         Image(systemName: "plus")
                     }
                 }
-        )
+            }
+        }
     }
-    
+
     private func addWeek() {
         let newWeek = Week(weekNumber: program.weeks.count + 1, workouts: [])
         withAnimation {
@@ -44,7 +46,7 @@ struct WeekView: View {
 }
 
 struct DisplayWeeks: View {
-    @ObservedObject var week: Week
+    @Bindable var week: Week
 
     var body: some View {
         VStack {
@@ -54,7 +56,7 @@ struct DisplayWeeks: View {
                 VStack(alignment: .leading) {
                     Text("Next Workout: \(week.workouts.first?.name ?? "No workouts")")
                 }
-                .padding()
+                //.padding()
                 .background(Color.clear)
                 .cornerRadius(5)
             }

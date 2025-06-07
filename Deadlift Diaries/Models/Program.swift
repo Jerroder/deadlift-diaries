@@ -6,17 +6,20 @@
 //
 
 import Foundation
+import SwiftData
 
-class Program: Identifiable, ObservableObject {
-    let id = UUID()
+@Model
+class Program {
+    var id: UUID
     var name: String
-    var description: String
+    var desc: String
     var duration: TimeInterval?
-    @Published var weeks: [Week]
+    var weeks: [Week]
 
     init(name: String, description: String, duration: TimeInterval? = nil, weeks: [Week]) {
+        self.id = UUID()
         self.name = name
-        self.description = description
+        self.desc = description
         self.duration = duration
         self.weeks = weeks
     }
