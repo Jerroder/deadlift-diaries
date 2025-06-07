@@ -57,6 +57,8 @@ struct ProgramView: View {
             modelContext.insert(newProgram)
         }
         focusedField = newProgram.id
+
+        try? modelContext.save()
     }
 
     private func deleteProgram(at offsets: IndexSet) {
@@ -66,12 +68,8 @@ struct ProgramView: View {
             for program in programsToDelete {
                 modelContext.delete(program)
             }
-            
-            do {
-                try modelContext.save()
-            } catch {
-                print("Failed to save context after deletion: \(error)")
-            }
+
+            try? modelContext.save()
 
             for index in programs.indices {
                 programs[index].orderIndex = index
