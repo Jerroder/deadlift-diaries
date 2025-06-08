@@ -28,12 +28,3 @@ final class Program {
         self.orderIndex = orderIndex
     }
 }
-
-@Model
-final class ProgramList {
-    var programs: [Program]
-
-    init(programs: [Program] = []) {
-        self.programs = programs
-    }
-}

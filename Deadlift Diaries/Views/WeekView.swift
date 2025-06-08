@@ -7,18 +7,23 @@
 
 import SwiftUI
 import SwiftData
+import Foundation
 
 struct WeekView: View {
+    @Environment(\.modelContext) private var modelContext
     @Environment(\.colorScheme) var colorScheme
 
     @Bindable var program: Program
+    
+    @State private var isEditing = false
 
     var body: some View {
         VStack(alignment: .leading) {
             List {
-                ForEach(program.weeks, id: \.id) { week in
+                ForEach(program.weeks.sorted { $0.creationDate < $1.creationDate }, id: \.id) { week in
                     DisplayWeeks(week: week)
                 }
+                .onDelete(perform: deleteWeek)
             }
         }
         .background(Color(colorScheme == .light ? UIColor.secondarySystemBackground : UIColor.systemBackground))
@@ -27,9 +32,11 @@ struct WeekView: View {
             ToolbarItem(placement: .navigationBarTrailing) {
                 HStack {
                     Button(action: {
-                        print("Edit button tapped!")
+                        withAnimation {
+                            isEditing.toggle()
+                        }
                     }) {
-                        Text("Edit")
+                        Text(isEditing ? "Done" : "Edit")
                     }
                     Button(action: addWeek) {
                         Image(systemName: "plus")
@@ -37,12 +44,35 @@ struct WeekView: View {
                 }
             }
         }
+        .environment(\.editMode, .constant(isEditing ? EditMode.active : EditMode.inactive))
+//        .onAppear {
+//            print("Current \(program.weeks.map { $0.weekNumber }): \(program.weeks.map { $0.id })")
+//        }
     }
 
     private func addWeek() {
         let newWeek = Week(weekNumber: program.weeks.count + 1, workouts: [])
         withAnimation {
             program.weeks.append(newWeek)
+        }
+        try? modelContext.save()
+    }
+    
+    private func deleteWeek(at indexSet: IndexSet) {
+        withAnimation {
+            for index in indexSet {
+                let objectId = program.weeks[index].persistentModelID
+                let weekToDelete = modelContext.model(for: objectId)
+                modelContext.delete(weekToDelete)
+            }
+            program.weeks.remove(atOffsets: indexSet)
+            
+            program.weeks.sort { $0.creationDate < $1.creationDate }
+            for index in program.weeks.indices {
+                program.weeks[index].weekNumber = index + 1
+            }
+
+            try? modelContext.save()
         }
     }
 }
@@ -53,6 +83,8 @@ struct DisplayWeeks: View {
     var body: some View {
         VStack {
             Text("Week \(week.weekNumber)")
+            Text("id \(week.id)").font(.system(size: 12))
+            Text("date \(week.creationDate)").font(.system(size: 16))
             
             NavigationLink(destination: WorkoutView(week: week)) {
                 VStack(alignment: .leading) {

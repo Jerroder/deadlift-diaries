@@ -16,7 +16,6 @@ struct ProgramView: View {
     @FocusState private var focusedField: UUID?
     
     @State private var isEditing = false
-    @State private var selectedItems = Set<UUID>()
 
     var body: some View {
         NavigationStack {
@@ -25,9 +24,9 @@ struct ProgramView: View {
                     DisplayPrograms(program: program, focusedField: $focusedField)
                 }
                 .onDelete(perform: deleteProgram)
-                .onTapGesture {
-                    focusedField = nil
-                }
+//                .onTapGesture { // breaks UX
+//                    focusedField = nil
+//                }
             }
             .background(Color(colorScheme == .light ? UIColor.secondarySystemBackground : UIColor.systemBackground))
             .navigationTitle("Programs")
@@ -61,18 +60,28 @@ struct ProgramView: View {
         try? modelContext.save()
     }
 
-    private func deleteProgram(at offsets: IndexSet) {
+    private func deleteProgram(at indexSet: IndexSet) {
         withAnimation {
-            let programsToDelete = offsets.map { programs[$0] }
+            let programsToDelete = indexSet.map { programs[$0] }
             
             for program in programsToDelete {
                 modelContext.delete(program)
             }
 
-            try? modelContext.save()
+            do {
+                try modelContext.save()
+            } catch {
+                print("Program save1 error: \(error)")
+            }
 
             for index in programs.indices {
                 programs[index].orderIndex = index
+            }
+            
+            do {
+                try modelContext.save()
+            } catch {
+                print("Program save2 error: \(error)")
             }
         }
     }
