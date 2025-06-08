@@ -14,7 +14,7 @@ struct WeekView: View {
     @Environment(\.colorScheme) var colorScheme
 
     @Bindable var program: Program
-    
+
     @State private var isEditing = false
 
     var body: some View {
@@ -29,7 +29,7 @@ struct WeekView: View {
         .background(Color(colorScheme == .light ? UIColor.secondarySystemBackground : UIColor.systemBackground))
         .navigationTitle(program.name.isEmpty ? "Program details" : program.name)
         .toolbar {
-            ToolbarItem(placement: .navigationBarTrailing) {
+            ToolbarItem(placement: .topBarTrailing) {
                 HStack {
                     Button(action: {
                         withAnimation {
@@ -57,7 +57,7 @@ struct WeekView: View {
         }
         try? modelContext.save()
     }
-    
+
     private func deleteWeek(at indexSet: IndexSet) {
         withAnimation {
             for index in indexSet {
@@ -83,8 +83,6 @@ struct DisplayWeeks: View {
     var body: some View {
         VStack {
             Text("Week \(week.weekNumber)")
-            Text("id \(week.id)").font(.system(size: 12))
-            Text("date \(week.creationDate)").font(.system(size: 16))
             
             NavigationLink(destination: WorkoutView(week: week)) {
                 VStack(alignment: .leading) {

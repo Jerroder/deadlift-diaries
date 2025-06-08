@@ -14,16 +14,16 @@ final class Exercise  {
 
     var name: String
     var desc: String
-    var duration: Double
     var sets: Int
     var reps: Int
+    var creationDate: Double
 
-    init(name: String, description: String, duration: Double, sets: Int, reps: Int) {
+    init(name: String, description: String, sets: Int, reps: Int) {
         self.id = UUID()
         self.name = name
         self.desc = description
-        self.duration = duration
         self.sets = sets
         self.reps = reps
+        self.creationDate = Date().timeIntervalSince1970
     }
 }

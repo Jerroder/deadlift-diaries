@@ -31,7 +31,7 @@ struct ProgramView: View {
             .background(Color(colorScheme == .light ? UIColor.secondarySystemBackground : UIColor.systemBackground))
             .navigationTitle("Programs")
             .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
+                ToolbarItem(placement: .topBarLeading) {
                     Button(action: {
                         withAnimation {
                             isEditing.toggle()
@@ -40,7 +40,7 @@ struct ProgramView: View {
                         Text(isEditing ? "Done" : "Edit")
                     }
                 }
-                ToolbarItem(placement: .navigationBarTrailing) {
+                ToolbarItem(placement: .topBarTrailing) {
                     Button(action: addProgram) {
                         Image(systemName: "plus")
                     }
@@ -68,21 +68,13 @@ struct ProgramView: View {
                 modelContext.delete(program)
             }
 
-            do {
-                try modelContext.save()
-            } catch {
-                print("Program save1 error: \(error)")
-            }
+            try? modelContext.save()
 
             for index in programs.indices {
                 programs[index].orderIndex = index
             }
             
-            do {
-                try modelContext.save()
-            } catch {
-                print("Program save2 error: \(error)")
-            }
+            try? modelContext.save()
         }
     }
 }
