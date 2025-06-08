@@ -13,9 +13,10 @@ struct ProgramView: View {
     @Environment(\.colorScheme) var colorScheme
 
     @Query(sort: \Program.orderIndex) private var programs: [Program]
-    @FocusState private var focusedField: UUID?
     
     @State private var isEditing = false
+
+    @FocusState private var focusedField: UUID?
 
     var body: some View {
         NavigationStack {
@@ -88,7 +89,7 @@ struct DisplayPrograms: View {
             VStack {
                 TextField("Program Name", text: $program.name)
                     .focused($focusedField, equals: program.id)
-                
+
                 NavigationLink(destination: WeekView(program: program)) {
                     VStack(alignment: .leading) {
                         Text(program.weeks.first?.weekNumber != nil ? "\(program.weeks.count) \(program.weeks.count == 1 ? "week" : "weeks")" : "")

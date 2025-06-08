@@ -53,17 +53,20 @@ struct WorkoutView: View {
         withAnimation {
             week.workouts.append(newWorkout)
         }
+        selectedWorkout = newWorkout
         try? modelContext.save()
     }
-    
+
     private func deleteWorkout(at indexSet: IndexSet) {
         withAnimation {
+            week.workouts.sort { $0.creationDate < $1.creationDate }
+
             for index in indexSet {
                 let objectId = week.workouts[index].persistentModelID
                 let workoutToDelete = modelContext.model(for: objectId)
                 modelContext.delete(workoutToDelete)
+                week.workouts.remove(at: index)
             }
-            week.workouts.remove(atOffsets: indexSet)
 
             try? modelContext.save()
         }

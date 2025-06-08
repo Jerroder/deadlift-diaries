@@ -18,7 +18,7 @@ final class Exercise  {
     var reps: Int
     var creationDate: Double
 
-    init(name: String, description: String, sets: Int, reps: Int) {
+    init(name: String, description: String, sets: Int = 0, reps: Int = 0) {
         self.id = UUID()
         self.name = name
         self.desc = description

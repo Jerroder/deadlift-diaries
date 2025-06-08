@@ -60,14 +60,15 @@ struct WeekView: View {
 
     private func deleteWeek(at indexSet: IndexSet) {
         withAnimation {
+            program.weeks.sort { $0.creationDate < $1.creationDate }
+
             for index in indexSet {
                 let objectId = program.weeks[index].persistentModelID
                 let weekToDelete = modelContext.model(for: objectId)
                 modelContext.delete(weekToDelete)
+                program.weeks.remove(at: index)
             }
-            program.weeks.remove(atOffsets: indexSet)
-            
-            program.weeks.sort { $0.creationDate < $1.creationDate }
+
             for index in program.weeks.indices {
                 program.weeks[index].weekNumber = index + 1
             }

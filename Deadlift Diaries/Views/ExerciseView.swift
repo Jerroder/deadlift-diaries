@@ -13,12 +13,15 @@ struct ExerciseView: View {
     @Environment(\.dismiss) private var dismiss
 
     @Bindable var workout: Workout
+    
+    @FocusState private var isWorkoutNameFocused: Bool
 
     var body: some View {
         NavigationStack {
             List {
                 Section {
                     TextField("Workout Name", text: $workout.name)
+                        .focused($isWorkoutNameFocused)
                 }
                 Section {
                     ForEach(workout.exercises.sorted { $0.creationDate < $1.creationDate }) { exercise in
@@ -41,10 +44,13 @@ struct ExerciseView: View {
                 }
             }
         }
+        .onAppear {
+            isWorkoutNameFocused = workout.name.isEmpty // only focus the TextField if workout.name is empty
+        }
     }
     
     private func addExercise() {
-        let newExercise = Exercise(name: "wo name", description: "desc", sets: 4, reps: 8)
+        let newExercise = Exercise(name: "", description: "desc")
         withAnimation {
             workout.exercises.append(newExercise)
         }
@@ -54,8 +60,51 @@ struct ExerciseView: View {
 
 struct DisplayExercises: View {
     @Bindable var exercise: Exercise
+
+    @State private var setNumber: String = ""
+    @State private var repNumber: String = ""
     
     var body: some View {
-        Text("Exercise: \(exercise.name), Sets: \(exercise.sets), Reps: \(exercise.reps)")
+        VStack {
+            TextField("Exercise Name", text: $exercise.name)
+            HStack {
+                Text("Sets")
+                TextField("0", text: $setNumber)
+                    .keyboardType(.decimalPad)
+                    .onChange(of: setNumber) { oldValue, newValue in
+                        // Filter the input to ensure it's a valid number
+                        let filtered = newValue.filter { $0.isNumber || $0 == "." }
+                        if filtered != newValue {
+                            self.setNumber = filtered
+                        }
+
+                        if let numericValue = Int(filtered) {
+                            exercise.sets = numericValue
+                        }
+                    }
+                    .onAppear {
+                        setNumber = (exercise.sets == 0) ? "" : String(exercise.sets)
+                    }
+            }
+            HStack {
+                Text("Reps")
+                TextField("0", text: $repNumber)
+                    .keyboardType(.decimalPad)
+                    .onChange(of: repNumber) { oldValue, newValue in
+                        // Filter the input to ensure it's a valid number
+                        let filtered = newValue.filter { $0.isNumber || $0 == "." }
+                        if filtered != newValue {
+                            self.repNumber = filtered
+                        }
+
+                        if let numericValue = Int(filtered) {
+                            exercise.reps = numericValue
+                        }
+                    }
+                    .onAppear {
+                        repNumber = (exercise.reps == 0) ? "" : String(exercise.reps)
+                    }
+            }
+        }
     }
 }
