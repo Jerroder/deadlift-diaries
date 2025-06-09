@@ -86,7 +86,7 @@ struct DisplayExercises: View {
                     .onAppear {
                         weight = (exercise.weight == 0) ? "" : String(exercise.weight)
                     }
-                Text("kg".localized(comment: "kg"))
+                Text("weight_format".localized(comment: "kg"))
                     .padding(.leading, -200)
             }
             HStack {
@@ -142,7 +142,7 @@ struct DisplayExercises: View {
                     .onAppear {
                         rest = (exercise.rest == 0) ? "" : String(exercise.rest)
                     }
-                Text("sec".localized(comment: "Sec"))
+                Text("sec".localized(comment: "sec"))
                     .padding(.leading, -120)
             }
         }
