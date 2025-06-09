@@ -27,6 +27,7 @@ struct ExerciseView: View {
                     ForEach(workout.exercises.sorted { $0.creationDate < $1.creationDate }) { exercise in
                         DisplayExercises(exercise: exercise)
                     }
+                    .onDelete(perform: deleteExercise)
                 }
             }
             .toolbar {
@@ -55,6 +56,21 @@ struct ExerciseView: View {
             workout.exercises.append(newExercise)
         }
         try? modelContext.save()
+    }
+    
+    private func deleteExercise(at indexSet: IndexSet) {
+        withAnimation {
+            workout.exercises.sort { $0.creationDate < $1.creationDate }
+
+            for index in indexSet.sorted(by: >) {
+                let objectId = workout.exercises[index].persistentModelID
+                let exerciseToDelete = modelContext.model(for: objectId)
+                modelContext.delete(exerciseToDelete)
+                workout.exercises.remove(at: index)
+            }
+
+            try? modelContext.save()
+        }
     }
 }
 
@@ -94,7 +110,7 @@ struct DisplayExercises: View {
                 TextField("0", text: $setNumber)
                     .keyboardType(.decimalPad)
                     .onChange(of: setNumber) { oldValue, newValue in
-                        let filtered = newValue.filter { $0.isNumber || $0 == "." }
+                        let filtered = newValue.filter { $0.isNumber }
                         if filtered != newValue {
                             self.setNumber = filtered
                         }
@@ -112,7 +128,7 @@ struct DisplayExercises: View {
                 TextField("0", text: $repNumber)
                     .keyboardType(.decimalPad)
                     .onChange(of: repNumber) { oldValue, newValue in
-                        let filtered = newValue.filter { $0.isNumber || $0 == "." }
+                        let filtered = newValue.filter { $0.isNumber }
                         if filtered != newValue {
                             self.repNumber = filtered
                         }
@@ -135,15 +151,15 @@ struct DisplayExercises: View {
                             self.rest = filtered
                         }
 
-                        if let numericValue = Int(filtered) {
+                        if let numericValue = Double(filtered) {
                             exercise.rest = numericValue
                         }
                     }
                     .onAppear {
-                        rest = (exercise.rest == 0) ? "" : String(exercise.rest)
+                        rest = (exercise.rest == 0.0) ? "" : String(exercise.rest)
                     }
                 Text("sec".localized(comment: "sec"))
-                    .padding(.leading, -120)
+                    .padding(.leading, -170)
             }
         }
     }

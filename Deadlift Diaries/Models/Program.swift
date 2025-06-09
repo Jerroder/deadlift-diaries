@@ -18,7 +18,7 @@ final class Program {
 
     @Relationship(deleteRule: .cascade) var weeks: [Week]
 
-    init(name: String, duration: TimeInterval? = nil, weeks: [Week], orderIndex: Int = Int.max) {
+    init(name: String = "", duration: TimeInterval? = nil, weeks: [Week] = [], orderIndex: Int = Int.max) {
         self.id = UUID()
         self.name = name
         self.duration = duration

@@ -52,7 +52,7 @@ struct ProgramView: View {
     }
 
     private func addProgram() {
-        let newProgram = Program(name: "", weeks: [], orderIndex: programs.count)
+        let newProgram = Program(orderIndex: programs.count)
         withAnimation {
             modelContext.insert(newProgram)
         }
@@ -92,8 +92,8 @@ struct DisplayPrograms: View {
 
                 NavigationLink(destination: WeekView(program: program)) {
                     VStack(alignment: .leading) {
-                        Text(program.weeks.first?.weekNumber != nil ? "\(program.weeks.count) \(program.weeks.count == 1 ? "week".localized(comment: "week") : "weeks".localized(comment: "weeks"))" : "")
-                        Text("next_workout".localized(comment: "Next workout") + ": " + (program.weeks.first?.workouts.first?.name ?? "no_workouts".localized(comment: "No workouts")))
+                        Text(weeksText)
+                        Text(nextWorkoutText)
                     }
                     .background(Color.clear)
                     .cornerRadius(5)
@@ -101,5 +101,22 @@ struct DisplayPrograms: View {
             }
             .padding(.vertical, 4)
         }
+    }
+    
+    private var weeksText: String {
+        let count = program.weeks.count
+        guard count > 0 else {
+            return ""
+        }
+
+        let weekOrWeeks = count == 1 ? "week".localized(comment: "week") : "weeks".localized(comment: "weeks")
+        return "\(count) \(weekOrWeeks)"
+    }
+
+    private var nextWorkoutText: String {
+        let workoutName = program.weeks.first?.workouts.first?.name ?? ""
+        let displayText = workoutName.isEmpty ? "no_workout_planned".localized(comment: "No workout planned") : "next_workout".localized(comment: "Next workout") + ": \(workoutName)"
+
+        return displayText
     }
 }

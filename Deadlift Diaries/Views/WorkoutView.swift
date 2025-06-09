@@ -49,7 +49,7 @@ struct WorkoutView: View {
     }
 
     private func addWorkout() {
-        let newWorkout = Workout(name: "", exercises: [])
+        let newWorkout = Workout()
         withAnimation {
             week.workouts.append(newWorkout)
         }
@@ -80,11 +80,11 @@ struct DisplayWorkouts: View {
         VStack(alignment: .leading) {
             Text(workout.name.isEmpty ? "workout".localized(comment: "Workout") : "\(workout.name)").font(.title)
 
-            ForEach(workout.exercises, id: \.id) { exercise in
+            ForEach(workout.exercises.sorted { $0.creationDate < $1.creationDate }, id: \.id) { exercise in
                 HStack {
                     Image(systemName: "circle.fill")
                         .font(.system(size: 4))
-                    Text("\(exercise.name) \(exercise.weight)" + "weight_format".localized(comment: "kg") + "- \(exercise.sets)x\(exercise.reps)")
+                    Text("\(exercise.name) \(exercise.weight)" + "weight_format".localized(comment: "kg") + " - \(exercise.sets)x\(exercise.reps)")
                 }
             }
             .padding(.leading, 20)

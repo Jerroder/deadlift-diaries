@@ -48,7 +48,7 @@ struct WeekView: View {
     }
 
     private func addWeek() {
-        let newWeek = Week(weekNumber: program.weeks.count + 1, workouts: [])
+        let newWeek = Week(weekNumber: program.weeks.count + 1)
         withAnimation {
             program.weeks.append(newWeek)
         }
@@ -84,7 +84,7 @@ struct DisplayWeeks: View {
             
             NavigationLink(destination: WorkoutView(week: week)) {
                 VStack(alignment: .leading) {
-                    Text(week.workouts.isEmpty ? "no_workout_planned".localized(comment: "No workout planned") : "next_workout".localized(comment: "Next workout") + ": \(week.workouts[0].name)")
+                    Text(workoutsText)
                 }
                 //.padding()
                 .background(Color.clear)
@@ -92,5 +92,12 @@ struct DisplayWeeks: View {
             }
         }
         .padding(.vertical, 8)
+    }
+    
+    private var workoutsText: String {
+        let workoutName = week.workouts.isEmpty ? "" : week.workouts[0].name
+        let displayText = workoutName.isEmpty ? "no_workout_planned".localized(comment: "No workout planned") : "next_workout".localized(comment: "Next workout") + ": \(workoutName)"
+        
+        return displayText
     }
 }
