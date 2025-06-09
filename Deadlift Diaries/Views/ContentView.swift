@@ -13,12 +13,12 @@ struct ContentView: View {
         TabView {
             ProgramView().tabItem {
                 Image(systemName: "calendar")
-                Text("Programs")
+                Text("programs".localized(comment: "Programs"))
             }
 
             TimerView().tabItem {
                 Image(systemName: "timer")
-                Text("Timer")
+                Text("timer".localized(comment: "Timer"))
             }
         }
     }

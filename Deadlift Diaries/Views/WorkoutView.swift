@@ -28,14 +28,14 @@ struct WorkoutView: View {
             }
         }
         .listStyle(PlainListStyle())
-        .navigationTitle("Week \(week.weekNumber)")
+        .navigationTitle("week".localized(comment: "Week") + " \(week.weekNumber)")
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 HStack {
                     Button(action: {
                         print("Edit button tapped!")
                     }) {
-                        Text("Edit")
+                        Text("edit".localized(comment: "Edit"))
                     }
                     Button(action: addWorkout) {
                         Image(systemName: "plus")
@@ -49,7 +49,7 @@ struct WorkoutView: View {
     }
 
     private func addWorkout() {
-        let newWorkout = Workout(name: "", description: "desc", exercises: [])
+        let newWorkout = Workout(name: "", exercises: [])
         withAnimation {
             week.workouts.append(newWorkout)
         }
@@ -61,7 +61,7 @@ struct WorkoutView: View {
         withAnimation {
             week.workouts.sort { $0.creationDate < $1.creationDate }
 
-            for index in indexSet {
+            for index in indexSet.sorted(by: >) {
                 let objectId = week.workouts[index].persistentModelID
                 let workoutToDelete = modelContext.model(for: objectId)
                 modelContext.delete(workoutToDelete)
@@ -78,11 +78,16 @@ struct DisplayWorkouts: View {
 
     var body: some View {
         VStack(alignment: .leading) {
-            Text("Workout: \(workout.name)")
+            Text(workout.name.isEmpty ? "workout".localized(comment: "Workout") : "\(workout.name)").font(.title)
 
-//            ForEach(workout.exercises, id: \.id) { exercise in
-//                ExerciseView(exercise: exercise)
-//            }
+            ForEach(workout.exercises, id: \.id) { exercise in
+                HStack {
+                    Image(systemName: "circle.fill")
+                        .font(.system(size: 4))
+                    Text("\(exercise.name) \(exercise.weight)" + "kg".localized(comment: "kg") + "- \(exercise.sets)x\(exercise.reps)")
+                }
+            }
+            .padding(.leading, 20)
         }
     }
 }

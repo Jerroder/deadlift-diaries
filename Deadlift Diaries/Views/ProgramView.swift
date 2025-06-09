@@ -30,7 +30,7 @@ struct ProgramView: View {
 //                }
             }
             .background(Color(colorScheme == .light ? UIColor.secondarySystemBackground : UIColor.systemBackground))
-            .navigationTitle("Programs")
+            .navigationTitle("programs".localized(comment: "Programs"))
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     Button(action: {
@@ -38,7 +38,7 @@ struct ProgramView: View {
                             isEditing.toggle()
                         }
                     }) {
-                        Text(isEditing ? "Done" : "Edit")
+                        Text(isEditing ? "done".localized(comment: "Done") : "edit".localized(comment: "Edit"))
                     }
                 }
                 ToolbarItem(placement: .topBarTrailing) {
@@ -52,7 +52,7 @@ struct ProgramView: View {
     }
 
     private func addProgram() {
-        let newProgram = Program(name: "", description: "A new fitness plan", weeks: [], orderIndex: programs.count)
+        let newProgram = Program(name: "", weeks: [], orderIndex: programs.count)
         withAnimation {
             modelContext.insert(newProgram)
         }
@@ -87,13 +87,13 @@ struct DisplayPrograms: View {
     var body: some View {
         Section {
             VStack {
-                TextField("Program Name", text: $program.name)
+                TextField("program_name".localized(comment: "Program Name"), text: $program.name)
                     .focused($focusedField, equals: program.id)
 
                 NavigationLink(destination: WeekView(program: program)) {
                     VStack(alignment: .leading) {
-                        Text(program.weeks.first?.weekNumber != nil ? "\(program.weeks.count) \(program.weeks.count == 1 ? "week" : "weeks")" : "")
-                        Text("Next Workout: \(program.weeks.first?.workouts.first?.name ?? "No workouts")")
+                        Text(program.weeks.first?.weekNumber != nil ? "\(program.weeks.count) \(program.weeks.count == 1 ? "week".localized(comment: "week") : "weeks".localized(comment: "weeks"))" : "")
+                        Text("next_workout".localized(comment: "Next workout") + ": " + (program.weeks.first?.workouts.first?.name ?? "no_workouts".localized(comment: "No workouts")))
                     }
                     .background(Color.clear)
                     .cornerRadius(5)

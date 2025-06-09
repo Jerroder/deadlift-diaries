@@ -9,6 +9,6 @@ import SwiftUI
 
 struct TimerView: View {
     var body: some View {
-        Text("Timer").font(.title)
+        Text("timer".localized(comment: "Timer")).font(.title)
     }
 }

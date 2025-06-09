@@ -27,7 +27,7 @@ struct WeekView: View {
             }
         }
         .background(Color(colorScheme == .light ? UIColor.secondarySystemBackground : UIColor.systemBackground))
-        .navigationTitle(program.name.isEmpty ? "Program details" : program.name)
+        .navigationTitle(program.name.isEmpty ? "program_details".localized(comment: "Program details") : program.name)
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 HStack {
@@ -36,7 +36,7 @@ struct WeekView: View {
                             isEditing.toggle()
                         }
                     }) {
-                        Text(isEditing ? "Done" : "Edit")
+                        Text(isEditing ? "done".localized(comment: "Done") : "edit".localized(comment: "Edit"))
                     }
                     Button(action: addWeek) {
                         Image(systemName: "plus")
@@ -45,9 +45,6 @@ struct WeekView: View {
             }
         }
         .environment(\.editMode, .constant(isEditing ? EditMode.active : EditMode.inactive))
-//        .onAppear {
-//            print("Current \(program.weeks.map { $0.weekNumber }): \(program.weeks.map { $0.id })")
-//        }
     }
 
     private func addWeek() {
@@ -62,7 +59,7 @@ struct WeekView: View {
         withAnimation {
             program.weeks.sort { $0.creationDate < $1.creationDate }
 
-            for index in indexSet {
+            for index in indexSet.sorted(by: >) {
                 let objectId = program.weeks[index].persistentModelID
                 let weekToDelete = modelContext.model(for: objectId)
                 modelContext.delete(weekToDelete)
@@ -83,11 +80,11 @@ struct DisplayWeeks: View {
 
     var body: some View {
         VStack {
-            Text("Week \(week.weekNumber)")
+            Text("week".localized(comment: "Week") + " \(week.weekNumber)")
             
             NavigationLink(destination: WorkoutView(week: week)) {
                 VStack(alignment: .leading) {
-                    Text("Next Workout: \(week.workouts.first?.name ?? "No workouts")")
+                    Text(week.workouts.isEmpty ? "no_workout_planned".localized(comment: "No workout planned") : "next_workout".localized(comment: "Next workout") + ": \(week.workouts[0].name)")
                 }
                 //.padding()
                 .background(Color.clear)

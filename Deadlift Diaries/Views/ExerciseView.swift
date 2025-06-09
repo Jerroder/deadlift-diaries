@@ -20,7 +20,7 @@ struct ExerciseView: View {
         NavigationStack {
             List {
                 Section {
-                    TextField("Workout Name", text: $workout.name)
+                    TextField("workout_name".localized(comment: "Workout Name"), text: $workout.name)
                         .focused($isWorkoutNameFocused)
                 }
                 Section {
@@ -34,7 +34,7 @@ struct ExerciseView: View {
                     Button(action: {
                         dismiss()
                     }) {
-                        Text("Done")
+                        Text("done".localized(comment: "Done"))
                     }
                 }
                 ToolbarItem(placement: .topBarTrailing) {
@@ -50,7 +50,7 @@ struct ExerciseView: View {
     }
     
     private func addExercise() {
-        let newExercise = Exercise(name: "", description: "desc")
+        let newExercise = Exercise()
         withAnimation {
             workout.exercises.append(newExercise)
         }
@@ -61,18 +61,39 @@ struct ExerciseView: View {
 struct DisplayExercises: View {
     @Bindable var exercise: Exercise
 
+    @State private var weight: String = ""
     @State private var setNumber: String = ""
     @State private var repNumber: String = ""
+    @State private var rest: String = ""
     
     var body: some View {
         VStack {
-            TextField("Exercise Name", text: $exercise.name)
+            TextField("exercise_name".localized(comment: "Exercise Name"), text: $exercise.name)
             HStack {
-                Text("Sets")
+                Text("weight".localized(comment: "Weight"))
+                TextField("0", text: $weight)
+                    .keyboardType(.decimalPad)
+                    .onChange(of: weight) { oldValue, newValue in
+                        let filtered = newValue.filter { $0.isNumber || $0 == "." }
+                        if filtered != newValue {
+                            self.weight = filtered
+                        }
+
+                        if let numericValue = Int(filtered) {
+                            exercise.weight = numericValue
+                        }
+                    }
+                    .onAppear {
+                        weight = (exercise.weight == 0) ? "" : String(exercise.weight)
+                    }
+                Text("kg".localized(comment: "kg"))
+                    .padding(.leading, -200)
+            }
+            HStack {
+                Text("sets".localized(comment: "Sets"))
                 TextField("0", text: $setNumber)
                     .keyboardType(.decimalPad)
                     .onChange(of: setNumber) { oldValue, newValue in
-                        // Filter the input to ensure it's a valid number
                         let filtered = newValue.filter { $0.isNumber || $0 == "." }
                         if filtered != newValue {
                             self.setNumber = filtered
@@ -87,11 +108,10 @@ struct DisplayExercises: View {
                     }
             }
             HStack {
-                Text("Reps")
+                Text("reps".localized(comment: "Reps"))
                 TextField("0", text: $repNumber)
                     .keyboardType(.decimalPad)
                     .onChange(of: repNumber) { oldValue, newValue in
-                        // Filter the input to ensure it's a valid number
                         let filtered = newValue.filter { $0.isNumber || $0 == "." }
                         if filtered != newValue {
                             self.repNumber = filtered
@@ -104,6 +124,26 @@ struct DisplayExercises: View {
                     .onAppear {
                         repNumber = (exercise.reps == 0) ? "" : String(exercise.reps)
                     }
+            }
+            HStack {
+                Text("rest".localized(comment: "Rest"))
+                TextField("0", text: $rest)
+                    .keyboardType(.decimalPad)
+                    .onChange(of: rest) { oldValue, newValue in
+                        let filtered = newValue.filter { $0.isNumber || $0 == "." }
+                        if filtered != newValue {
+                            self.rest = filtered
+                        }
+
+                        if let numericValue = Int(filtered) {
+                            exercise.rest = numericValue
+                        }
+                    }
+                    .onAppear {
+                        rest = (exercise.rest == 0) ? "" : String(exercise.rest)
+                    }
+                Text("sec".localized(comment: "Sec"))
+                    .padding(.leading, -120)
             }
         }
     }
