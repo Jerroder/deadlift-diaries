@@ -5,8 +5,8 @@
 //  Created by Jerroder on 2025-05-24.
 //
 
-import SwiftUI
 import SwiftData
+import SwiftUI
 
 struct ContentView: View {
     var body: some View {

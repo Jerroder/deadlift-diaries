@@ -5,8 +5,8 @@
 //  Created by Jerroder on 2025-05-24.
 //
 
-import SwiftUI
 import SwiftData
+import SwiftUI
 
 @main
 struct Deadlift_DiariesApp: App {

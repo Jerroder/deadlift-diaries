@@ -5,8 +5,24 @@
 //  Created by Jerroder on 2025-06-06.
 //
 
-import SwiftUI
+import Foundation
 import SwiftData
+import SwiftUI
+
+func isMetricSystem() -> Bool {
+    let locale = Locale.current
+    switch locale.measurementSystem {
+        case .metric:
+            return true
+
+        case .us: fallthrough
+        case .uk:
+            return false
+
+        default:
+            return false
+    }
+}
 
 struct ExerciseView: View {
     @Environment(\.modelContext) private var modelContext
@@ -81,7 +97,7 @@ struct DisplayExercises: View {
     @State private var setNumber: String = ""
     @State private var repNumber: String = ""
     @State private var rest: String = ""
-    
+
     var body: some View {
         VStack {
             TextField("exercise_name".localized(comment: "Exercise Name"), text: $exercise.name)
@@ -102,7 +118,7 @@ struct DisplayExercises: View {
                     .onAppear {
                         weight = (exercise.weight == 0) ? "" : String(exercise.weight)
                     }
-                Text("weight_format".localized(comment: "kg"))
+                Text(isMetricSystem() ? "kg" : "lbs")
                     .padding(.leading, -200)
             }
             HStack {

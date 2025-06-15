@@ -5,9 +5,9 @@
 //  Created by Jerroder on 2025-06-06.
 //
 
-import SwiftUI
-import SwiftData
 import Foundation
+import SwiftData
+import SwiftUI
 
 struct WeekView: View {
     @Environment(\.modelContext) private var modelContext

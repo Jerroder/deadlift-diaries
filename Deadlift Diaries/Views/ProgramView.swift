@@ -5,8 +5,8 @@
 //  Created by Jerroder on 2025-06-06.
 //
 
-import SwiftUI
 import SwiftData
+import SwiftUI
 
 struct ProgramView: View {
     @Environment(\.modelContext) private var modelContext
@@ -25,9 +25,7 @@ struct ProgramView: View {
                     DisplayPrograms(program: program, focusedField: $focusedField)
                 }
                 .onDelete(perform: deleteProgram)
-//                .onTapGesture { // breaks UX
-//                    focusedField = nil
-//                }
+                .onMove(perform: moveProgram)
             }
             .background(Color(colorScheme == .light ? UIColor.secondarySystemBackground : UIColor.systemBackground))
             .navigationTitle("programs".localized(comment: "Programs"))
@@ -78,6 +76,32 @@ struct ProgramView: View {
             try? modelContext.save()
         }
     }
+    
+    private func moveProgram(from source: IndexSet, to destination: Int) {
+        print("test")
+        withAnimation {
+            var programs = programs // Capture the current state of programs
+            
+            // Calculate the new indices after moving
+            let newIndices = programs.indices.map { index -> Int in
+                if index < destination && !source.contains(index) {
+                    return index
+                } else if index >= destination && !source.contains(index) {
+                    return index + source.count
+                } else {
+                    return index - source.first! + destination
+                }
+            }
+            
+            // Update the orderIndex based on the new indices
+            for index in programs.indices {
+                programs[index].orderIndex = newIndices[index]
+            }
+            
+            // Save the changes to the model context
+            try? modelContext.save()
+        }
+    }
 }
 
 struct DisplayPrograms: View {
@@ -87,8 +111,10 @@ struct DisplayPrograms: View {
     var body: some View {
         Section {
             VStack {
-                TextField("program_name".localized(comment: "Program Name"), text: $program.name)
-                    .focused($focusedField, equals: program.id)
+                TextField("program_name".localized(comment: "Program Name"), text: $program.name) {
+                    focusedField = nil
+                }
+                .focused($focusedField, equals: program.id)
 
                 NavigationLink(destination: WeekView(program: program)) {
                     VStack(alignment: .leading) {

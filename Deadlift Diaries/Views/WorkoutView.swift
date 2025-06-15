@@ -5,8 +5,8 @@
 //  Created by Jerroder on 2025-06-06.
 //
 
-import SwiftUI
 import SwiftData
+import SwiftUI
 
 struct WorkoutView: View {
     @Environment(\.modelContext) private var modelContext
