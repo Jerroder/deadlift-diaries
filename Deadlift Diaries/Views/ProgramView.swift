@@ -80,7 +80,7 @@ struct ProgramView: View {
     private func moveProgram(from source: IndexSet, to destination: Int) {
         print("test")
         withAnimation {
-            var programs = programs // Capture the current state of programs
+            let programs = programs // Capture the current state of programs
             
             // Calculate the new indices after moving
             let newIndices = programs.indices.map { index -> Int in

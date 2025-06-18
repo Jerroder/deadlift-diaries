@@ -84,7 +84,9 @@ struct DisplayWorkouts: View {
                 HStack {
                     Image(systemName: "circle.fill")
                         .font(.system(size: 4))
-                    Text("\(exercise.name) \(exercise.weight)" + "weight_format".localized(comment: "kg") + " - \(exercise.sets)x\(exercise.reps)")
+                    let unit = isMetricSystem() ? "kg" : "lbs"
+                    let weight = exercise.weight == 0 ? "" : "\(exercise.weight)" + unit + " "
+                    Text("\(exercise.name) \(weight)- \(exercise.sets)x\(exercise.reps)")
                 }
             }
             .padding(.leading, 20)
