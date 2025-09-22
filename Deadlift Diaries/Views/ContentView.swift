@@ -11,9 +11,9 @@ import SwiftUI
 struct ContentView: View {
     var body: some View {
         TabView {
-            ProgramView().tabItem {
+            MesocycleView().tabItem {
                 Image(systemName: "calendar")
-                Text("programs".localized(comment: "Programs"))
+                Text("cycles".localized(comment: "Cycles"))
             }
 
             TimerView().tabItem {
@@ -26,7 +26,7 @@ struct ContentView: View {
 
 #Preview {
     let config = ModelConfiguration(isStoredInMemoryOnly: true)
-    let container = try! ModelContainer(for: Program.self, configurations: config)
+    let container = try! ModelContainer(for: Mesocycle.self, configurations: config)
     ContentView()
         .modelContainer(container)
 }

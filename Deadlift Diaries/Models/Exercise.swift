@@ -13,13 +13,13 @@ final class Exercise  {
     @Attribute(.unique) var id: UUID
 
     var name: String
-    var weight: Int
+    var weight: Double
     var sets: Int
     var reps: Int
-    var rest: Double
+    var rest: Int
     var creationDate: Double
 
-    init(name: String = "", weight: Int = 0, sets: Int = 0, reps: Int = 0, rest: Double = 0.0) {
+    init(name: String = "", weight: Double = 0.0, sets: Int = 0, reps: Int = 0, rest: Int = 0) {
         self.id = UUID()
         self.name = name
         self.weight = weight

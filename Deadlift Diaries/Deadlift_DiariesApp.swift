@@ -14,6 +14,6 @@ struct Deadlift_DiariesApp: App {
         WindowGroup {
             ContentView()
         }
-        .modelContainer(for: [Program.self, Week.self, Workout.self, Exercise.self])
+        .modelContainer(for: [Mesocycle.self, Week.self, Workout.self, Exercise.self])
     }
 }

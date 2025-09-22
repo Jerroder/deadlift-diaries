@@ -1,5 +1,5 @@
 //
-//  ProgramView.swift
+//  MesocycleView.swift
 //  Deadlift Diaries
 //
 //  Created by Jerroder on 2025-06-06.
@@ -8,11 +8,11 @@
 import SwiftData
 import SwiftUI
 
-struct ProgramView: View {
+struct MesocycleView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.colorScheme) var colorScheme
 
-    @Query(sort: \Program.orderIndex) private var programs: [Program]
+    @Query(sort: \Mesocycle.orderIndex) private var mesocycles: [Mesocycle]
     
     @State private var isEditing = false
 
@@ -21,14 +21,14 @@ struct ProgramView: View {
     var body: some View {
         NavigationStack {
             List {
-                ForEach(programs) { program in
-                    DisplayPrograms(program: program, focusedField: $focusedField)
+                ForEach(mesocycles) { mesocycle in
+                    DisplayMesocycles(mesocycle: mesocycle, focusedField: $focusedField)
                 }
-                .onDelete(perform: deleteProgram)
-                .onMove(perform: moveProgram)
+                .onDelete(perform: deleteMesocycle)
+                .onMove(perform: moveMesocycle)
             }
             .background(Color(colorScheme == .light ? UIColor.secondarySystemBackground : UIColor.systemBackground))
-            .navigationTitle("programs".localized(comment: "Programs"))
+            .navigationTitle("cycles".localized(comment: "Cycles"))
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     Button(action: {
@@ -40,7 +40,7 @@ struct ProgramView: View {
                     }
                 }
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button(action: addProgram) {
+                    Button(action: addMesocycle) {
                         Image(systemName: "plus")
                     }
                 }
@@ -49,41 +49,41 @@ struct ProgramView: View {
         }
     }
 
-    private func addProgram() {
-        let newProgram = Program(orderIndex: programs.count)
+    private func addMesocycle() {
+        let newCycle = Mesocycle(orderIndex: mesocycles.count)
         withAnimation {
-            modelContext.insert(newProgram)
+            modelContext.insert(newCycle)
         }
-        focusedField = newProgram.id
+        focusedField = newCycle.id
 
         try? modelContext.save()
     }
 
-    private func deleteProgram(at indexSet: IndexSet) {
+    private func deleteMesocycle(at indexSet: IndexSet) {
         withAnimation {
-            let programsToDelete = indexSet.map { programs[$0] }
+            let mesocyclesToDelete = indexSet.map { mesocycles[$0] }
             
-            for program in programsToDelete {
-                modelContext.delete(program)
+            for mesocycle in mesocyclesToDelete {
+                modelContext.delete(mesocycle)
             }
 
             try? modelContext.save()
 
-            for index in programs.indices {
-                programs[index].orderIndex = index
+            for index in mesocycles.indices {
+                mesocycles[index].orderIndex = index
             }
             
             try? modelContext.save()
         }
     }
     
-    private func moveProgram(from source: IndexSet, to destination: Int) {
+    private func moveMesocycle(from source: IndexSet, to destination: Int) {
         print("test")
         withAnimation {
-            let programs = programs // Capture the current state of programs
+            let mesocycles = mesocycles // Capture the current state of mesocycles
             
             // Calculate the new indices after moving
-            let newIndices = programs.indices.map { index -> Int in
+            let newIndices = mesocycles.indices.map { index -> Int in
                 if index < destination && !source.contains(index) {
                     return index
                 } else if index >= destination && !source.contains(index) {
@@ -94,8 +94,8 @@ struct ProgramView: View {
             }
             
             // Update the orderIndex based on the new indices
-            for index in programs.indices {
-                programs[index].orderIndex = newIndices[index]
+            for index in mesocycles.indices {
+                mesocycles[index].orderIndex = newIndices[index]
             }
             
             // Save the changes to the model context
@@ -104,19 +104,23 @@ struct ProgramView: View {
     }
 }
 
-struct DisplayPrograms: View {
-    @Bindable var program: Program
+struct DisplayMesocycles: View {
+    @Bindable var mesocycle: Mesocycle
     @FocusState.Binding var focusedField: UUID?
+    
+    @State private var wakeUp = Date.now
+    @State private var unit: Unit = Unit(symbol: "weeks")
+    @State private var duration: Int = 0
 
     var body: some View {
         Section {
             VStack {
-                TextField("program_name".localized(comment: "Program Name"), text: $program.name) {
+                TextField("cycle_name".localized(comment: "Cycle Name"), text: $mesocycle.name) {
                     focusedField = nil
                 }
-                .focused($focusedField, equals: program.id)
+                .focused($focusedField, equals: mesocycle.id)
 
-                NavigationLink(destination: WeekView(program: program)) {
+                NavigationLink(destination: WeekView(mesocycle: mesocycle)) {
                     VStack(alignment: .leading) {
                         Text(weeksText)
                         Text(nextWorkoutText)
@@ -124,13 +128,28 @@ struct DisplayPrograms: View {
                     .background(Color.clear)
                     .cornerRadius(5)
                 }
+                
+                DatePicker("Please enter a date", selection: $wakeUp, in: Date.now..., displayedComponents: .date)
+                    .padding()
+                
+                HStack {
+                    TextFieldWithUnitInt(value: $duration, unit: $unit)
+                        .keyboardType(.numberPad)
+                        .onChange(of: duration) { _, _ in
+                            mesocycle.duration = duration
+                        }
+                        .onAppear {
+                            duration = mesocycle.duration
+                        }
+                Spacer()
+                }
             }
             .padding(.vertical, 4)
         }
     }
     
     private var weeksText: String {
-        let count = program.weeks.count
+        let count = mesocycle.weeks.count
         guard count > 0 else {
             return ""
         }
@@ -140,7 +159,7 @@ struct DisplayPrograms: View {
     }
 
     private var nextWorkoutText: String {
-        let workoutName = program.weeks.first?.workouts.first?.name ?? ""
+        let workoutName = mesocycle.weeks.first?.workouts.first?.name ?? ""
         let displayText = workoutName.isEmpty ? "no_workout_planned".localized(comment: "No workout planned") : "next_workout".localized(comment: "Next workout") + ": \(workoutName)"
 
         return displayText

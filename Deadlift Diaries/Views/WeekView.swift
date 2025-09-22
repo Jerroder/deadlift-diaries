@@ -13,21 +13,21 @@ struct WeekView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.colorScheme) var colorScheme
 
-    @Bindable var program: Program
+    @Bindable var mesocycle: Mesocycle
 
     @State private var isEditing = false
 
     var body: some View {
         VStack(alignment: .leading) {
             List {
-                ForEach(program.weeks.sorted { $0.creationDate < $1.creationDate }, id: \.id) { week in
+                ForEach(mesocycle.weeks.sorted { $0.creationDate < $1.creationDate }, id: \.id) { week in
                     DisplayWeeks(week: week)
                 }
                 .onDelete(perform: deleteWeek)
             }
         }
         .background(Color(colorScheme == .light ? UIColor.secondarySystemBackground : UIColor.systemBackground))
-        .navigationTitle(program.name.isEmpty ? "program_details".localized(comment: "Program details") : program.name)
+        .navigationTitle(mesocycle.name.isEmpty ? "mesocycle_details".localized(comment: "Cycle details") : mesocycle.name)
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 HStack {
@@ -48,26 +48,26 @@ struct WeekView: View {
     }
 
     private func addWeek() {
-        let newWeek = Week(weekNumber: program.weeks.count + 1)
+        let newWeek = Week(weekNumber: mesocycle.weeks.count + 1)
         withAnimation {
-            program.weeks.append(newWeek)
+            mesocycle.weeks.append(newWeek)
         }
         try? modelContext.save()
     }
 
     private func deleteWeek(at indexSet: IndexSet) {
         withAnimation {
-            program.weeks.sort { $0.creationDate < $1.creationDate }
+            mesocycle.weeks.sort { $0.creationDate < $1.creationDate }
 
             for index in indexSet.sorted(by: >) {
-                let objectId = program.weeks[index].persistentModelID
+                let objectId = mesocycle.weeks[index].persistentModelID
                 let weekToDelete = modelContext.model(for: objectId)
                 modelContext.delete(weekToDelete)
-                program.weeks.remove(at: index)
+                mesocycle.weeks.remove(at: index)
             }
 
-            for index in program.weeks.indices {
-                program.weeks[index].weekNumber = index + 1
+            for index in mesocycle.weeks.indices {
+                mesocycle.weeks[index].weekNumber = index + 1
             }
 
             try? modelContext.save()

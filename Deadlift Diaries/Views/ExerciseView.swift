@@ -93,48 +93,53 @@ struct ExerciseView: View {
 struct DisplayExercises: View {
     @Bindable var exercise: Exercise
 
-    @State private var weight: String = ""
+    @State private var weight: Double = 0.0
     @State private var setNumber: String = ""
     @State private var repNumber: String = ""
-    @State private var rest: String = ""
+    @State private var rest: Int = 0
+    
+    @State private var weightUnit: Unit = Unit(symbol: isMetricSystem() ? "kg" : "lbs")
+    @State private var timeUnit: Unit = Unit(symbol: "sec")
 
     var body: some View {
         VStack {
             TextField("exercise_name".localized(comment: "Exercise Name"), text: $exercise.name)
             HStack {
                 Text("weight".localized(comment: "Weight"))
-                TextField("0", text: $weight)
+                
+                TextFieldWithUnitDouble(value: $weight, unit: $weightUnit)
                     .keyboardType(.decimalPad)
-                    .onChange(of: weight) { oldValue, newValue in
-                        let filtered = newValue.filter { $0.isNumber || $0 == "." }
-                        if filtered != newValue {
-                            self.weight = filtered
-                        }
-
-                        if let numericValue = Int(filtered) {
-                            exercise.weight = numericValue
-                        }
+                    .onChange(of: weight) { _, _ in
+                        exercise.weight = weight
                     }
                     .onAppear {
-                        weight = (exercise.weight == 0) ? "" : String(exercise.weight)
+                        weight = exercise.weight
                     }
-                Text(isMetricSystem() ? "kg" : "lbs")
-                    .padding(.leading, -200)
+                
+                Spacer()
+                
+//                TextField("0", text: $weight)
+//                    .keyboardType(.decimalPad)
+//                    .onChange(of: weight) { oldValue, newValue in
+//                        let filtered = newValue.filter { $0.isNumber || $0 == "." }
+//                        if filtered != newValue {
+//                            self.weight = filtered
+//                        }
+//
+//                        if let numericValue = Int(filtered) {
+//                            exercise.weight = numericValue
+//                        }
+//                    }
+//                    .onAppear {
+//                        weight = (exercise.weight == 0) ? "" : String(exercise.weight)
+//                    }
+//                Text(isMetricSystem() ? "kg" : "lbs")
+//                    .padding(.leading, -200)
             }
             HStack {
                 Text("sets".localized(comment: "Sets"))
                 TextField("0", text: $setNumber)
-                    .keyboardType(.decimalPad)
-                    .onChange(of: setNumber) { oldValue, newValue in
-                        let filtered = newValue.filter { $0.isNumber }
-                        if filtered != newValue {
-                            self.setNumber = filtered
-                        }
-
-                        if let numericValue = Int(filtered) {
-                            exercise.sets = numericValue
-                        }
-                    }
+                    .keyboardType(.numberPad)
                     .onAppear {
                         setNumber = (exercise.sets == 0) ? "" : String(exercise.sets)
                     }
@@ -142,40 +147,42 @@ struct DisplayExercises: View {
             HStack {
                 Text("reps".localized(comment: "Reps"))
                 TextField("0", text: $repNumber)
-                    .keyboardType(.decimalPad)
-                    .onChange(of: repNumber) { oldValue, newValue in
-                        let filtered = newValue.filter { $0.isNumber }
-                        if filtered != newValue {
-                            self.repNumber = filtered
-                        }
-
-                        if let numericValue = Int(filtered) {
-                            exercise.reps = numericValue
-                        }
-                    }
+                    .keyboardType(.numberPad)
                     .onAppear {
                         repNumber = (exercise.reps == 0) ? "" : String(exercise.reps)
                     }
             }
             HStack {
                 Text("rest".localized(comment: "Rest"))
-                TextField("0", text: $rest)
-                    .keyboardType(.decimalPad)
-                    .onChange(of: rest) { oldValue, newValue in
-                        let filtered = newValue.filter { $0.isNumber || $0 == "." }
-                        if filtered != newValue {
-                            self.rest = filtered
-                        }
-
-                        if let numericValue = Double(filtered) {
-                            exercise.rest = numericValue
-                        }
+                
+                TextFieldWithUnitInt(value: $rest, unit: $timeUnit)
+                    .keyboardType(.numberPad)
+                    .onChange(of: rest) { _, _ in
+                        exercise.rest = rest
                     }
                     .onAppear {
-                        rest = (exercise.rest == 0.0) ? "" : String(exercise.rest)
+                        rest = exercise.rest
                     }
-                Text("sec".localized(comment: "sec"))
-                    .padding(.leading, -170)
+                
+                Spacer()
+                
+//                TextField("0", text: $rest)
+//                    .keyboardType(.decimalPad)
+//                    .onChange(of: rest) { oldValue, newValue in
+//                        let filtered = newValue.filter { $0.isNumber || $0 == "." }
+//                        if filtered != newValue {
+//                            self.rest = filtered
+//                        }
+//
+//                        if let numericValue = Double(filtered) {
+//                            exercise.rest = numericValue
+//                        }
+//                    }
+//                    .onAppear {
+//                        rest = (exercise.rest == 0.0) ? "" : String(exercise.rest)
+//                    }
+//                Text("sec".localized(comment: "sec"))
+//                    .padding(.leading, -170)
             }
         }
     }
