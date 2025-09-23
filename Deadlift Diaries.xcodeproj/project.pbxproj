@@ -51,7 +51,6 @@
 				463AEADB2DF632CB00F1189B /* Localizable.xcstrings */,
 				463EC1B42DF4BCC200ED7B0F /* PrivacyInfo.xcprivacy */,
 				463EC1AD2DF37D5000ED7B0F /* README.md */,
-				46F54CC62E8160AC0056FF55 /* Deadlift Diaries.app */,
 			);
 			sourceTree = "<group>";
 		};

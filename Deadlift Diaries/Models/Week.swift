@@ -11,16 +11,17 @@ import SwiftData
 @Model
 final class Week {
     @Attribute(.unique) var id: UUID
-
-    var weekNumber: Int
-    var creationDate: Double
-
+    
+    var number: Int
+    var startDate: Date
+    var mesocycle: Mesocycle?
+    
     @Relationship(deleteRule: .cascade) var workouts: [Workout]
-
-    init(weekNumber: Int, workouts: [Workout] = []) {
+    
+    init(number: Int, startDate: Date) {
         self.id = UUID()
-        self.weekNumber = weekNumber
-        self.creationDate = Date().timeIntervalSince1970
-        self.workouts = workouts
+        self.number = number
+        self.startDate = startDate
+        self.workouts = []
     }
 }

@@ -5,163 +5,155 @@
 //  Created by Jerroder on 2025-06-06.
 //
 
-import SwiftData
 import SwiftUI
+import SwiftData
 
 struct MesocycleView: View {
     @Environment(\.modelContext) private var modelContext
-    @Environment(\.colorScheme) var colorScheme
-
+    @Environment(\.editMode) private var editMode
     @Query(sort: \Mesocycle.orderIndex) private var mesocycles: [Mesocycle]
     
-    @State private var isEditing = false
-
-    @FocusState private var focusedField: UUID?
-
+    @State private var isShowingMesocycleSheet = false
+    @State private var selectedMesocycle: Mesocycle?
+    @State private var mesocycleName = ""
+    @State private var mesocycleStartDate = Date()
+    @State private var mesocycleNumberOfWeeks = 4
+    
     var body: some View {
         NavigationStack {
             List {
                 ForEach(mesocycles) { mesocycle in
-                    DisplayMesocycles(mesocycle: mesocycle, focusedField: $focusedField)
+                    if editMode?.wrappedValue.isEditing == true {
+                        Button(action: {
+                            selectedMesocycle = mesocycle
+                            mesocycleName = mesocycle.name
+                            mesocycleStartDate = mesocycle.startDate
+                            mesocycleNumberOfWeeks = mesocycle.numberOfWeeks
+                            isShowingMesocycleSheet = true
+                        }) {
+                            MesocycleRow(mesocycle: mesocycle)
+                                .contentShape(Rectangle())
+                        }
+                        .buttonStyle(PlainButtonStyle())
+                    } else {
+                        NavigationLink {
+                            WeekView(mesocycle: mesocycle)
+                        } label: {
+                            MesocycleRow(mesocycle: mesocycle)
+                                .contentShape(Rectangle())
+                        }
+                    }
                 }
-                .onDelete(perform: deleteMesocycle)
-                .onMove(perform: moveMesocycle)
+                .onDelete(perform: deleteMesocycles)
             }
-            .background(Color(colorScheme == .light ? UIColor.secondarySystemBackground : UIColor.systemBackground))
-            .navigationTitle("cycles".localized(comment: "Cycles"))
+            .navigationTitle("Mesocycles")
             .toolbar {
-                ToolbarItem(placement: .topBarLeading) {
-                    Button(action: {
-                        withAnimation {
-                            isEditing.toggle()
+                ToolbarItem(placement: .navigationBarLeading) {
+                    EditButton()
+                }
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("", systemImage: "plus", action: {
+                        selectedMesocycle = nil
+                        mesocycleName = ""
+                        mesocycleStartDate = Date()
+                        mesocycleNumberOfWeeks = 4
+                        isShowingMesocycleSheet = true
+                    })
+                }
+            }
+            .sheet(isPresented: $isShowingMesocycleSheet) {
+                NavigationStack {
+                    Form {
+                        TextField("Name", text: $mesocycleName)
+                            .withTextFieldToolbar()
+                        DatePicker("Start Date", selection: $mesocycleStartDate, displayedComponents: .date)
+                        Stepper("Number of Weeks: \(mesocycleNumberOfWeeks)", value: $mesocycleNumberOfWeeks, in: 1...12)
+                    }
+                    .navigationTitle(selectedMesocycle == nil ? "New Mesocycle" : "Edit Mesocycle")
+                    .toolbar {
+                        ToolbarItem(placement: .confirmationAction) {
+                            Button("", systemImage: "checkmark") {
+                                if let mesocycle = selectedMesocycle {
+                                    mesocycle.name = mesocycleName
+                                    mesocycle.startDate = mesocycleStartDate
+                                    updateWeeks(for: mesocycle, newStartDate: mesocycleStartDate, newWeekCount: mesocycleNumberOfWeeks)
+                                } else {
+                                    let orderIndex = (mesocycles.map { $0.orderIndex }.max() ?? 0) + 1
+                                    let mesocycle = Mesocycle(
+                                        name: mesocycleName,
+                                        startDate: mesocycleStartDate,
+                                        numberOfWeeks: mesocycleNumberOfWeeks,
+                                        orderIndex: orderIndex
+                                    )
+                                    modelContext.insert(mesocycle)
+                                }
+                                isShowingMesocycleSheet = false
+                            }
                         }
-                    }) {
-                        Text(isEditing ? "done".localized(comment: "Done") : "edit".localized(comment: "Edit"))
+                        ToolbarItem(placement: .cancellationAction) {
+                            Button("", systemImage: "xmark") {
+                                isShowingMesocycleSheet = false
+                            }
+                        }
                     }
                 }
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button(action: addMesocycle) {
-                        Image(systemName: "plus")
-                    }
-                }
             }
-            .environment(\.editMode, .constant(isEditing ? EditMode.active : EditMode.inactive))
-        }
-    }
-
-    private func addMesocycle() {
-        let newCycle = Mesocycle(orderIndex: mesocycles.count)
-        withAnimation {
-            modelContext.insert(newCycle)
-        }
-        focusedField = newCycle.id
-
-        try? modelContext.save()
-    }
-
-    private func deleteMesocycle(at indexSet: IndexSet) {
-        withAnimation {
-            let mesocyclesToDelete = indexSet.map { mesocycles[$0] }
-            
-            for mesocycle in mesocyclesToDelete {
-                modelContext.delete(mesocycle)
-            }
-
-            try? modelContext.save()
-
-            for index in mesocycles.indices {
-                mesocycles[index].orderIndex = index
-            }
-            
-            try? modelContext.save()
+            .environment(\.editMode, Binding(
+                get: { editMode?.wrappedValue ?? .inactive },
+                set: { editMode?.wrappedValue = $0 }
+            ))
         }
     }
     
-    private func moveMesocycle(from source: IndexSet, to destination: Int) {
-        print("test")
-        withAnimation {
-            let mesocycles = mesocycles // Capture the current state of mesocycles
-            
-            // Calculate the new indices after moving
-            let newIndices = mesocycles.indices.map { index -> Int in
-                if index < destination && !source.contains(index) {
-                    return index
-                } else if index >= destination && !source.contains(index) {
-                    return index + source.count
-                } else {
-                    return index - source.first! + destination
-                }
+    private func updateWeeks(for mesocycle: Mesocycle, newStartDate: Date, newWeekCount: Int) {
+        let currentWeekCount = mesocycle.weeks.count
+        
+        for (index, week) in mesocycle.weeks.sorted(by: { $0.number < $1.number }).enumerated() {
+            week.startDate = Calendar.current.date(byAdding: .day, value: index * 7, to: newStartDate)!
+        }
+        
+        if newWeekCount > currentWeekCount {
+            for weekNumber in currentWeekCount + 1...newWeekCount {
+                let weekStartDate = Calendar.current.date(byAdding: .day, value: (weekNumber - 1) * 7, to: newStartDate)!
+                let newWeek = Week(number: weekNumber, startDate: weekStartDate)
+                mesocycle.weeks.append(newWeek)
+                newWeek.mesocycle = mesocycle
+                modelContext.insert(newWeek)
             }
-            
-            // Update the orderIndex based on the new indices
-            for index in mesocycles.indices {
-                mesocycles[index].orderIndex = newIndices[index]
+        } else if newWeekCount < currentWeekCount {
+            let weeksToRemove = mesocycle.weeks.sorted { $0.number > $1.number }.prefix(currentWeekCount - newWeekCount)
+            for week in weeksToRemove {
+                modelContext.delete(week)
             }
-            
-            // Save the changes to the model context
-            try? modelContext.save()
+        }
+        
+        mesocycle.numberOfWeeks = newWeekCount
+    }
+    
+    private func deleteMesocycles(offsets: IndexSet) {
+        for index in offsets {
+            modelContext.delete(mesocycles[index])
         }
     }
 }
 
-struct DisplayMesocycles: View {
-    @Bindable var mesocycle: Mesocycle
-    @FocusState.Binding var focusedField: UUID?
+struct MesocycleRow: View {
+    let mesocycle: Mesocycle
     
-    @State private var wakeUp = Date.now
-    @State private var unit: Unit = Unit(symbol: "weeks")
-    @State private var duration: Int = 0
-
     var body: some View {
-        Section {
-            VStack {
-                TextField("cycle_name".localized(comment: "Cycle Name"), text: $mesocycle.name) {
-                    focusedField = nil
-                }
-                .focused($focusedField, equals: mesocycle.id)
-
-                NavigationLink(destination: WeekView(mesocycle: mesocycle)) {
-                    VStack(alignment: .leading) {
-                        Text(weeksText)
-                        Text(nextWorkoutText)
-                    }
-                    .background(Color.clear)
-                    .cornerRadius(5)
-                }
-                
-                DatePicker("Please enter a date", selection: $wakeUp, in: Date.now..., displayedComponents: .date)
-                    .padding()
-                
-                HStack {
-                    TextFieldWithUnitInt(value: $duration, unit: $unit)
-                        .keyboardType(.numberPad)
-                        .onChange(of: duration) { _, _ in
-                            mesocycle.duration = duration
-                        }
-                        .onAppear {
-                            duration = mesocycle.duration
-                        }
+        VStack(alignment: .leading) {
+            Text(mesocycle.name)
+                .font(.headline)
+            HStack {
+                Text("Start: \(mesocycle.startDate.formatted(.dateTime.day().month().year()))")
+                    .font(.subheadline)
                 Spacer()
-                }
+                Text("\(mesocycle.weeks.count) weeks")
+                    .font(.subheadline)
+                    .foregroundColor(.gray)
             }
-            .padding(.vertical, 4)
         }
-    }
-    
-    private var weeksText: String {
-        let count = mesocycle.weeks.count
-        guard count > 0 else {
-            return ""
-        }
-
-        let weekOrWeeks = count == 1 ? "week".localized(comment: "week") : "weeks".localized(comment: "weeks")
-        return "\(count) \(weekOrWeeks)"
-    }
-
-    private var nextWorkoutText: String {
-        let workoutName = mesocycle.weeks.first?.workouts.first?.name ?? ""
-        let displayText = workoutName.isEmpty ? "no_workout_planned".localized(comment: "No workout planned") : "next_workout".localized(comment: "Next workout") + ": \(workoutName)"
-
-        return displayText
     }
 }
+
+

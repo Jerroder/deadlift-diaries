@@ -5,9 +5,8 @@
 //  Created by Jerroder on 2025-06-06.
 //
 
-import Foundation
-import SwiftData
 import SwiftUI
+import SwiftData
 
 func isMetricSystem() -> Bool {
     let locale = Locale.current
@@ -25,165 +24,151 @@ func isMetricSystem() -> Bool {
 }
 
 struct ExerciseView: View {
+    let workout: Workout
     @Environment(\.modelContext) private var modelContext
-    @Environment(\.dismiss) private var dismiss
-
-    @Bindable var workout: Workout
+    @Environment(\.editMode) private var editMode
     
-    @FocusState private var isWorkoutNameFocused: Bool
-
+    @State private var isShowingExerciseSheet = false
+    @State private var selectedExercise: Exercise?
+    @State private var exerciseName = ""
+    @State private var exerciseSets = 5
+    @State private var exerciseRestTime = 60
+    @State private var exerciseIsTimeBased = false
+    @State private var exerciseReps = 8
+    @State private var exerciseDuration = 30
+    @State private var exerciseWeight = 50.0
+    
+    private let unit: String = isMetricSystem() ? "kg" : "lbs"
+    
     var body: some View {
-        NavigationStack {
-            List {
+        List {
+            ForEach(workout.exercises.sorted { $0.orderIndex < $1.orderIndex }, id: \.id) { exercise in
                 Section {
-                    TextField("workout_name".localized(comment: "Workout Name"), text: $workout.name)
-                        .focused($isWorkoutNameFocused)
-                }
-                Section {
-                    ForEach(workout.exercises.sorted { $0.creationDate < $1.creationDate }) { exercise in
-                        DisplayExercises(exercise: exercise)
+                    if editMode?.wrappedValue.isEditing == true {
+                        Button(action: {
+                            selectedExercise = exercise
+                            exerciseName = exercise.name
+                            exerciseSets = exercise.sets
+                            exerciseRestTime = exercise.restTime
+                            exerciseIsTimeBased = exercise.isTimeBased
+                            exerciseReps = exercise.reps ?? 10
+                            exerciseDuration = exercise.duration ?? 30
+                            exerciseWeight = exercise.weight ?? 0.0
+                            isShowingExerciseSheet = true
+                        }) {
+                            ExerciseRow(exercise: exercise, unit: unit)
+                                .contentShape(Rectangle())
+                        }
+                        .buttonStyle(PlainButtonStyle())
+                    } else {
+                        ExerciseRow(exercise: exercise, unit: unit)
+                            .contentShape(Rectangle())
                     }
-                    .onDelete(perform: deleteExercise)
                 }
             }
-            .toolbar {
-                ToolbarItem {
-                    Button(action: {
-                        dismiss()
-                    }) {
-                        Text("done".localized(comment: "Done"))
+            .onDelete(perform: deleteExercises)
+        }
+        .navigationTitle(workout.name)
+        .toolbar {
+            ToolbarItemGroup(placement: .navigationBarTrailing) {
+                EditButton()
+                
+                Button("", systemImage: "plus", action: {
+                    selectedExercise = nil
+                    exerciseName = ""
+                    exerciseSets = 3
+                    exerciseRestTime = 60
+                    exerciseIsTimeBased = false
+                    exerciseReps = 10
+                    exerciseDuration = 30
+                    exerciseWeight = 0.0
+                    isShowingExerciseSheet = true
+                })
+            }
+        }
+        .sheet(isPresented: $isShowingExerciseSheet) {
+            NavigationStack {
+                Form {
+                    TextField("Exercise Name", text: $exerciseName)
+                        .withTextFieldToolbar()
+                    Stepper("Sets: \(exerciseSets)", value: $exerciseSets, in: 1...20)
+                    Stepper("Rest Time (sec): \(exerciseRestTime)", value: $exerciseRestTime, in: 10...300, step: 10)
+                    Toggle("Time Based", isOn: $exerciseIsTimeBased)
+                    if exerciseIsTimeBased {
+                        Stepper("Duration (sec): \(exerciseDuration)", value: $exerciseDuration, in: 10...600, step: 10)
+                    } else {
+                        Stepper("Reps: \(exerciseReps)", value: $exerciseReps, in: 1...50)
+                        Stepper("Weight (\(unit)): \(exerciseWeight, specifier: "%.1f")", value: $exerciseWeight, in: 0...200, step: 2.5)
                     }
                 }
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button(action: addExercise) {
-                        Image(systemName: "plus")
+                .navigationTitle(selectedExercise == nil ? "New Exercise" : "Edit Exercise")
+                .toolbar {
+                    ToolbarItem(placement: .confirmationAction) {
+                        Button("", systemImage: "checkmark") {
+                            if let exercise = selectedExercise {
+                                exercise.name = exerciseName
+                                exercise.sets = exerciseSets
+                                exercise.restTime = exerciseRestTime
+                                exercise.isTimeBased = exerciseIsTimeBased
+                                exercise.reps = exerciseIsTimeBased ? nil : exerciseReps
+                                exercise.duration = exerciseIsTimeBased ? exerciseDuration : nil
+                                exercise.weight = exerciseIsTimeBased ? nil : exerciseWeight
+                            } else {
+                                let orderIndex = (workout.exercises.map { $0.orderIndex }.max() ?? 0) + 1
+                                let exercise = Exercise(
+                                    name: exerciseName,
+                                    weight: exerciseIsTimeBased ? nil : exerciseWeight,
+                                    sets: exerciseSets,
+                                    reps: exerciseIsTimeBased ? nil : exerciseReps,
+                                    duration: exerciseIsTimeBased ? exerciseDuration : nil,
+                                    restTime: exerciseRestTime,
+                                    isTimeBased: exerciseIsTimeBased,
+                                    orderIndex: orderIndex
+                                )
+                                workout.exercises.append(exercise)
+                                exercise.workout = workout
+                                modelContext.insert(exercise)
+                            }
+                            isShowingExerciseSheet = false
+                        }
+                    }
+                    ToolbarItem(placement: .cancellationAction) {
+                        Button("", systemImage: "xmark") {
+                            isShowingExerciseSheet = false
+                        }
                     }
                 }
             }
         }
-        .onAppear {
-            isWorkoutNameFocused = workout.name.isEmpty // only focus the TextField if workout.name is empty
-        }
+        .environment(\.editMode, Binding(
+            get: { editMode?.wrappedValue ?? .inactive },
+            set: { editMode?.wrappedValue = $0 }
+        ))
     }
     
-    private func addExercise() {
-        let newExercise = Exercise()
-        withAnimation {
-            workout.exercises.append(newExercise)
-        }
-        try? modelContext.save()
-    }
-    
-    private func deleteExercise(at indexSet: IndexSet) {
-        withAnimation {
-            workout.exercises.sort { $0.creationDate < $1.creationDate }
-
-            for index in indexSet.sorted(by: >) {
-                let objectId = workout.exercises[index].persistentModelID
-                let exerciseToDelete = modelContext.model(for: objectId)
-                modelContext.delete(exerciseToDelete)
-                workout.exercises.remove(at: index)
-            }
-
-            try? modelContext.save()
+    private func deleteExercises(offsets: IndexSet) {
+        for index in offsets {
+            modelContext.delete(workout.exercises[index])
         }
     }
 }
 
-struct DisplayExercises: View {
-    @Bindable var exercise: Exercise
-
-    @State private var weight: Double = 0.0
-    @State private var setNumber: String = ""
-    @State private var repNumber: String = ""
-    @State private var rest: Int = 0
+struct ExerciseRow: View {
+    let exercise: Exercise
+    let unit: String
     
-    @State private var weightUnit: Unit = Unit(symbol: isMetricSystem() ? "kg" : "lbs")
-    @State private var timeUnit: Unit = Unit(symbol: "sec")
-
     var body: some View {
-        VStack {
-            TextField("exercise_name".localized(comment: "Exercise Name"), text: $exercise.name)
-            HStack {
-                Text("weight".localized(comment: "Weight"))
-                
-                TextFieldWithUnitDouble(value: $weight, unit: $weightUnit)
-                    .keyboardType(.decimalPad)
-                    .onChange(of: weight) { _, _ in
-                        exercise.weight = weight
-                    }
-                    .onAppear {
-                        weight = exercise.weight
-                    }
-                
-                Spacer()
-                
-//                TextField("0", text: $weight)
-//                    .keyboardType(.decimalPad)
-//                    .onChange(of: weight) { oldValue, newValue in
-//                        let filtered = newValue.filter { $0.isNumber || $0 == "." }
-//                        if filtered != newValue {
-//                            self.weight = filtered
-//                        }
-//
-//                        if let numericValue = Int(filtered) {
-//                            exercise.weight = numericValue
-//                        }
-//                    }
-//                    .onAppear {
-//                        weight = (exercise.weight == 0) ? "" : String(exercise.weight)
-//                    }
-//                Text(isMetricSystem() ? "kg" : "lbs")
-//                    .padding(.leading, -200)
+        HStack {
+            VStack(alignment: .leading) {
+                Text(exercise.name)
+                    .font(.headline)
+                if exercise.isTimeBased {
+                    Text("Duration: \(exercise.duration ?? 0) sec, Sets: \(exercise.sets), Rest: \(exercise.restTime) sec")
+                } else {
+                    Text("Weight: \(String(format: "%.1f", exercise.weight ?? 0)) \(unit), Sets: \(exercise.sets), Reps: \(exercise.reps ?? 0), Rest: \(exercise.restTime) sec")
+                }
             }
-            HStack {
-                Text("sets".localized(comment: "Sets"))
-                TextField("0", text: $setNumber)
-                    .keyboardType(.numberPad)
-                    .onAppear {
-                        setNumber = (exercise.sets == 0) ? "" : String(exercise.sets)
-                    }
-            }
-            HStack {
-                Text("reps".localized(comment: "Reps"))
-                TextField("0", text: $repNumber)
-                    .keyboardType(.numberPad)
-                    .onAppear {
-                        repNumber = (exercise.reps == 0) ? "" : String(exercise.reps)
-                    }
-            }
-            HStack {
-                Text("rest".localized(comment: "Rest"))
-                
-                TextFieldWithUnitInt(value: $rest, unit: $timeUnit)
-                    .keyboardType(.numberPad)
-                    .onChange(of: rest) { _, _ in
-                        exercise.rest = rest
-                    }
-                    .onAppear {
-                        rest = exercise.rest
-                    }
-                
-                Spacer()
-                
-//                TextField("0", text: $rest)
-//                    .keyboardType(.decimalPad)
-//                    .onChange(of: rest) { oldValue, newValue in
-//                        let filtered = newValue.filter { $0.isNumber || $0 == "." }
-//                        if filtered != newValue {
-//                            self.rest = filtered
-//                        }
-//
-//                        if let numericValue = Double(filtered) {
-//                            exercise.rest = numericValue
-//                        }
-//                    }
-//                    .onAppear {
-//                        rest = (exercise.rest == 0.0) ? "" : String(exercise.rest)
-//                    }
-//                Text("sec".localized(comment: "sec"))
-//                    .padding(.leading, -170)
-            }
+            Spacer()
         }
     }
 }

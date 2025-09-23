@@ -5,91 +5,102 @@
 //  Created by Jerroder on 2025-06-06.
 //
 
-import SwiftData
 import SwiftUI
+import SwiftData
 
 struct WorkoutView: View {
+    let week: Week
     @Environment(\.modelContext) private var modelContext
+    @Environment(\.editMode) private var editMode
+    @State private var isShowingWorkoutSheet = false
+    @State private var selectedWorkout: Workout?
+    @State private var workoutName = ""
     
-    @Bindable var week: Week
-
-    @State private var selectedWorkout: Workout? = nil
-
     var body: some View {
-        VStack(alignment: .leading) {
-            List {
-                ForEach(week.workouts.sorted { $0.creationDate < $1.creationDate }, id: \.id) { workout in
-                    DisplayWorkouts(workout: workout)
-                        .onTapGesture {
+        List {
+            ForEach(week.workouts.sorted { $0.orderIndex < $1.orderIndex }) { workout in
+                Section {
+                    if editMode?.wrappedValue.isEditing == true {
+                        Button(action: {
                             selectedWorkout = workout
+                            workoutName = workout.name
+                            isShowingWorkoutSheet = true
+                        }) {
+                            HStack {
+                                Text(workout.name)
+                                    .font(.headline)
+                                Spacer()
+                            }
+                            .contentShape(Rectangle())
                         }
+                        .buttonStyle(PlainButtonStyle())
+                    } else {
+                        NavigationLink {
+                            ExerciseView(workout: workout)
+                        } label: {
+                            HStack {
+                                Text(workout.name)
+                                    .font(.headline)
+                                Spacer()
+                            }
+                            .contentShape(Rectangle())
+                        }
+                    }
                 }
-                .onDelete(perform: deleteWorkout)
             }
+            .onDelete(perform: deleteWorkouts)
         }
-        .listStyle(PlainListStyle())
-        .navigationTitle("week".localized(comment: "Week") + " \(week.weekNumber)")
+        .navigationTitle("Week \(week.number)")
         .toolbar {
-            ToolbarItem(placement: .topBarTrailing) {
-                HStack {
-                    Button(action: {
-                        print("Edit button tapped!")
-                    }) {
-                        Text("edit".localized(comment: "Edit"))
+            ToolbarItemGroup(placement: .navigationBarTrailing) {
+                EditButton()
+                
+                Button("", systemImage: "plus") {
+                    selectedWorkout = nil
+                    workoutName = ""
+                    isShowingWorkoutSheet = true
+                }
+            }
+        }
+        .sheet(isPresented: $isShowingWorkoutSheet) {
+            NavigationStack {
+                Form {
+                    TextField("Workout Name", text: $workoutName)
+                        .withTextFieldToolbar()
+                }
+                .navigationTitle(selectedWorkout == nil ? "New Workout" : "Rename Workout")
+                .toolbar {
+                    ToolbarItem(placement: .confirmationAction) {
+                        Button("", systemImage: "checkmark") {
+                            if let workout = selectedWorkout {
+                                workout.name = workoutName
+                            } else {
+                                let orderIndex = (week.workouts.map { $0.orderIndex }.max() ?? 0) + 1
+                                let workout = Workout(name: workoutName, orderIndex: orderIndex)
+                                week.workouts.append(workout)
+                                workout.week = week
+                                modelContext.insert(workout)
+                            }
+                            isShowingWorkoutSheet = false
+                        }
                     }
-                    Button(action: addWorkout) {
-                        Image(systemName: "plus")
+                    ToolbarItem(placement: .cancellationAction) {
+                        Button("", systemImage: "xmark") {
+                            isShowingWorkoutSheet = false
+                        }
                     }
                 }
             }
         }
-        .sheet(item: $selectedWorkout) { workout in
-            ExerciseView(workout: workout)
-        }
+        .environment(\.editMode, Binding(
+            get: { editMode?.wrappedValue ?? .inactive },
+            set: { editMode?.wrappedValue = $0 }
+        ))
     }
-
-    private func addWorkout() {
-        let newWorkout = Workout()
-        withAnimation {
-            week.workouts.append(newWorkout)
-        }
-        selectedWorkout = newWorkout
-        try? modelContext.save()
-    }
-
-    private func deleteWorkout(at indexSet: IndexSet) {
-        withAnimation {
-            week.workouts.sort { $0.creationDate < $1.creationDate }
-
-            for index in indexSet.sorted(by: >) {
-                let objectId = week.workouts[index].persistentModelID
-                let workoutToDelete = modelContext.model(for: objectId)
-                modelContext.delete(workoutToDelete)
-                week.workouts.remove(at: index)
-            }
-
-            try? modelContext.save()
-        }
-    }
-}
-
-struct DisplayWorkouts: View {
-    @Bindable var workout: Workout
-
-    var body: some View {
-        VStack(alignment: .leading) {
-            Text(workout.name.isEmpty ? "workout".localized(comment: "Workout") : "\(workout.name)").font(.title)
-
-            ForEach(workout.exercises.sorted { $0.creationDate < $1.creationDate }, id: \.id) { exercise in
-                HStack {
-                    Image(systemName: "circle.fill")
-                        .font(.system(size: 4))
-                    let unit = isMetricSystem() ? "kg" : "lbs"
-                    let weight = exercise.weight == 0 ? "" : "\(exercise.weight)" + unit + " "
-                    Text("\(exercise.name) \(weight)- \(exercise.sets)x\(exercise.reps)")
-                }
-            }
-            .padding(.leading, 20)
+    
+    private func deleteWorkouts(offsets: IndexSet) {
+        for index in offsets {
+            modelContext.delete(week.workouts[index])
         }
     }
 }

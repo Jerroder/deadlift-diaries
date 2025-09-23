@@ -11,21 +11,26 @@ import SwiftData
 @Model
 final class Exercise  {
     @Attribute(.unique) var id: UUID
-
+    
     var name: String
-    var weight: Double
+    var weight: Double?
     var sets: Int
-    var reps: Int
-    var rest: Int
-    var creationDate: Double
-
-    init(name: String = "", weight: Double = 0.0, sets: Int = 0, reps: Int = 0, rest: Int = 0) {
+    var reps: Int?
+    var duration: Int?
+    var restTime: Int
+    var isTimeBased: Bool
+    var orderIndex: Int
+    var workout: Workout?
+    
+    init(name: String, weight: Double? = nil, sets: Int, reps: Int? = nil, duration: Int? = nil, restTime: Int, isTimeBased: Bool, orderIndex: Int) {
         self.id = UUID()
         self.name = name
         self.weight = weight
         self.sets = sets
         self.reps = reps
-        self.rest = rest
-        self.creationDate = Date().timeIntervalSince1970
+        self.duration = duration
+        self.restTime = restTime
+        self.isTimeBased = isTimeBased
+        self.orderIndex = orderIndex
     }
 }
