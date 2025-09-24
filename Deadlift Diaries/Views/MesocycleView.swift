@@ -11,7 +11,7 @@ import SwiftData
 struct MesocycleView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.editMode) private var editMode
-    @Query(sort: \Mesocycle.orderIndex) private var mesocycles: [Mesocycle]
+    @Query(sort: \Mesocycle.startDate) private var mesocycles: [Mesocycle]
     
     @State private var isShowingMesocycleSheet = false
     @State private var selectedMesocycle: Mesocycle?
@@ -23,24 +23,26 @@ struct MesocycleView: View {
         NavigationStack {
             List {
                 ForEach(mesocycles) { mesocycle in
-                    if editMode?.wrappedValue.isEditing == true {
-                        Button(action: {
-                            selectedMesocycle = mesocycle
-                            mesocycleName = mesocycle.name
-                            mesocycleStartDate = mesocycle.startDate
-                            mesocycleNumberOfWeeks = mesocycle.numberOfWeeks
-                            isShowingMesocycleSheet = true
-                        }) {
-                            MesocycleRow(mesocycle: mesocycle)
-                                .contentShape(Rectangle())
-                        }
-                        .buttonStyle(PlainButtonStyle())
-                    } else {
-                        NavigationLink {
-                            WeekView(mesocycle: mesocycle)
-                        } label: {
-                            MesocycleRow(mesocycle: mesocycle)
-                                .contentShape(Rectangle())
+                    Section {
+                        if editMode?.wrappedValue.isEditing == true {
+                            Button(action: {
+                                selectedMesocycle = mesocycle
+                                mesocycleName = mesocycle.name
+                                mesocycleStartDate = mesocycle.startDate
+                                mesocycleNumberOfWeeks = mesocycle.numberOfWeeks
+                                isShowingMesocycleSheet = true
+                            }) {
+                                MesocycleRow(mesocycle: mesocycle)
+                                    .contentShape(Rectangle())
+                            }
+                            .buttonStyle(PlainButtonStyle())
+                        } else {
+                            NavigationLink {
+                                WeekView(mesocycle: mesocycle)
+                            } label: {
+                                MesocycleRow(mesocycle: mesocycle)
+                                    .contentShape(Rectangle())
+                            }
                         }
                     }
                 }
@@ -77,6 +79,7 @@ struct MesocycleView: View {
                                     mesocycle.name = mesocycleName
                                     mesocycle.startDate = mesocycleStartDate
                                     updateWeeks(for: mesocycle, newStartDate: mesocycleStartDate, newWeekCount: mesocycleNumberOfWeeks)
+                                    updateWorkoutDates(for: mesocycle)
                                 } else {
                                     let orderIndex = (mesocycles.map { $0.orderIndex }.max() ?? 0) + 1
                                     let mesocycle = Mesocycle(
@@ -130,6 +133,19 @@ struct MesocycleView: View {
         mesocycle.numberOfWeeks = newWeekCount
     }
     
+    private func updateWorkoutDates(for mesocycle: Mesocycle) {
+        for week in mesocycle.weeks {
+            for workout in week.workouts {
+                let weekStartDate = week.startDate
+                let weekEndDate = Calendar.current.date(byAdding: .day, value: 6, to: weekStartDate)!
+                
+                if workout.date < weekStartDate || workout.date > weekEndDate {
+                    workout.date = weekStartDate
+                }
+            }
+        }
+    }
+    
     private func deleteMesocycles(offsets: IndexSet) {
         for index in offsets {
             modelContext.delete(mesocycles[index])
@@ -139,6 +155,11 @@ struct MesocycleView: View {
 
 struct MesocycleRow: View {
     let mesocycle: Mesocycle
+    
+    private var isPast: Bool {
+        let endDate = Calendar.current.date(byAdding: .day, value: (mesocycle.numberOfWeeks * 7) - 1, to: mesocycle.startDate)!
+        return Calendar.current.startOfDay(for: endDate) < Calendar.current.startOfDay(for: Date())
+    }
     
     var body: some View {
         VStack(alignment: .leading) {
@@ -150,9 +171,10 @@ struct MesocycleRow: View {
                 Spacer()
                 Text("\(mesocycle.weeks.count) weeks")
                     .font(.subheadline)
-                    .foregroundColor(.gray)
+                    .foregroundColor(Color(UIColor.secondaryLabel))
             }
         }
+        .opacity(isPast ? 0.5 : 1.0)
     }
 }
 

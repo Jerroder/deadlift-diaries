@@ -162,11 +162,30 @@ struct ExerciseRow: View {
             VStack(alignment: .leading) {
                 Text(exercise.name)
                     .font(.headline)
+                
                 if exercise.isTimeBased {
-                    Text("Duration: \(exercise.duration ?? 0) sec, Sets: \(exercise.sets), Rest: \(exercise.restTime) sec")
+                    Text("Duration: \(exercise.duration ?? 0) sec")
+                        .font(.subheadline)
+                        .foregroundColor(Color(UIColor.secondaryLabel))
                 } else {
-                    Text("Weight: \(String(format: "%.1f", exercise.weight ?? 0)) \(unit), Sets: \(exercise.sets), Reps: \(exercise.reps ?? 0), Rest: \(exercise.restTime) sec")
+                    Text("Weight: \(String(format: "%.1f", exercise.weight ?? 0)) \(unit)")
+                        .font(.subheadline)
+                        .foregroundColor(Color(UIColor.secondaryLabel))
                 }
+                
+                Text("Sets: \(exercise.sets)")
+                    .font(.subheadline)
+                    .foregroundColor(Color(UIColor.secondaryLabel))
+                
+                if !exercise.isTimeBased {
+                    Text("Reps: \(exercise.reps ?? 0)")
+                        .font(.subheadline)
+                        .foregroundColor(Color(UIColor.secondaryLabel))
+                }
+                
+                Text("Rest: \(exercise.restTime) sec")
+                    .font(.subheadline)
+                    .foregroundColor(Color(UIColor.secondaryLabel))
             }
             Spacer()
         }

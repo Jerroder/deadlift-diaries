@@ -15,6 +15,12 @@ struct WeekView: View {
     var body: some View {
         List {
             ForEach(mesocycle.weeks.sorted { $0.startDate < $1.startDate }, id: \.id) { week in
+                let isPast = {
+                    // Calculate if the week is in the past
+                    let endDate = Calendar.current.date(byAdding: .day, value: 6, to: week.startDate)!
+                    return Calendar.current.startOfDay(for: endDate) < Calendar.current.startOfDay(for: Date())
+                }()
+                
                 NavigationLink {
                     WorkoutView(week: week)
                 } label: {
@@ -24,6 +30,7 @@ struct WeekView: View {
                         Text("Start: \(week.startDate.formatted(.dateTime.day().month().year()))")
                             .font(.subheadline)
                     }
+                    .opacity(isPast ? 0.5 : 1.0)
                 }
             }
         }

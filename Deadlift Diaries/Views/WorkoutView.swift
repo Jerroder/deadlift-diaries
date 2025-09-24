@@ -15,10 +15,17 @@ struct WorkoutView: View {
     @State private var isShowingWorkoutSheet = false
     @State private var selectedWorkout: Workout?
     @State private var workoutName = ""
+    @State private var workoutDate = Date()
+    
+    private var weekDateRange: ClosedRange<Date> {
+        let startDate = week.startDate
+        let endDate = Calendar.current.date(byAdding: .day, value: 6, to: startDate)!
+        return startDate...endDate
+    }
     
     var body: some View {
         List {
-            ForEach(week.workouts.sorted { $0.orderIndex < $1.orderIndex }) { workout in
+            ForEach(week.workouts.sorted(by: { $0.date < $1.date })) { workout in
                 Section {
                     if editMode?.wrappedValue.isEditing == true {
                         Button(action: {
@@ -26,24 +33,16 @@ struct WorkoutView: View {
                             workoutName = workout.name
                             isShowingWorkoutSheet = true
                         }) {
-                            HStack {
-                                Text(workout.name)
-                                    .font(.headline)
-                                Spacer()
-                            }
-                            .contentShape(Rectangle())
+                            WorkoutRow(workout: workout)
+                                .contentShape(Rectangle())
                         }
                         .buttonStyle(PlainButtonStyle())
                     } else {
                         NavigationLink {
                             ExerciseView(workout: workout)
                         } label: {
-                            HStack {
-                                Text(workout.name)
-                                    .font(.headline)
-                                Spacer()
-                            }
-                            .contentShape(Rectangle())
+                            WorkoutRow(workout: workout)
+                                .contentShape(Rectangle())
                         }
                     }
                 }
@@ -58,6 +57,7 @@ struct WorkoutView: View {
                 Button("", systemImage: "plus") {
                     selectedWorkout = nil
                     workoutName = ""
+                    workoutDate = week.startDate
                     isShowingWorkoutSheet = true
                 }
             }
@@ -67,6 +67,12 @@ struct WorkoutView: View {
                 Form {
                     TextField("Workout Name", text: $workoutName)
                         .withTextFieldToolbar()
+                    DatePicker(
+                        "Date",
+                        selection: $workoutDate,
+                        in: weekDateRange,
+                        displayedComponents: .date
+                    )
                 }
                 .navigationTitle(selectedWorkout == nil ? "New Workout" : "Rename Workout")
                 .toolbar {
@@ -102,5 +108,31 @@ struct WorkoutView: View {
         for index in offsets {
             modelContext.delete(week.workouts[index])
         }
+    }
+    
+    private func calculateDateRange(for week: Week) -> ClosedRange<Date> {
+        let startDate = week.startDate
+        let endDate = Calendar.current.date(byAdding: .day, value: 6, to: startDate)!
+        return startDate...endDate
+    }
+}
+
+struct WorkoutRow: View {
+    let workout: Workout
+    
+    private var isPast: Bool {
+        Calendar.current.startOfDay(for: workout.date) < Calendar.current.startOfDay(for: Date())
+    }
+    
+    var body: some View {
+        HStack {
+            Text(workout.name)
+                .font(.headline)
+            Text("\(workout.date.formatted(.dateTime.day().month()))")
+                .font(.subheadline)
+                .foregroundColor(Color(UIColor.secondaryLabel))
+            Spacer()
+        }
+        .opacity(isPast ? 0.5 : 1.0)
     }
 }
