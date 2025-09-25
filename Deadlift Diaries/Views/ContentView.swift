@@ -24,9 +24,37 @@ struct ContentView: View {
     }
 }
 
+@MainActor
+extension ModelContainer {
+    static func preview(with objects: [any PersistentModel]) -> ModelContainer {
+        let config = ModelConfiguration(isStoredInMemoryOnly: true)
+        let container = try! ModelContainer(for: Mesocycle.self, Week.self, Workout.self, Exercise.self, configurations: config)
+        
+        objects.forEach { container.mainContext.insert($0) }
+        
+        return container
+    }
+}
+
 #Preview {
-    let config = ModelConfiguration(isStoredInMemoryOnly: true)
-    let container = try! ModelContainer(for: Mesocycle.self, configurations: config)
-    ContentView()
-        .modelContainer(container)
+    @MainActor func makePreview() -> some View {
+        let exercise1 = Exercise(name: "Deadlift", weight: 150, sets: 5, reps: 8, restTime: 120, isTimeBased: false, orderIndex: 1)
+        let exercise2 = Exercise(name: "Plank", weight: 150, sets: 5, duration: 60, restTime: 60, isTimeBased: true, orderIndex: 2)
+        let exercise3 = Exercise(name: "Bench Press", weight: 150, sets: 5, reps: 8, restTime: 120, isTimeBased: false, orderIndex: 3)
+        let sampleWorkout1 = Workout(name: "Workout 1", orderIndex: 1)
+        sampleWorkout1.exercises.append(exercise1)
+        sampleWorkout1.exercises.append(exercise2)
+        sampleWorkout1.exercises.append(exercise3)
+        let sampleWeek = Week(number: 1, startDate: Date.now)
+        sampleWeek.workouts.append(sampleWorkout1)
+        let sampleMesocycle = Mesocycle(name: "Hypertrophy", startDate: Date.now, numberOfWeeks: 0, orderIndex: 1)
+        sampleMesocycle.weeks.append(sampleWeek)
+        
+        let allObjects: [any PersistentModel] = [exercise1, exercise2, exercise3, sampleWorkout1, sampleWeek, sampleMesocycle]
+        let container = ModelContainer.preview(with: allObjects)
+        
+        return ContentView()
+            .modelContainer(container)
+    }
+    return makePreview()
 }
