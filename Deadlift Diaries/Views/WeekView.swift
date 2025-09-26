@@ -36,6 +36,8 @@ struct WeekView: View {
         ))
     }
     
+    // MARK: - Computed Properties for Views
+    
     @ViewBuilder
     private func weekRow(for week: Week) -> some View {
         let isPast = {
@@ -88,6 +90,8 @@ struct WeekView: View {
             mesocycle.numberOfWeeks = mesocycle.weeks.count
         }
     }
+    
+    // MARK: - Helper Functions
     
     private func deleteWeeks(offsets: IndexSet) {
         let weeks = mesocycle.weeks.sorted { $0.number < $1.number }

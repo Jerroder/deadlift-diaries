@@ -69,6 +69,8 @@ struct MesocycleView: View {
         }
     }
     
+    // MARK: - Computed Properties for Views
+    
     @ViewBuilder
     private func mesocycleRow(for mesocycle: Mesocycle) -> some View {
         Section {
@@ -140,6 +142,8 @@ struct MesocycleView: View {
             }
         }
     }
+    
+    // MARK: - Helper Functions
     
     private func calculateStartDateForNewMesocycle() -> Date {
         guard let lastMesocycle = mesocycles.sorted(by: { $0.orderIndex > $1.orderIndex }).first else {

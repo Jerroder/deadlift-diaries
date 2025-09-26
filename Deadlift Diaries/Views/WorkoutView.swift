@@ -16,6 +16,8 @@ struct WorkoutView: View {
     @State private var isAddingNewWorkout = false
     @State private var newWorkoutName = ""
     @State private var newWorkoutDate = Date()
+    @State private var selectedWorkoutIDs = Set<Workout.ID>()
+    @State private var isShowingWeekPicker = false
     
     private var weekDateRange: ClosedRange<Date> {
         let startDate = week.startDate
@@ -23,12 +25,20 @@ struct WorkoutView: View {
         return startDate...endDate
     }
     
+    private var availableWeeks: [Week] {
+        guard let mesocycle = week.mesocycle else { return [] }
+        return mesocycle.weeks
+            .filter { $0.id != week.id }
+            .sorted { $0.startDate < $1.startDate }
+    }
+    
+    private var sortedWorkouts: [Workout] {
+        week.workouts.sorted(by: { $0.date < $1.date })
+    }
+    
     var body: some View {
-        List {
-            ForEach(week.workouts.sorted(by: { $0.date < $1.date })) { workout in
-                workoutRow(for: workout)
-            }
-            .onDelete(perform: deleteWorkouts)
+        List(selection: $selectedWorkoutIDs) {
+            buildWorkoutRows()
         }
         .navigationTitle("Week \(week.number)")
         .navigationBarBackButtonHidden(editMode?.wrappedValue.isEditing == true)
@@ -46,10 +56,30 @@ struct WorkoutView: View {
         .sheet(isPresented: $isAddingNewWorkout) {
             workoutEditSheet(workout: nil)
         }
+        .sheet(isPresented: $isShowingWeekPicker) {
+            weekPickerSheet
+        }
         .environment(\.editMode, Binding(
             get: { editMode?.wrappedValue ?? .inactive },
             set: { editMode?.wrappedValue = $0 }
         ))
+    }
+    
+    // MARK: - Computed Properties for Views
+    
+    @ViewBuilder
+    private func buildWorkoutRows() -> some View {
+        ForEach(sortedWorkouts) { workout in
+            workoutRow(for: workout)
+                .swipeActions(edge: .trailing) {
+                    Button(role: .destructive) {
+                        deleteWorkout(workout)
+                    } label: {
+                        Label("Delete", systemImage: "trash")
+                    }
+                }
+                .tag(workout.id)
+        }
     }
     
     @ViewBuilder
@@ -139,14 +169,21 @@ struct WorkoutView: View {
     @ViewBuilder
     private var leadingToolbarItems: some View {
         if editMode?.wrappedValue.isEditing == true {
-            Menu {
-                Button(action: {
-                    print("test")
-                }) {
-                    Label("info".localized(comment: "Info"), systemImage: "info.circle")
+            if !selectedWorkoutIDs.isEmpty {
+                Menu {
+                    Button(action: {
+                        isShowingWeekPicker = true
+                    }) {
+                        Label("Copy", systemImage: "document.on.document")
+                    }
+                    Button(role: .destructive, action: {
+                        deleteSelectedWorkouts()
+                    }) {
+                        Label("Delete", systemImage: "trash")
+                    }
+                } label: {
+                    Image(systemName: "ellipsis.circle")
                 }
-            } label: {
-                Image(systemName: "ellipsis.circle")
             }
         }
     }
@@ -154,7 +191,6 @@ struct WorkoutView: View {
     @ViewBuilder
     private var trailingToolbarItems: some View {
         EditButton()
-        
         Button("", systemImage: "plus") {
             isAddingNewWorkout = true
             newWorkoutName = ""
@@ -162,10 +198,81 @@ struct WorkoutView: View {
         }
     }
     
-    private func deleteWorkouts(offsets: IndexSet) {
-        for index in offsets {
+    @ViewBuilder
+    private var weekPickerSheet: some View {
+        NavigationStack {
+            List(availableWeeks) { targetWeek in
+                Button(action: {
+                    copyWorkouts(to: targetWeek)
+                    isShowingWeekPicker = false
+                }) {
+                    VStack(alignment: .leading) {
+                        Text("Week \(targetWeek.number)")
+                            .font(.headline)
+                        Text("Start: \(targetWeek.startDate.formattedRelative())")
+                            .font(.subheadline)
+                            .foregroundColor(Color(UIColor.secondaryLabel))
+                    }
+                }
+            }
+            .navigationTitle("Copy to Week")
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") {
+                        isShowingWeekPicker = false
+                    }
+                }
+            }
+        }
+    }
+    
+    // MARK: - Helper Functions
+    
+    private func copyWorkouts(to targetWeek: Week) {
+        let selectedWorkouts = week.workouts.filter { selectedWorkoutIDs.contains($0.id) }
+        let maxOrderIndex = targetWeek.workouts.map { $0.orderIndex }.max() ?? 0
+        
+        for (index, workout) in selectedWorkouts.enumerated() {
+            let newWorkout = Workout(
+                name: workout.name,
+                orderIndex: maxOrderIndex + index + 1,
+                date: workout.date
+            )
+            targetWeek.workouts.append(newWorkout)
+            newWorkout.week = targetWeek
+            modelContext.insert(newWorkout)
+            
+            for exercise in workout.exercises {
+                let newExercise = Exercise(
+                    name: exercise.name,
+                    weight: exercise.weight,
+                    sets: exercise.sets,
+                    reps: exercise.reps,
+                    duration: exercise.duration,
+                    restTime: exercise.restTime,
+                    isTimeBased: exercise.isTimeBased,
+                    orderIndex: exercise.orderIndex
+                )
+                newWorkout.exercises.append(newExercise)
+                newExercise.workout = newWorkout
+                modelContext.insert(newExercise)
+            }
+        }
+        selectedWorkoutIDs.removeAll()
+    }
+    
+    private func deleteWorkout(_ workout: Workout) {
+        if let index = week.workouts.firstIndex(where: { $0.id == workout.id }) {
             modelContext.delete(week.workouts[index])
         }
+    }
+    
+    private func deleteSelectedWorkouts() {
+        let workoutsToDelete = week.workouts.filter { selectedWorkoutIDs.contains($0.id) }
+        for workout in workoutsToDelete {
+            modelContext.delete(workout)
+        }
+        selectedWorkoutIDs.removeAll()
     }
     
     private func calculateDefaultWorkoutDate() -> Date {
@@ -175,3 +282,4 @@ struct WorkoutView: View {
         return Calendar.current.date(byAdding: .day, value: 1, to: lastWorkout.date) ?? week.startDate
     }
 }
+

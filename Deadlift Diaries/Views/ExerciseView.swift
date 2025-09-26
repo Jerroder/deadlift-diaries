@@ -47,23 +47,13 @@ struct ExerciseView: View {
         return mesocycle.weeks.flatMap { $0.workouts }.filter { $0.id != workout.id }
     }
     
+    private var sortedExercises: [Exercise] {
+        workout.exercises.sorted { $0.orderIndex < $1.orderIndex }
+    }
+    
     var body: some View {
-        NavigationStack {
-            List(selection: $selectedExerciseIDs) {
-                ForEach(workout.exercises.sorted { $0.orderIndex < $1.orderIndex }, id: \.id) { exercise in
-                    exerciseRow(for: exercise)
-                        .swipeActions(edge: .trailing) {
-                            Button(role: .destructive) {
-                                if let index = workout.exercises.firstIndex(where: { $0.id == exercise.id }) {
-                                    workout.exercises.remove(at: index)
-                                }
-                            } label: {
-                                Label("Delete", systemImage: "trash")
-                            }
-                        }
-                        .tag(exercise.id)
-                }
-            }
+        List(selection: $selectedExerciseIDs) {
+            buildExerciseRows
         }
         .listStyle(.plain)
         .navigationTitle(workout.name)
@@ -89,6 +79,23 @@ struct ExerciseView: View {
             get: { editMode?.wrappedValue ?? .inactive },
             set: { editMode?.wrappedValue = $0 }
         ))
+    }
+    
+    // MARK: - Computed Properties for Views
+    
+    @ViewBuilder
+    private var buildExerciseRows: some View {
+        ForEach(sortedExercises, id: \.id) { exercise in
+            exerciseRow(for: exercise)
+                .swipeActions(edge: .trailing) {
+                    Button(role: .destructive) {
+                        deleteExercise(exercise)
+                    } label: {
+                        Label("Delete", systemImage: "trash")
+                    }
+                }
+                .tag(exercise.id)
+        }
     }
     
     @ViewBuilder
@@ -119,7 +126,7 @@ struct ExerciseView: View {
                             value: exercise == nil ? $newExerciseDuration : Binding(
                                 get: { exercise!.duration ?? 30 },
                                 set: { exercise!.duration = $0 }
-                            ), in: 10...600, step: 10)
+                            ), in: 10...600, step: 5)
                 } else {
                     Stepper("Reps: \(exercise == nil ? newExerciseReps : exercise!.reps ?? 10)",
                             value: exercise == nil ? $newExerciseReps : Binding(
@@ -205,12 +212,12 @@ struct ExerciseView: View {
         Button("", systemImage: "plus", action: {
             isAddingNewExercise = true
             newExerciseName = ""
-            newExerciseSets = 3
+            newExerciseSets = 5
             newExerciseRestTime = 60
             newExerciseIsTimeBased = false
-            newExerciseReps = 10
+            newExerciseReps = 8
             newExerciseDuration = 30
-            newExerciseWeight = 0.0
+            newExerciseWeight = 50.0
         })
     }
     
@@ -218,7 +225,19 @@ struct ExerciseView: View {
     private var workoutPickerSheet: some View {
         NavigationStack {
             let allWorkouts = workout.week?.mesocycle?.weeks.flatMap { $0.workouts } ?? []
-            let targetWorkouts = allWorkouts.filter { $0.id != workout.id }
+            let targetWorkouts = allWorkouts
+                .filter { $0.id != workout.id }
+                .sorted {
+                    guard let weekNumber1 = $0.week?.number,
+                          let weekNumber2 = $1.week?.number else {
+                        return $0.date < $1.date
+                    }
+                    if weekNumber1 != weekNumber2 {
+                        return weekNumber1 < weekNumber2
+                    } else {
+                        return $0.date < $1.date
+                    }
+                }
             
             List(targetWorkouts) { targetWorkout in
                 Button(action: {
@@ -245,6 +264,8 @@ struct ExerciseView: View {
         }
     }
     
+    // MARK: - Helper Functions
+    
     private func copyExercises(to targetWorkout: Workout) {
         let selectedExercises = workout.exercises.filter { selectedExerciseIDs.contains($0.id) }
         let maxOrderIndex = targetWorkout.exercises.map { $0.orderIndex }.max() ?? 0
@@ -265,6 +286,12 @@ struct ExerciseView: View {
             modelContext.insert(newExercise)
         }
         selectedExerciseIDs.removeAll()
+    }
+    
+    private func deleteExercise(_ exercise: Exercise) {
+        if let index = workout.exercises.firstIndex(where: { $0.id == exercise.id }) {
+            workout.exercises.remove(at: index)
+        }
     }
     
     private func deleteSelectedExercises() {
