@@ -13,59 +13,20 @@ struct MesocycleView: View {
     @Environment(\.editMode) private var editMode
     @Query(sort: \Mesocycle.startDate) private var mesocycles: [Mesocycle]
     
-    @State private var isShowingMesocycleSheet = false
     @State private var selectedMesocycle: Mesocycle?
-    @State private var mesocycleName = ""
-    @State private var mesocycleStartDate = Date()
-    @State private var mesocycleNumberOfWeeks = 4
+    @State private var isAddingNewMesocycle = false
+    @State private var newMesocycleName = ""
+    @State private var newMesocycleStartDate = Date()
+    @State private var newMesocycleNumberOfWeeks = 4
     
+    @ViewBuilder
     private var addMesocycleButton: some View {
         Button("", systemImage: "plus", action: {
-            selectedMesocycle = nil
-            mesocycleName = ""
-            mesocycleStartDate = calculateStartDateForNewMesocycle()
-            mesocycleNumberOfWeeks = 4
-            isShowingMesocycleSheet = true
+            isAddingNewMesocycle = true
+            newMesocycleName = ""
+            newMesocycleStartDate = calculateStartDateForNewMesocycle()
+            newMesocycleNumberOfWeeks = 4
         })
-    }
-    
-    private var mesocycleEditSheet: some View {
-        NavigationStack {
-            Form {
-                TextField("Name", text: $mesocycleName)
-                    .withTextFieldToolbar()
-                DatePicker("Start Date", selection: $mesocycleStartDate, displayedComponents: .date)
-                Stepper("Number of Weeks: \(mesocycleNumberOfWeeks)", value: $mesocycleNumberOfWeeks, in: 1...12)
-            }
-            .navigationTitle(selectedMesocycle == nil ? "New Mesocycle" : "Edit Mesocycle")
-            .toolbar {
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("", systemImage: "checkmark") {
-                        if let mesocycle = selectedMesocycle {
-                            mesocycle.name = mesocycleName
-                            mesocycle.startDate = mesocycleStartDate
-                            updateWeeks(for: mesocycle, newStartDate: mesocycleStartDate, newWeekCount: mesocycleNumberOfWeeks)
-                            updateWorkoutDates(for: mesocycle)
-                        } else {
-                            let orderIndex = (mesocycles.map { $0.orderIndex }.max() ?? 0) + 1
-                            let mesocycle = Mesocycle(
-                                name: mesocycleName,
-                                startDate: mesocycleStartDate,
-                                numberOfWeeks: mesocycleNumberOfWeeks,
-                                orderIndex: orderIndex
-                            )
-                            modelContext.insert(mesocycle)
-                        }
-                        isShowingMesocycleSheet = false
-                    }
-                }
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("", systemImage: "xmark") {
-                        isShowingMesocycleSheet = false
-                    }
-                }
-            }
-        }
     }
     
     var body: some View {
@@ -95,8 +56,11 @@ struct MesocycleView: View {
                     addMesocycleButton
                 }
             }
-            .sheet(isPresented: $isShowingMesocycleSheet) {
-                mesocycleEditSheet
+            .sheet(item: $selectedMesocycle) { mesocycle in
+                mesocycleEditSheet(mesocycle: mesocycle)
+            }
+            .sheet(isPresented: $isAddingNewMesocycle) {
+                mesocycleEditSheet(mesocycle: nil)
             }
             .environment(\.editMode, Binding(
                 get: { editMode?.wrappedValue ?? .inactive },
@@ -111,10 +75,6 @@ struct MesocycleView: View {
             if editMode?.wrappedValue.isEditing == true {
                 Button(action: {
                     selectedMesocycle = mesocycle
-                    mesocycleName = mesocycle.name
-                    mesocycleStartDate = mesocycle.startDate
-                    mesocycleNumberOfWeeks = mesocycle.weeks.count
-                    isShowingMesocycleSheet = true
                 }) {
                     MesocycleRow(mesocycle: mesocycle)
                         .contentShape(Rectangle())
@@ -126,6 +86,56 @@ struct MesocycleView: View {
                 } label: {
                     MesocycleRow(mesocycle: mesocycle)
                         .contentShape(Rectangle())
+                }
+            }
+        }
+    }
+    
+    @ViewBuilder
+    private func mesocycleEditSheet(mesocycle: Mesocycle?) -> some View {
+        NavigationStack {
+            Form {
+                TextField("Name", text: mesocycle == nil ? $newMesocycleName : Binding(
+                    get: { mesocycle!.name },
+                    set: { mesocycle!.name = $0 }
+                ))
+                .withTextFieldToolbar()
+                DatePicker("Start Date", selection: mesocycle == nil ? $newMesocycleStartDate : Binding(
+                    get: { mesocycle!.startDate },
+                    set: { mesocycle!.startDate = $0 }
+                ), displayedComponents: .date)
+                Stepper("Number of Weeks: \(mesocycle == nil ? newMesocycleNumberOfWeeks : mesocycle!.weeks.count)",
+                        value: mesocycle == nil ? $newMesocycleNumberOfWeeks : Binding(
+                            get: { mesocycle!.weeks.count },
+                            set: { _ in }
+                        ), in: 1...12)
+            }
+            .navigationTitle(mesocycle == nil ? "New Mesocycle" : "Edit Mesocycle")
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("", systemImage: "checkmark") {
+                        if let mesocycle = mesocycle {
+                            updateWeeks(for: mesocycle, newStartDate: mesocycle.startDate, newWeekCount: mesocycle.weeks.count)
+                            updateWorkoutDates(for: mesocycle)
+                        } else {
+                            let orderIndex = (mesocycles.map { $0.orderIndex }.max() ?? 0) + 1
+                            let mesocycle = Mesocycle(
+                                name: newMesocycleName,
+                                startDate: newMesocycleStartDate,
+                                numberOfWeeks: newMesocycleNumberOfWeeks,
+                                orderIndex: orderIndex
+                            )
+                            modelContext.insert(mesocycle)
+                        }
+                        selectedMesocycle = nil
+                        isAddingNewMesocycle = false
+                    }
+                }
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("", systemImage: "xmark") {
+                        selectedMesocycle = nil
+                        isAddingNewMesocycle = false
+                    }
                 }
             }
         }

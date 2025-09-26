@@ -12,10 +12,10 @@ struct WorkoutView: View {
     let week: Week
     @Environment(\.modelContext) private var modelContext
     @Environment(\.editMode) private var editMode
-    @State private var isShowingWorkoutSheet = false
     @State private var selectedWorkout: Workout?
-    @State private var workoutName = ""
-    @State private var workoutDate = Date()
+    @State private var isAddingNewWorkout = false
+    @State private var newWorkoutName = ""
+    @State private var newWorkoutDate = Date()
     
     private var weekDateRange: ClosedRange<Date> {
         let startDate = week.startDate
@@ -40,42 +40,11 @@ struct WorkoutView: View {
                 trailingToolbarItems
             }
         }
-        .sheet(isPresented: $isShowingWorkoutSheet) {
-            NavigationStack {
-                Form {
-                    TextField("Workout Name", text: $workoutName)
-                        .withTextFieldToolbar()
-                    DatePicker(
-                        "Date",
-                        selection: $workoutDate,
-                        in: weekDateRange,
-                        displayedComponents: .date
-                    )
-                }
-                .navigationTitle(selectedWorkout == nil ? "New Workout" : "Rename Workout")
-                .toolbar {
-                    ToolbarItem(placement: .confirmationAction) {
-                        Button("", systemImage: "checkmark") {
-                            if let workout = selectedWorkout {
-                                workout.name = workoutName
-                                workout.date = workoutDate
-                            } else {
-                                let orderIndex = (week.workouts.map { $0.orderIndex }.max() ?? 0) + 1
-                                let workout = Workout(name: workoutName, orderIndex: orderIndex, date: workoutDate)
-                                week.workouts.append(workout)
-                                workout.week = week
-                                modelContext.insert(workout)
-                            }
-                            isShowingWorkoutSheet = false
-                        }
-                    }
-                    ToolbarItem(placement: .cancellationAction) {
-                        Button("", systemImage: "xmark") {
-                            isShowingWorkoutSheet = false
-                        }
-                    }
-                }
-            }
+        .sheet(item: $selectedWorkout) { workout in
+            workoutEditSheet(workout: workout)
+        }
+        .sheet(isPresented: $isAddingNewWorkout) {
+            workoutEditSheet(workout: nil)
         }
         .environment(\.editMode, Binding(
             get: { editMode?.wrappedValue ?? .inactive },
@@ -91,8 +60,6 @@ struct WorkoutView: View {
             if editMode?.wrappedValue.isEditing == true {
                 Button(action: {
                     selectedWorkout = workout
-                    workoutName = workout.name
-                    isShowingWorkoutSheet = true
                 }) {
                     HStack {
                         Text(workout.name)
@@ -103,7 +70,7 @@ struct WorkoutView: View {
                         Spacer()
                     }
                     .opacity(isPast ? 0.5 : 1.0)
-                        .contentShape(Rectangle())
+                    .contentShape(Rectangle())
                 }
                 .buttonStyle(PlainButtonStyle())
             } else {
@@ -119,7 +86,51 @@ struct WorkoutView: View {
                         Spacer()
                     }
                     .opacity(isPast ? 0.5 : 1.0)
-                        .contentShape(Rectangle())
+                    .contentShape(Rectangle())
+                }
+            }
+        }
+    }
+    
+    @ViewBuilder
+    private func workoutEditSheet(workout: Workout?) -> some View {
+        NavigationStack {
+            Form {
+                TextField("Workout Name", text: workout == nil ? $newWorkoutName : Binding(
+                    get: { workout!.name },
+                    set: { workout!.name = $0 }
+                ))
+                .withTextFieldToolbar()
+                DatePicker(
+                    "Date",
+                    selection: workout == nil ? $newWorkoutDate : Binding(
+                        get: { workout!.date },
+                        set: { workout!.date = $0 }
+                    ),
+                    in: weekDateRange,
+                    displayedComponents: .date
+                )
+            }
+            .navigationTitle(workout == nil ? "New Workout" : "Rename Workout")
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("", systemImage: "checkmark") {
+                        if workout == nil {
+                            let orderIndex = (week.workouts.map { $0.orderIndex }.max() ?? 0) + 1
+                            let workout = Workout(name: newWorkoutName, orderIndex: orderIndex, date: newWorkoutDate)
+                            week.workouts.append(workout)
+                            workout.week = week
+                            modelContext.insert(workout)
+                        }
+                        selectedWorkout = nil
+                        isAddingNewWorkout = false
+                    }
+                }
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("", systemImage: "xmark") {
+                        selectedWorkout = nil
+                        isAddingNewWorkout = false
+                    }
                 }
             }
         }
@@ -145,10 +156,9 @@ struct WorkoutView: View {
         EditButton()
         
         Button("", systemImage: "plus") {
-            selectedWorkout = nil
-            workoutName = ""
-            workoutDate = calculateDefaultWorkoutDate()
-            isShowingWorkoutSheet = true
+            isAddingNewWorkout = true
+            newWorkoutName = ""
+            newWorkoutDate = calculateDefaultWorkoutDate()
         }
     }
     

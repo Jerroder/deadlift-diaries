@@ -28,15 +28,15 @@ struct ExerciseView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.editMode) private var editMode
     
-    @State private var isShowingExerciseSheet = false
     @State private var selectedExercise: Exercise?
-    @State private var exerciseName = ""
-    @State private var exerciseSets = 5
-    @State private var exerciseRestTime = 60
-    @State private var exerciseIsTimeBased = false
-    @State private var exerciseReps = 8
-    @State private var exerciseDuration = 30
-    @State private var exerciseWeight = 50.0
+    @State private var isAddingNewExercise = false
+    @State private var newExerciseName = ""
+    @State private var newExerciseSets = 5
+    @State private var newExerciseRestTime = 60
+    @State private var newExerciseIsTimeBased = false
+    @State private var newExerciseReps = 8
+    @State private var newExerciseDuration = 30
+    @State private var newExerciseWeight = 50.0
     @State private var selectedExerciseIDs = Set<Exercise.ID>()
     @State private var isShowingWorkoutPicker = false
     
@@ -76,8 +76,11 @@ struct ExerciseView: View {
                 trailingToolbarItems
             }
         }
-        .sheet(isPresented: $isShowingExerciseSheet) {
-            addExerciseSheet
+        .sheet(item: $selectedExercise) { exercise in
+            exerciseEditSheet(exercise: exercise)
+        }
+        .sheet(isPresented: $isAddingNewExercise) {
+            exerciseEditSheet(exercise: nil)
         }
         .sheet(isPresented: $isShowingWorkoutPicker) {
             workoutPickerSheet
@@ -89,18 +92,86 @@ struct ExerciseView: View {
     }
     
     @ViewBuilder
+    private func exerciseEditSheet(exercise: Exercise?) -> some View {
+        NavigationStack {
+            Form {
+                TextField("Exercise Name", text: exercise == nil ? $newExerciseName : Binding(
+                    get: { exercise!.name },
+                    set: { exercise!.name = $0 }
+                ))
+                .withTextFieldToolbar()
+                Stepper("Sets: \(exercise == nil ? newExerciseSets : exercise!.sets)",
+                        value: exercise == nil ? $newExerciseSets : Binding(
+                            get: { exercise!.sets },
+                            set: { exercise!.sets = $0 }
+                        ), in: 1...20)
+                Stepper("Rest Time (sec): \(exercise == nil ? newExerciseRestTime : exercise!.restTime)",
+                        value: exercise == nil ? $newExerciseRestTime : Binding(
+                            get: { exercise!.restTime },
+                            set: { exercise!.restTime = $0 }
+                        ), in: 10...300, step: 10)
+                Toggle("Time Based", isOn: exercise == nil ? $newExerciseIsTimeBased : Binding(
+                    get: { exercise!.isTimeBased },
+                    set: { exercise!.isTimeBased = $0 }
+                ))
+                if exercise == nil ? newExerciseIsTimeBased : exercise!.isTimeBased {
+                    Stepper("Duration (sec): \(exercise == nil ? newExerciseDuration : exercise!.duration ?? 30)",
+                            value: exercise == nil ? $newExerciseDuration : Binding(
+                                get: { exercise!.duration ?? 30 },
+                                set: { exercise!.duration = $0 }
+                            ), in: 10...600, step: 10)
+                } else {
+                    Stepper("Reps: \(exercise == nil ? newExerciseReps : exercise!.reps ?? 10)",
+                            value: exercise == nil ? $newExerciseReps : Binding(
+                                get: { exercise!.reps ?? 10 },
+                                set: { exercise!.reps = $0 }
+                            ), in: 1...50)
+                    Stepper("Weight (\(unit)): \(exercise == nil ? newExerciseWeight : exercise!.weight ?? 0.0, specifier: "%.1f")",
+                            value: exercise == nil ? $newExerciseWeight : Binding(
+                                get: { exercise!.weight ?? 0.0 },
+                                set: { exercise!.weight = $0 }
+                            ), in: 0...200, step: 2.5)
+                }
+            }
+            .navigationTitle(exercise == nil ? "New Exercise" : "Edit Exercise")
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("", systemImage: "checkmark") {
+                        if exercise == nil {
+                            let orderIndex = (workout.exercises.map { $0.orderIndex }.max() ?? 0) + 1
+                            let exercise = Exercise(
+                                name: newExerciseName,
+                                weight: newExerciseIsTimeBased ? nil : newExerciseWeight,
+                                sets: newExerciseSets,
+                                reps: newExerciseIsTimeBased ? nil : newExerciseReps,
+                                duration: newExerciseIsTimeBased ? newExerciseDuration : nil,
+                                restTime: newExerciseRestTime,
+                                isTimeBased: newExerciseIsTimeBased,
+                                orderIndex: orderIndex
+                            )
+                            workout.exercises.append(exercise)
+                            exercise.workout = workout
+                            modelContext.insert(exercise)
+                        }
+                        selectedExercise = nil
+                        isAddingNewExercise = false
+                    }
+                }
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("", systemImage: "xmark") {
+                        selectedExercise = nil
+                        isAddingNewExercise = false
+                    }
+                }
+            }
+        }
+    }
+    
+    @ViewBuilder
     private func exerciseRow(for exercise: Exercise) -> some View {
         if editMode?.wrappedValue.isEditing == true {
             Button(action: {
                 selectedExercise = exercise
-                exerciseName = exercise.name
-                exerciseSets = exercise.sets
-                exerciseRestTime = exercise.restTime
-                exerciseIsTimeBased = exercise.isTimeBased
-                exerciseReps = exercise.reps ?? 10
-                exerciseDuration = exercise.duration ?? 30
-                exerciseWeight = exercise.weight ?? 0.0
-                isShowingExerciseSheet = true
             }) {
                 ExerciseRow(exercise: exercise, unit: unit)
                     .contentShape(Rectangle())
@@ -114,18 +185,16 @@ struct ExerciseView: View {
     
     @ViewBuilder
     private var leadingToolbarItems: some View {
-        if editMode?.wrappedValue.isEditing == true {
-            if !selectedExerciseIDs.isEmpty {
-                Menu {
-                    Button("Copy", systemImage: "document.on.document") {
-                        isShowingWorkoutPicker = true
-                    }
-                    Button("Delete", systemImage: "trash", role: .destructive) {
-                        deleteSelectedExercises()
-                    }
-                } label: {
-                    Image(systemName: "ellipsis.circle")
+        if editMode?.wrappedValue.isEditing == true, !selectedExerciseIDs.isEmpty {
+            Menu {
+                Button("Copy", systemImage: "document.on.document") {
+                    isShowingWorkoutPicker = true
                 }
+                Button("Delete", systemImage: "trash", role: .destructive) {
+                    deleteSelectedExercises()
+                }
+            } label: {
+                Image(systemName: "ellipsis.circle")
             }
         }
     }
@@ -133,74 +202,16 @@ struct ExerciseView: View {
     @ViewBuilder
     private var trailingToolbarItems: some View {
         EditButton()
-        
         Button("", systemImage: "plus", action: {
-            selectedExercise = nil
-            exerciseName = ""
-            exerciseSets = 3
-            exerciseRestTime = 60
-            exerciseIsTimeBased = false
-            exerciseReps = 10
-            exerciseDuration = 30
-            exerciseWeight = 0.0
-            isShowingExerciseSheet = true
+            isAddingNewExercise = true
+            newExerciseName = ""
+            newExerciseSets = 3
+            newExerciseRestTime = 60
+            newExerciseIsTimeBased = false
+            newExerciseReps = 10
+            newExerciseDuration = 30
+            newExerciseWeight = 0.0
         })
-    }
-    
-    @ViewBuilder
-    private var addExerciseSheet: some View {
-        NavigationStack {
-            Form {
-                TextField("Exercise Name", text: $exerciseName)
-                    .withTextFieldToolbar()
-                Stepper("Sets: \(exerciseSets)", value: $exerciseSets, in: 1...20)
-                Stepper("Rest Time (sec): \(exerciseRestTime)", value: $exerciseRestTime, in: 10...300, step: 10)
-                Toggle("Time Based", isOn: $exerciseIsTimeBased)
-                if exerciseIsTimeBased {
-                    Stepper("Duration (sec): \(exerciseDuration)", value: $exerciseDuration, in: 10...600, step: 10)
-                } else {
-                    Stepper("Reps: \(exerciseReps)", value: $exerciseReps, in: 1...50)
-                    Stepper("Weight (\(unit)): \(exerciseWeight, specifier: "%.1f")", value: $exerciseWeight, in: 0...200, step: 2.5)
-                }
-            }
-            .navigationTitle(selectedExercise == nil ? "New Exercise" : "Edit Exercise")
-            .toolbar {
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("", systemImage: "checkmark") {
-                        if let exercise = selectedExercise {
-                            exercise.name = exerciseName
-                            exercise.sets = exerciseSets
-                            exercise.restTime = exerciseRestTime
-                            exercise.isTimeBased = exerciseIsTimeBased
-                            exercise.reps = exerciseIsTimeBased ? nil : exerciseReps
-                            exercise.duration = exerciseIsTimeBased ? exerciseDuration : nil
-                            exercise.weight = exerciseIsTimeBased ? nil : exerciseWeight
-                        } else {
-                            let orderIndex = (workout.exercises.map { $0.orderIndex }.max() ?? 0) + 1
-                            let exercise = Exercise(
-                                name: exerciseName,
-                                weight: exerciseIsTimeBased ? nil : exerciseWeight,
-                                sets: exerciseSets,
-                                reps: exerciseIsTimeBased ? nil : exerciseReps,
-                                duration: exerciseIsTimeBased ? exerciseDuration : nil,
-                                restTime: exerciseRestTime,
-                                isTimeBased: exerciseIsTimeBased,
-                                orderIndex: orderIndex
-                            )
-                            workout.exercises.append(exercise)
-                            exercise.workout = workout
-                            modelContext.insert(exercise)
-                        }
-                        isShowingExerciseSheet = false
-                    }
-                }
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("", systemImage: "xmark") {
-                        isShowingExerciseSheet = false
-                    }
-                }
-            }
-        }
     }
     
     @ViewBuilder
