@@ -18,6 +18,7 @@ struct MesocycleView: View {
     @State private var newMesocycleName = ""
     @State private var newMesocycleStartDate = Date()
     @State private var newMesocycleNumberOfWeeks = 4
+    @State private var selectedMesocycleIDs = Set<Mesocycle.ID>()
     
     @ViewBuilder
     private var addMesocycleButton: some View {
@@ -31,30 +32,28 @@ struct MesocycleView: View {
     
     var body: some View {
         NavigationStack {
-            List {
+            List(selection: $selectedMesocycleIDs) {
                 ForEach(mesocycles) { mesocycle in
                     mesocycleRow(for: mesocycle)
+                        .swipeActions(edge: .trailing) {
+                            Button(role: .destructive) {
+                                if let index = mesocycles.firstIndex(where: { $0.id == mesocycle.id }) {
+                                    modelContext.delete(mesocycles[index])
+                                }
+                            } label: {
+                                Label("Delete", systemImage: "trash")
+                            }
+                        }
+                        .tag(mesocycle.id)
                 }
-                .onDelete(perform: deleteMesocycles)
             }
             .navigationTitle("Mesocycles")
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
-                    if editMode?.wrappedValue.isEditing == false {
-                        Menu {
-                            Button(action: {
-                                print("test")
-                            }) {
-                                Label("info".localized(comment: "Info"), systemImage: "info.circle")
-                            }
-                        } label: {
-                            Image(systemName: "ellipsis.circle")
-                        }
-                    }
+                    leadingToolbarItems
                 }
                 ToolbarItemGroup(placement: .navigationBarTrailing) {
                     EditButton()
-                    
                     addMesocycleButton
                 }
             }
@@ -91,6 +90,34 @@ struct MesocycleView: View {
                     MesocycleRow(mesocycle: mesocycle)
                         .contentShape(Rectangle())
                 }
+            }
+        }
+    }
+    
+    @ViewBuilder
+    private var leadingToolbarItems: some View {
+        if editMode?.wrappedValue.isEditing == true {
+            if !selectedMesocycleIDs.isEmpty {
+                Menu {
+                    Button(action: duplicateSelectedMesocycles) {
+                        Label("Duplicate", systemImage: "plus.square.on.square")
+                    }
+                    Button(role: .destructive, action: deleteSelectedMesocycles) {
+                        Label("Delete", systemImage: "trash")
+                    }
+                } label: {
+                    Image(systemName: "ellipsis.circle")
+                }
+            }
+        } else {
+            Menu {
+                Button(action: {
+                    print("test")
+                }) {
+                    Label("info".localized(comment: "Info"), systemImage: "info.circle")
+                }
+            } label: {
+                Image(systemName: "ellipsis.circle")
             }
         }
     }
@@ -193,10 +220,71 @@ struct MesocycleView: View {
         }
     }
     
-    private func deleteMesocycles(offsets: IndexSet) {
-        for index in offsets {
-            modelContext.delete(mesocycles[index])
+    private func duplicateSelectedMesocycles() {
+        let selectedMesocycles = mesocycles.filter { selectedMesocycleIDs.contains($0.id) }
+        let maxOrderIndex = mesocycles.map { $0.orderIndex }.max() ?? 0
+        
+        for (index, mesocycle) in selectedMesocycles.enumerated() {
+            let newOrderIndex = maxOrderIndex + index + 1
+            let newStartDate = Calendar.current.date(byAdding: .day, value: mesocycle.numberOfWeeks * 7, to: mesocycle.startDate) ?? Date()
+            
+            let newMesocycle = Mesocycle(
+                name: "\(mesocycle.name) Copy",
+                startDate: newStartDate,
+                numberOfWeeks: 0,
+                orderIndex: newOrderIndex
+            )
+            modelContext.insert(newMesocycle)
+            
+            for week in mesocycle.weeks.sorted(by: { $0.number < $1.number }) {
+                let newWeekStartDate = Calendar.current.date(byAdding: .day, value: (week.number - 1) * 7, to: newStartDate)!
+                let newWeek = Week(number: week.number, startDate: newWeekStartDate)
+                newMesocycle.weeks.append(newWeek)
+                newWeek.mesocycle = newMesocycle
+                modelContext.insert(newWeek)
+                
+                for workout in week.workouts.sorted(by: { $0.date < $1.date }) {
+                    let daysFromWeekStart = Calendar.current.dateComponents([.day], from: week.startDate, to: workout.date).day ?? 0
+                    let newWorkoutDate = Calendar.current.date(byAdding: .day, value: daysFromWeekStart, to: newWeekStartDate)!
+                    let newWorkout = Workout(
+                        name: workout.name,
+                        orderIndex: workout.orderIndex,
+                        date: newWorkoutDate
+                    )
+                    newWeek.workouts.append(newWorkout)
+                    newWorkout.week = newWeek
+                    modelContext.insert(newWorkout)
+                    
+                    for exercise in workout.exercises.sorted(by: { $0.orderIndex < $1.orderIndex }) {
+                        let newExercise = Exercise(
+                            name: exercise.name,
+                            weight: exercise.weight,
+                            sets: exercise.sets,
+                            reps: exercise.reps,
+                            duration: exercise.duration,
+                            restTime: exercise.restTime,
+                            isTimeBased: exercise.isTimeBased,
+                            orderIndex: exercise.orderIndex
+                        )
+                        newWorkout.exercises.append(newExercise)
+                        newExercise.workout = newWorkout
+                        modelContext.insert(newExercise)
+                    }
+                }
+                
+                newMesocycle.numberOfWeeks = mesocycle.weeks.count
+            }
+            
+            selectedMesocycleIDs.removeAll()
         }
+    }
+    
+    private func deleteSelectedMesocycles() {
+        let mesocyclesToDelete = mesocycles.filter { selectedMesocycleIDs.contains($0.id) }
+        for mesocycle in mesocyclesToDelete {
+            modelContext.delete(mesocycle)
+        }
+        selectedMesocycleIDs.removeAll()
     }
 }
 
@@ -225,4 +313,3 @@ struct MesocycleRow: View {
         .opacity(isPast ? 0.5 : 1.0)
     }
 }
-
