@@ -40,14 +40,16 @@ struct MesocycleView: View {
             .navigationTitle("Mesocycles")
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
-                    Menu {
-                        Button(action: {
-                            print("test")
-                        }) {
-                            Label("info".localized(comment: "Info"), systemImage: "info.circle")
+                    if editMode?.wrappedValue.isEditing == false {
+                        Menu {
+                            Button(action: {
+                                print("test")
+                            }) {
+                                Label("info".localized(comment: "Info"), systemImage: "info.circle")
+                            }
+                        } label: {
+                            Image(systemName: "ellipsis.circle")
                         }
-                    } label: {
-                        Image(systemName: "ellipsis.circle")
                     }
                 }
                 ToolbarItemGroup(placement: .navigationBarTrailing) {

@@ -25,3 +25,5 @@ final class Week {
         self.workouts = []
     }
 }
+
+extension Week: Identifiable {} // Apparently needed because otherwise "Set<Week.ID>()" throws an error
