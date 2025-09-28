@@ -58,13 +58,8 @@ struct ExerciseView: View {
         .listStyle(.plain)
         .navigationTitle(workout.name)
         .navigationBarBackButtonHidden(editMode?.wrappedValue.isEditing == true)
-        .toolbar {
-            ToolbarItem(placement: .topBarLeading) {
-                leadingToolbarItems
-            }
-            ToolbarItemGroup(placement: .navigationBarTrailing) {
-                trailingToolbarItems
-            }
+        .onAppear {
+            selectedExerciseIDs.removeAll()
         }
         .sheet(item: $selectedExercise) { exercise in
             exerciseEditSheet(exercise: exercise)
@@ -74,6 +69,14 @@ struct ExerciseView: View {
         }
         .sheet(isPresented: $isShowingWorkoutPicker) {
             workoutPickerSheet
+        }
+        .toolbar {
+            ToolbarItem(placement: .topBarLeading) {
+                leadingToolbarItems
+            }
+            ToolbarItemGroup(placement: .navigationBarTrailing) {
+                trailingToolbarItems
+            }
         }
         .environment(\.editMode, Binding(
             get: { editMode?.wrappedValue ?? .inactive },
@@ -267,7 +270,9 @@ struct ExerciseView: View {
     // MARK: - Helper Functions
     
     private func copyExercises(to targetWorkout: Workout) {
-        let selectedExercises = workout.exercises.filter { selectedExerciseIDs.contains($0.id) }
+        let selectedExercises = workout.exercises
+            .filter { selectedExerciseIDs.contains($0.id) }
+            .sorted { $0.orderIndex < $1.orderIndex }
         let maxOrderIndex = targetWorkout.exercises.map { $0.orderIndex }.max() ?? 0
         
         for (index, exercise) in selectedExercises.enumerated() {
@@ -300,6 +305,7 @@ struct ExerciseView: View {
             modelContext.delete(exercise)
         }
         selectedExerciseIDs.removeAll()
+        try? modelContext.save()
     }
 }
 

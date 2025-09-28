@@ -42,13 +42,8 @@ struct WorkoutView: View {
         }
         .navigationTitle("Week \(week.number)")
         .navigationBarBackButtonHidden(editMode?.wrappedValue.isEditing == true)
-        .toolbar {
-            ToolbarItem(placement: .topBarLeading) {
-                leadingToolbarItems
-            }
-            ToolbarItemGroup(placement: .navigationBarTrailing) {
-                trailingToolbarItems
-            }
+        .onAppear {
+            selectedWorkoutIDs.removeAll()
         }
         .sheet(item: $selectedWorkout) { workout in
             workoutEditSheet(workout: workout)
@@ -58,6 +53,14 @@ struct WorkoutView: View {
         }
         .sheet(isPresented: $isShowingWeekPicker) {
             weekPickerSheet
+        }
+        .toolbar {
+            ToolbarItem(placement: .topBarLeading) {
+                leadingToolbarItems
+            }
+            ToolbarItemGroup(placement: .navigationBarTrailing) {
+                trailingToolbarItems
+            }
         }
         .environment(\.editMode, Binding(
             get: { editMode?.wrappedValue ?? .inactive },
@@ -273,6 +276,7 @@ struct WorkoutView: View {
             modelContext.delete(workout)
         }
         selectedWorkoutIDs.removeAll()
+        try? modelContext.save()
     }
     
     private func calculateDefaultWorkoutDate() -> Date {

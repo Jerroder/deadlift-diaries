@@ -48,6 +48,15 @@ struct MesocycleView: View {
                 }
             }
             .navigationTitle("Mesocycles")
+            .onAppear {
+                selectedMesocycleIDs.removeAll()
+            }
+            .sheet(item: $selectedMesocycle) { mesocycle in
+                mesocycleEditSheet(mesocycle: mesocycle)
+            }
+            .sheet(isPresented: $isAddingNewMesocycle) {
+                mesocycleEditSheet(mesocycle: nil)
+            }
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
                     leadingToolbarItems
@@ -56,12 +65,6 @@ struct MesocycleView: View {
                     EditButton()
                     addMesocycleButton
                 }
-            }
-            .sheet(item: $selectedMesocycle) { mesocycle in
-                mesocycleEditSheet(mesocycle: mesocycle)
-            }
-            .sheet(isPresented: $isAddingNewMesocycle) {
-                mesocycleEditSheet(mesocycle: nil)
             }
             .environment(\.editMode, Binding(
                 get: { editMode?.wrappedValue ?? .inactive },
@@ -285,6 +288,7 @@ struct MesocycleView: View {
             modelContext.delete(mesocycle)
         }
         selectedMesocycleIDs.removeAll()
+        try? modelContext.save()
     }
 }
 

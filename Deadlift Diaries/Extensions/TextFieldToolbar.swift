@@ -16,7 +16,7 @@ struct TextFieldToolbar: ViewModifier {
             .toolbar {
                 ToolbarItemGroup(placement: .keyboard) {
                     Spacer()
-                    Button("Done") {
+                    Button("", systemImage: "checkmark") {
                         isFocused = false
                     }
                 }

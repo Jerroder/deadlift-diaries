@@ -26,6 +26,12 @@ struct WeekView: View {
         }
         .navigationTitle(mesocycle.name)
         .navigationBarBackButtonHidden(editMode?.wrappedValue.isEditing == true)
+        .onAppear {
+            selectedWeekIDs.removeAll()
+        }
+        .sheet(isPresented: $isShowingMesocyclePicker) {
+            mesocyclePickerSheet
+        }
         .toolbar {
             ToolbarItem(placement: .topBarLeading) {
                 leadingToolbarItems
@@ -33,9 +39,6 @@ struct WeekView: View {
             ToolbarItemGroup(placement: .primaryAction) {
                 trailingToolbarItems
             }
-        }
-        .sheet(isPresented: $isShowingMesocyclePicker) {
-            mesocyclePickerSheet
         }
         .environment(\.editMode, Binding(
             get: { editMode?.wrappedValue ?? .inactive },
@@ -239,6 +242,7 @@ struct WeekView: View {
         }
         renumberWeeks()
         selectedWeekIDs.removeAll()
+        try? modelContext.save()
     }
     
     private func renumberWeeks() {
