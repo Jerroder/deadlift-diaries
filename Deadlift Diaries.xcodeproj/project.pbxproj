@@ -19,9 +19,22 @@
 		46AC66012E85E59900DAA16F /* Deadlift Diaries.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Deadlift Diaries.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		46D241932E89D0AC006E6935 /* Exceptions for "Deadlift Diaries" folder in "Deadlift Diaries" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				"Deadlift-Diaries-Info.plist",
+			);
+			target = 465E04C62DE1FCCC00CD70D8 /* Deadlift Diaries */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		465E04C92DE1FCCC00CD70D8 /* Deadlift Diaries */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				46D241932E89D0AC006E6935 /* Exceptions for "Deadlift Diaries" folder in "Deadlift Diaries" target */,
+			);
 			path = "Deadlift Diaries";
 			sourceTree = "<group>";
 		};
@@ -279,6 +292,7 @@
 				"DEVELOPMENT_TEAM[sdk=iphoneos*]" = JUA2K3U263;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "Deadlift-Diaries-Info.plist";
 				INFOPLIST_KEY_CFBundleDisplayName = "Deadlift Diaries";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.healthcare-fitness";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
@@ -318,6 +332,7 @@
 				"DEVELOPMENT_TEAM[sdk=iphoneos*]" = JUA2K3U263;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "Deadlift-Diaries-Info.plist";
 				INFOPLIST_KEY_CFBundleDisplayName = "Deadlift Diaries";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.healthcare-fitness";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;

@@ -20,16 +20,6 @@ struct MesocycleView: View {
     @State private var newMesocycleNumberOfWeeks = 4
     @State private var selectedMesocycleIDs = Set<Mesocycle.ID>()
     
-    @ViewBuilder
-    private var addMesocycleButton: some View {
-        Button("", systemImage: "plus", action: {
-            isAddingNewMesocycle = true
-            newMesocycleName = ""
-            newMesocycleStartDate = calculateStartDateForNewMesocycle()
-            newMesocycleNumberOfWeeks = 4
-        })
-    }
-    
     var body: some View {
         NavigationStack {
             List(selection: $selectedMesocycleIDs) {
@@ -74,6 +64,16 @@ struct MesocycleView: View {
     }
     
     // MARK: - Computed Properties for Views
+    
+    @ViewBuilder
+    private var addMesocycleButton: some View {
+        Button("", systemImage: "plus", action: {
+            isAddingNewMesocycle = true
+            newMesocycleName = ""
+            newMesocycleStartDate = calculateStartDateForNewMesocycle()
+            newMesocycleNumberOfWeeks = 4
+        })
+    }
     
     @ViewBuilder
     private func mesocycleRow(for mesocycle: Mesocycle) -> some View {

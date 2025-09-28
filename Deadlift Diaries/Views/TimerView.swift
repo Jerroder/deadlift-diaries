@@ -5,6 +5,8 @@
 //  Created by Jerroder on 2025-06-06.
 //
 
+import AudioToolbox
+import AVFoundation
 import SwiftUI
 
 struct TimerView: View {
@@ -13,129 +15,204 @@ struct TimerView: View {
     @AppStorage("restDuration") private var restDuration: Int = 60
     @AppStorage("timeRemaining") private var timeRemaining: Int = 60
     @State private var isTimerRunning: Bool = false
-    @State private var timer: Timer?
+    @State private var timer: DispatchSourceTimer?
     @State private var restProgress: CGFloat = 0
+    @State private var backgroundTask: UIBackgroundTaskIdentifier = .invalid
+    @State private var showingSoundPicker = false
     
     let orange = Color(red: 0xFF/255, green: 0xBC/255, blue: 0x8E/255)
     let yellow = Color(red: 0xFF/255, green: 0xD6/255, blue: 0x8E/255)
     
+    @AppStorage("selectedSoundID") private var selectedSoundID: Int = 1023
+    
+    private let soundOptions: [(id: UInt32, name: String)] = [
+        (1023, "Choo Choo"),
+        (1052, "Beep"),
+        (1057, "Tink"),
+        (1070, "Busy"),
+        (1071, "Congestion"),
+        (1075, "Key Tone"),
+        (1103, "Tink 2"),
+        (1110, "Begin"),
+        (1111, "Confirm"),
+        (1114, "End Record"),
+        (1255, "Short Double High"),
+        (1257, "Short Double Low"),
+        (1328, "News Flash"),
+    ]
+    
     var body: some View {
-        VStack(spacing: 20) {
-            Stepper("Total Sets: \(totalSets)", value: $totalSets, in: 1...20)
-                .onChange(of: totalSets) { oldValue, newValue in
-                    if currentSet > newValue {
-                        currentSet = newValue
+        NavigationStack {
+            VStack(spacing: 20) {
+                Stepper("Total Sets: \(totalSets)", value: $totalSets, in: 1...20)
+                    .onChange(of: totalSets) { oldValue, newValue in
+                        if currentSet > newValue {
+                            currentSet = newValue
+                        }
+                    }
+                HStack {
+                    Text("Rest Duration:")
+                    
+                    Picker("Rest Duration", selection: $restDuration) {
+                        ForEach(Array(stride(from: 5, through: 300, by: 5)), id: \.self) { duration in
+                            Text("\(duration) sec").tag(duration)
+                        }
+                    }
+                    .pickerStyle(.wheel)
+                    .disabled(isTimerRunning)
+                    .frame(height: 150)
+                    .onChange(of: restDuration) { oldValue, newValue in
+                        timeRemaining = newValue
+                    }
+                    
+                    if #available(iOS 26.0, *) {
+                        VStack(spacing: 8) {
+                            Button("30s") { restDuration = 30; timeRemaining = 30 }
+                                .disabled(isTimerRunning)
+                            Button("60s") { restDuration = 60; timeRemaining = 60 }
+                                .disabled(isTimerRunning)
+                            Button("90s") { restDuration = 90; timeRemaining = 90 }
+                                .disabled(isTimerRunning)
+                            Button("120s") { restDuration = 120; timeRemaining = 120 }
+                                .disabled(isTimerRunning)
+                        }
+                        .buttonStyle(.glass)
+                    } else {
+                        VStack(spacing: 8) {
+                            Button("30s") { restDuration = 30; timeRemaining = 30 }
+                                .disabled(isTimerRunning)
+                            Button("60s") { restDuration = 60; timeRemaining = 60 }
+                                .disabled(isTimerRunning)
+                            Button("90s") { restDuration = 90; timeRemaining = 90 }
+                                .disabled(isTimerRunning)
+                            Button("120s") { restDuration = 120; timeRemaining = 120 }
+                                .disabled(isTimerRunning)
+                        }
+                        .buttonStyle(.bordered)
                     }
                 }
-            HStack {
-                Text("Rest Duration:")
                 
-                Picker("Rest Duration", selection: $restDuration) {
-                    ForEach(Array(stride(from: 5, through: 300, by: 5)), id: \.self) { duration in
-                        Text("\(duration) sec").tag(duration)
-                    }
-                }
-                .pickerStyle(.wheel)
-                .disabled(isTimerRunning)
-                .frame(height: 150)
-                .onChange(of: restDuration) { oldValue, newValue in
-                    timeRemaining = newValue
-                }
+                //            Text("\(currentSet)/\(totalSets)")
+                //                .font(.title)
                 
-                if #available(iOS 26.0, *) {
-                    VStack(spacing: 8) {
-                        Button("30s") { restDuration = 30; timeRemaining = 30 }
-                            .disabled(isTimerRunning)
-                        Button("60s") { restDuration = 60; timeRemaining = 60 }
-                            .disabled(isTimerRunning)
-                        Button("90s") { restDuration = 90; timeRemaining = 90 }
-                            .disabled(isTimerRunning)
-                        Button("120s") { restDuration = 120; timeRemaining = 120 }
-                            .disabled(isTimerRunning)
-                    }
-                    .buttonStyle(.glass)
-                } else {
-                    VStack(spacing: 8) {
-                        Button("30s") { restDuration = 30; timeRemaining = 30 }
-                            .disabled(isTimerRunning)
-                        Button("60s") { restDuration = 60; timeRemaining = 60 }
-                            .disabled(isTimerRunning)
-                        Button("90s") { restDuration = 90; timeRemaining = 90 }
-                            .disabled(isTimerRunning)
-                        Button("120s") { restDuration = 120; timeRemaining = 120 }
-                            .disabled(isTimerRunning)
-                    }
-                    .buttonStyle(.bordered)
-                }
-            }
-            
-//            Text("\(currentSet)/\(totalSets)")
-//                .font(.title)
-            
-            GeometryReader { geometry in
-                let squareWidth = geometry.size.width / CGFloat(2 * self.totalSets - 1)
-                HStack(spacing: 4) {
-                    ForEach(1..<2*self.totalSets, id: \.self) { index in
-                        if index.isMultiple(of: 2) {
-                            let restNumber = index / 2
-                            if restNumber == self.currentSet && (self.isTimerRunning || self.restProgress > 0) {
-                                ZStack(alignment: .leading) {
+                GeometryReader { geometry in
+                    let squareWidth = geometry.size.width / CGFloat(2 * self.totalSets - 1)
+                    HStack(spacing: 4) {
+                        ForEach(1..<2*self.totalSets, id: \.self) { index in
+                            if index.isMultiple(of: 2) {
+                                let restNumber = index / 2
+                                if restNumber == self.currentSet && (self.isTimerRunning || self.restProgress > 0) {
+                                    ZStack(alignment: .leading) {
+                                        Rectangle()
+                                            .frame(width: squareWidth, height: 20)
+                                            .foregroundColor(.gray)
+                                            .cornerRadius(4)
+                                        Rectangle()
+                                            .frame(width: squareWidth * self.restProgress, height: 20)
+                                            .foregroundColor(yellow)
+                                            .cornerRadius(4)
+                                            .animation(.linear, value: self.restProgress)
+                                    }
+                                } else if restNumber < self.currentSet {
+                                    Rectangle()
+                                        .frame(width: squareWidth, height: 20)
+                                        .foregroundColor(orange)
+                                        .cornerRadius(4)
+                                } else {
                                     Rectangle()
                                         .frame(width: squareWidth, height: 20)
                                         .foregroundColor(.gray)
                                         .cornerRadius(4)
-                                    Rectangle()
-                                        .frame(width: squareWidth * self.restProgress, height: 20)
-                                        .foregroundColor(yellow)
-                                        .cornerRadius(4)
-                                        .animation(.linear, value: self.restProgress)
                                 }
-                            } else if restNumber < self.currentSet {
-                                Rectangle()
-                                    .frame(width: squareWidth, height: 20)
-                                    .foregroundColor(orange)
-                                    .cornerRadius(4)
                             } else {
+                                let setNumber = (index + 1) / 2
                                 Rectangle()
                                     .frame(width: squareWidth, height: 20)
-                                    .foregroundColor(.gray)
+                                    .foregroundColor(setNumber <= self.currentSet ? .accentColor : .gray)
                                     .cornerRadius(4)
                             }
-                        } else {
-                            let setNumber = (index + 1) / 2
-                            Rectangle()
-                                .frame(width: squareWidth, height: 20)
-                                .foregroundColor(setNumber <= self.currentSet ? .accentColor : .gray)
-                                .cornerRadius(4)
                         }
                     }
+                    .frame(width: geometry.size.width, height: 20)
                 }
-                .frame(width: geometry.size.width, height: 20)
+                .frame(height: 20)
+                .padding(.horizontal)
+                
+                Text("Remaining: \(timeRemaining) sec")
+                    .font(.title)
+                
+                HStack {
+                    Spacer()
+                    Button(action: toggleTimer) {
+                        Text(isTimerRunning ? "Pause" : "Start")
+                    }
+                    .disabled(currentSet >= totalSets)
+                    Spacer()
+                    Button("Reset") {
+                        timer?.cancel()
+                        isTimerRunning = false
+                        currentSet = 1
+                        timeRemaining = restDuration
+                        restProgress = 0
+                    }
+                    Spacer()
+                }
             }
-            .frame(height: 20)
-            .padding(.horizontal)
-            
-            Text("Remaining: \(timeRemaining) sec")
-                .font(.title)
-            
-            HStack {
-                Spacer()
-                Button(action: toggleTimer) {
-                    Text(isTimerRunning ? "Pause" : "Start")
+            .padding()
+            .navigationTitle("Timer")
+            .sheet(isPresented: $showingSoundPicker) {
+                soundPickerSheet()
+            }
+            .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    Menu {
+                        Button(action: {
+                            showingSoundPicker = true
+                        }) {
+                            Label("settings".localized(comment: "Settings"), systemImage: "gear")
+                        }
+                    } label: {
+                        Image(systemName: "ellipsis.circle")
+                    }
                 }
-                .disabled(currentSet >= totalSets)
-                Spacer()
-                Button("Reset") {
-                    timer?.invalidate()
-                    isTimerRunning = false
-                    currentSet = 1
-                    timeRemaining = restDuration
-                    restProgress = 0
-                }
-                Spacer()
             }
         }
-        .padding()
+        .onAppear {
+            if timeRemaining < restDuration {
+                restProgress = 1 - (CGFloat(timeRemaining) / CGFloat(restDuration))
+            } else {
+                restProgress = 0
+            }
+        }
+    }
+    
+    @ViewBuilder
+    private func soundPickerSheet() -> some View {
+        NavigationView {
+            Form {
+                HStack {
+                    Text("Sound")
+                    Picker("Sound", selection: $selectedSoundID) {
+                        ForEach(soundOptions, id: \.id) { option in
+                            Text(option.name).tag(Int(option.id))
+                        }
+                    }
+                    .pickerStyle(.wheel)
+                    .onChange(of: selectedSoundID) { _, _ in
+                        AudioServicesPlaySystemSound(UInt32(selectedSoundID))
+                    }
+                }
+            }
+            .navigationTitle("Settings")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("", systemImage: "checkmark") {
+                        showingSoundPicker = false
+                    }
+                }
+            }
+        }
     }
     
     private func colorForIndex(_ index: Int) -> Color {
@@ -156,7 +233,7 @@ struct TimerView: View {
     
     private func toggleTimer() {
         if isTimerRunning {
-            timer?.invalidate()
+            stopTimer()
         } else {
             startTimer()
         }
@@ -164,18 +241,68 @@ struct TimerView: View {
     }
     
     private func startTimer() {
-        timer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { _ in
-            if timeRemaining > 0 {
-                timeRemaining -= 1
-                restProgress = 1 - (CGFloat(timeRemaining) / CGFloat(restDuration))
-            } else {
-                timer?.invalidate()
-                isTimerRunning = false
-                if currentSet < totalSets {
-                    currentSet += 1
+        backgroundTask = UIApplication.shared.beginBackgroundTask { [self] in
+            self.endBackgroundTask()
+        }
+        
+        let queue = DispatchQueue(label: "com.jerroder.deadliftdiaries", qos: .background)
+        timer = DispatchSource.makeTimerSource(queue: queue)
+        timer?.schedule(deadline: .now(), repeating: .seconds(1))
+        timer?.setEventHandler {
+            DispatchQueue.main.async { [self] in
+                if timeRemaining > 0 {
+                    if timeRemaining == 1 {
+                        playSystemSound()
+                    }
+                    timeRemaining -= 1
+                    restProgress = 1 - (CGFloat(timeRemaining) / CGFloat(restDuration))
+                } else {
+                    isTimerRunning = false
+                    stopTimer()
+                    if currentSet < totalSets {
+                        currentSet += 1
+                        timeRemaining = restDuration
+                        restProgress = 0
+                    }
                 }
-                timeRemaining = restDuration
-                restProgress = 0
+            }
+        }
+        timer?.resume()
+    }
+
+    
+    private func stopTimer() {
+        timer?.cancel()
+        timer = nil
+        endBackgroundTask()
+    }
+    
+    private func endBackgroundTask() {
+        if backgroundTask != .invalid {
+            UIApplication.shared.endBackgroundTask(backgroundTask)
+            backgroundTask = .invalid
+        }
+    }
+    
+    private func playSystemSound() {
+        let audioSession = AVAudioSession.sharedInstance()
+        do {
+            try audioSession.setCategory(.ambient, options: .duckOthers)
+            try audioSession.setActive(true)
+        } catch {
+            print("Failed to set audio session category: \(error)")
+        }
+        
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+            AudioServicesPlaySystemSound(UInt32(selectedSoundID))
+        }
+        
+        let duration: Double = selectedSoundID == 1328 ? 2.0 : 1.0
+        DispatchQueue.main.asyncAfter(deadline: .now() + duration) {
+            do {
+                try audioSession.setActive(false)
+            } catch {
+                print("Failed to deactivate audio session: \(error)")
             }
         }
     }
