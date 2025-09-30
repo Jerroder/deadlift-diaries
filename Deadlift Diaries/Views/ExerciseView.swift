@@ -54,45 +54,74 @@ struct ExerciseView: View {
         workout.exercises.sorted { $0.orderIndex < $1.orderIndex }
     }
     
-    var body: some View {
-        List(selection: $selectedExerciseIDs) {
-            buildExerciseRows
-        }
-        .listStyle(.plain)
-        .navigationTitle(workout.name)
-        .navigationBarBackButtonHidden(editMode?.wrappedValue.isEditing == true)
-        .onAppear {
-            selectedExerciseIDs.removeAll()
-        }
-        .sheet(item: $selectedExercise) { exercise in
-            exerciseEditSheet(exercise: exercise)
-        }
-        .sheet(isPresented: $isAddingNewExercise) {
-            exerciseEditSheet(exercise: nil)
-        }
-        .sheet(isPresented: $isShowingWorkoutPicker) {
-            workoutPickerSheet
-        }
-        .toolbar {
-            ToolbarItem(placement: .topBarLeading) {
-                leadingToolbarItems
-            }
-            ToolbarItemGroup(placement: .navigationBarTrailing) {
-                trailingToolbarItems
-            }
-        }
-        .environment(\.editMode, Binding(
-            get: { editMode?.wrappedValue ?? .inactive },
-            set: { editMode?.wrappedValue = $0 }
-        ))
-    }
-    
-    // MARK: - Computed Properties for Views
+    // MARK: - ViewBuilder variables
     
     @ViewBuilder
-    private var buildExerciseRows: some View {
-        ForEach(sortedExercises, id: \.id) { exercise in
-            exerciseRow(for: exercise)
+    private var trailingToolbarItems: some View {
+        EditButton()
+        Button("", systemImage: "plus", action: {
+            isAddingNewExercise = true
+            newExerciseName = ""
+            newExerciseSets = 5
+            newExerciseRestTime = 60
+            newExerciseIsTimeBased = false
+            newExerciseReps = 8
+            newExerciseDuration = 30
+            newExerciseWeight = 50.0
+        })
+    }
+    
+    var body: some View {
+        exerciseRow()
+            .listStyle(.plain)
+            .navigationTitle(workout.name)
+            .navigationBarBackButtonHidden(editMode?.wrappedValue.isEditing == true)
+            .onAppear {
+                selectedExerciseIDs.removeAll()
+            }
+            .sheet(item: $selectedExercise) { exercise in
+                exerciseEditSheet(exercise: exercise)
+            }
+            .sheet(isPresented: $isAddingNewExercise) {
+                exerciseEditSheet(exercise: nil)
+            }
+            .sheet(isPresented: $isShowingWorkoutPicker) {
+                workoutPickerSheet()
+            }
+            .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    leadingToolbarItems()
+                }
+                ToolbarItemGroup(placement: .navigationBarTrailing) {
+                    trailingToolbarItems
+                }
+            }
+            .environment(\.editMode, Binding(
+                get: { editMode?.wrappedValue ?? .inactive },
+                set: { editMode?.wrappedValue = $0 }
+            ))
+    }
+    
+    // MARK: - ViewBuilder functions
+    
+    @ViewBuilder
+    private func exerciseRow() -> some View {
+        List(selection: $selectedExerciseIDs) {
+            ForEach(sortedExercises, id: \.id) { exercise in
+                Group {
+                    if editMode?.wrappedValue.isEditing == true {
+                        Button(action: {
+                            selectedExercise = exercise
+                        }) {
+                            displayExercises(exercise: exercise, unit: unit)
+                                .contentShape(Rectangle())
+                        }
+                        .buttonStyle(PlainButtonStyle())
+                    } else {
+                        displayExercises(exercise: exercise, unit: unit)
+                            .contentShape(Rectangle())
+                    }
+                }
                 .swipeActions(edge: .trailing) {
                     Button(role: .destructive) {
                         deleteExercise(exercise)
@@ -101,6 +130,42 @@ struct ExerciseView: View {
                     }
                 }
                 .tag(exercise.id)
+            }
+        }
+    }
+    
+    @ViewBuilder
+    private func displayExercises(exercise: Exercise, unit: Unit) -> some View {
+        HStack {
+            VStack(alignment: .leading) {
+                Text(exercise.name)
+                    .font(.headline)
+                
+                if exercise.isTimeBased {
+                    Text("Duration: \(exercise.duration ?? 0) sec")
+                        .font(.subheadline)
+                        .foregroundColor(Color(UIColor.secondaryLabel))
+                } else {
+                    Text("Weight: \(String(format: "%.1f", exercise.weight ?? 0)) \(unit.symbol)")
+                        .font(.subheadline)
+                        .foregroundColor(Color(UIColor.secondaryLabel))
+                }
+                
+                Text("Sets: \(exercise.sets)")
+                    .font(.subheadline)
+                    .foregroundColor(Color(UIColor.secondaryLabel))
+                
+                if !exercise.isTimeBased {
+                    Text("Reps: \(exercise.reps ?? 0)")
+                        .font(.subheadline)
+                        .foregroundColor(Color(UIColor.secondaryLabel))
+                }
+                
+                Text("Rest: \(exercise.restTime) sec")
+                    .font(.subheadline)
+                    .foregroundColor(Color(UIColor.secondaryLabel))
+            }
+            Spacer()
         }
     }
     
@@ -241,23 +306,7 @@ struct ExerciseView: View {
     }
     
     @ViewBuilder
-    private func exerciseRow(for exercise: Exercise) -> some View {
-        if editMode?.wrappedValue.isEditing == true {
-            Button(action: {
-                selectedExercise = exercise
-            }) {
-                ExerciseRow(exercise: exercise, unit: unit)
-                    .contentShape(Rectangle())
-            }
-            .buttonStyle(PlainButtonStyle())
-        } else {
-            ExerciseRow(exercise: exercise, unit: unit)
-                .contentShape(Rectangle())
-        }
-    }
-    
-    @ViewBuilder
-    private var leadingToolbarItems: some View {
+    private func leadingToolbarItems() -> some View {
         if editMode?.wrappedValue.isEditing == true, !selectedExerciseIDs.isEmpty {
             Menu {
                 Button("Copy", systemImage: "document.on.document") {
@@ -273,22 +322,7 @@ struct ExerciseView: View {
     }
     
     @ViewBuilder
-    private var trailingToolbarItems: some View {
-        EditButton()
-        Button("", systemImage: "plus", action: {
-            isAddingNewExercise = true
-            newExerciseName = ""
-            newExerciseSets = 5
-            newExerciseRestTime = 60
-            newExerciseIsTimeBased = false
-            newExerciseReps = 8
-            newExerciseDuration = 30
-            newExerciseWeight = 50.0
-        })
-    }
-    
-    @ViewBuilder
-    private var workoutPickerSheet: some View {
+    private func workoutPickerSheet() -> some View {
         let allWorkouts = workout.week?.mesocycle?.weeks.flatMap { $0.workouts } ?? []
         let targetWorkouts = allWorkouts
             .filter { $0.id != workout.id }
@@ -367,44 +401,5 @@ struct ExerciseView: View {
         }
         selectedExerciseIDs.removeAll()
         try? modelContext.save()
-    }
-}
-
-struct ExerciseRow: View {
-    let exercise: Exercise
-    let unit: Unit
-    
-    var body: some View {
-        HStack {
-            VStack(alignment: .leading) {
-                Text(exercise.name)
-                    .font(.headline)
-                
-                if exercise.isTimeBased {
-                    Text("Duration: \(exercise.duration ?? 0) sec")
-                        .font(.subheadline)
-                        .foregroundColor(Color(UIColor.secondaryLabel))
-                } else {
-                    Text("Weight: \(String(format: "%.1f", exercise.weight ?? 0)) \(unit.symbol)")
-                        .font(.subheadline)
-                        .foregroundColor(Color(UIColor.secondaryLabel))
-                }
-                
-                Text("Sets: \(exercise.sets)")
-                    .font(.subheadline)
-                    .foregroundColor(Color(UIColor.secondaryLabel))
-                
-                if !exercise.isTimeBased {
-                    Text("Reps: \(exercise.reps ?? 0)")
-                        .font(.subheadline)
-                        .foregroundColor(Color(UIColor.secondaryLabel))
-                }
-                
-                Text("Rest: \(exercise.restTime) sec")
-                    .font(.subheadline)
-                    .foregroundColor(Color(UIColor.secondaryLabel))
-            }
-            Spacer()
-        }
     }
 }

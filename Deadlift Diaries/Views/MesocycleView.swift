@@ -19,66 +19,18 @@ struct MesocycleView: View {
     @State private var newMesocycleStartDate = Date()
     @State private var newMesocycleNumberOfWeeks = 4
     @State private var selectedMesocycleIDs = Set<Mesocycle.ID>()
-    
     @State private var isKeyboardShowing = false
+    @State private var showingSoundPicker = false
+    
     @FocusState.Binding var isTextFieldFocused: Bool
     
     @AppStorage("selectedSoundID") private var selectedSoundID: Int = 1075
-    @State private var showingSoundPicker = false
     
-    var body: some View {
-        NavigationStack {
-            List(selection: $selectedMesocycleIDs) {
-                ForEach(mesocycles) { mesocycle in
-                    mesocycleRow(for: mesocycle)
-                        .swipeActions(edge: .trailing) {
-                            Button(role: .destructive) {
-                                if let index = mesocycles.firstIndex(where: { $0.id == mesocycle.id }) {
-                                    modelContext.delete(mesocycles[index])
-                                }
-                            } label: {
-                                Label("Delete", systemImage: "trash")
-                            }
-                        }
-                        .tag(mesocycle.id)
-                }
-            }
-            .navigationTitle("Mesocycles")
-            .onAppear {
-                selectedMesocycleIDs.removeAll()
-            }
-            .sheet(item: $selectedMesocycle) { mesocycle in
-                mesocycleEditSheet(mesocycle: mesocycle)
-            }
-            .sheet(isPresented: $isAddingNewMesocycle) {
-                mesocycleEditSheet(mesocycle: nil)
-            }
-            .sheet(isPresented: $showingSoundPicker) {
-                SoundPickerSheet(
-                    selectedSoundID: $selectedSoundID,
-                    isPresented: $showingSoundPicker
-                )
-            }
-            .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
-                    leadingToolbarItems
-                }
-                ToolbarItemGroup(placement: .navigationBarTrailing) {
-                    EditButton()
-                    addMesocycleButton
-                }
-            }
-            .environment(\.editMode, Binding(
-                get: { editMode?.wrappedValue ?? .inactive },
-                set: { editMode?.wrappedValue = $0 }
-            ))
-        }
-    }
-    
-    // MARK: - Computed Properties for Views
+    // MARK: - ViewBuilder variables
     
     @ViewBuilder
     private var addMesocycleButton: some View {
+        EditButton()
         Button("", systemImage: "plus", action: {
             isAddingNewMesocycle = true
             newMesocycleName = ""
@@ -87,30 +39,46 @@ struct MesocycleView: View {
         })
     }
     
-    @ViewBuilder
-    private func mesocycleRow(for mesocycle: Mesocycle) -> some View {
-        Section {
-            if editMode?.wrappedValue.isEditing == true {
-                Button(action: {
-                    selectedMesocycle = mesocycle
-                }) {
-                    MesocycleRow(mesocycle: mesocycle)
-                        .contentShape(Rectangle())
+    // MARK: - Main view
+    
+    var body: some View {
+        NavigationStack {
+            mesocycleRows()
+                .navigationTitle("Mesocycles")
+                .onAppear {
+                    selectedMesocycleIDs.removeAll()
                 }
-                .buttonStyle(PlainButtonStyle())
-            } else {
-                NavigationLink {
-                    WeekView(mesocycle: mesocycle, isTextFieldFocused: $isTextFieldFocused)
-                } label: {
-                    MesocycleRow(mesocycle: mesocycle)
-                        .contentShape(Rectangle())
+                .sheet(item: $selectedMesocycle) { mesocycle in
+                    mesocycleEditSheet(mesocycle: mesocycle)
                 }
-            }
+                .sheet(isPresented: $isAddingNewMesocycle) {
+                    mesocycleEditSheet(mesocycle: nil)
+                }
+                .sheet(isPresented: $showingSoundPicker) {
+                    SoundPickerSheet(
+                        selectedSoundID: $selectedSoundID,
+                        isPresented: $showingSoundPicker
+                    )
+                }
+                .toolbar {
+                    ToolbarItem(placement: .navigationBarLeading) {
+                        leadingToolbarItems()
+                    }
+                    ToolbarItemGroup(placement: .navigationBarTrailing) {
+                        addMesocycleButton
+                    }
+                }
+                .environment(\.editMode, Binding(
+                    get: { editMode?.wrappedValue ?? .inactive },
+                    set: { editMode?.wrappedValue = $0 }
+                ))
         }
     }
     
+    // MARK: - ViewBuilder functions
+    
     @ViewBuilder
-    private var leadingToolbarItems: some View {
+    private func leadingToolbarItems() -> some View {
         if editMode?.wrappedValue.isEditing == true {
             if !selectedMesocycleIDs.isEmpty {
                 Menu {
@@ -135,6 +103,68 @@ struct MesocycleView: View {
                 Image(systemName: "ellipsis")
             }
         }
+    }
+    
+    @ViewBuilder
+    private func mesocycleRows() -> some View {
+        List(selection: $selectedMesocycleIDs) {
+            ForEach(mesocycles) { mesocycle in
+                displayMesocycle(for: mesocycle)
+            }
+        }
+    }
+    
+    @ViewBuilder
+    private func displayMesocycle(for mesocycle: Mesocycle) -> some View {
+        Section {
+            if editMode?.wrappedValue.isEditing == true {
+                Button(action: {
+                    selectedMesocycle = mesocycle
+                }) {
+                    mesocycleRow(mesocycle: mesocycle)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(PlainButtonStyle())
+            } else {
+                NavigationLink {
+                    WeekView(mesocycle: mesocycle, isTextFieldFocused: $isTextFieldFocused)
+                } label: {
+                    mesocycleRow(mesocycle: mesocycle)
+                        .contentShape(Rectangle())
+                }
+            }
+        }
+        .swipeActions(edge: .trailing) {
+            Button(role: .destructive) {
+                if let index = mesocycles.firstIndex(where: { $0.id == mesocycle.id }) {
+                    modelContext.delete(mesocycles[index])
+                }
+            } label: {
+                Label("Delete", systemImage: "trash")
+            }
+        }
+        .tag(mesocycle.id)
+    }
+    
+    @ViewBuilder
+    private func mesocycleRow(mesocycle: Mesocycle) -> some View {
+        let endDate = Calendar.current.date(byAdding: .day, value: (mesocycle.numberOfWeeks * 7) - 1, to: mesocycle.startDate)!
+        let isPast = Calendar.current.startOfDay(for: endDate) < Calendar.current.startOfDay(for: Date())
+        
+        VStack(alignment: .leading) {
+            Text(mesocycle.name)
+                .font(.headline)
+            HStack {
+                Text("Start: \(mesocycle.startDate.formattedRelative())")
+                    .font(.subheadline)
+                    .foregroundColor(Color(UIColor.secondaryLabel))
+                Spacer()
+                Text("\(mesocycle.weeks.count) \((mesocycle.weeks.count == 1) ? "week" : "weeks")")
+                    .font(.subheadline)
+                    .foregroundColor(Color(UIColor.secondaryLabel))
+            }
+        }
+        .opacity(isPast ? 0.5 : 1.0)
     }
     
     @ViewBuilder
@@ -305,31 +335,5 @@ struct MesocycleView: View {
         }
         selectedMesocycleIDs.removeAll()
         try? modelContext.save()
-    }
-}
-
-struct MesocycleRow: View {
-    let mesocycle: Mesocycle
-    
-    private var isPast: Bool {
-        let endDate = Calendar.current.date(byAdding: .day, value: (mesocycle.numberOfWeeks * 7) - 1, to: mesocycle.startDate)!
-        return Calendar.current.startOfDay(for: endDate) < Calendar.current.startOfDay(for: Date())
-    }
-    
-    var body: some View {
-        VStack(alignment: .leading) {
-            Text(mesocycle.name)
-                .font(.headline)
-            HStack {
-                Text("Start: \(mesocycle.startDate.formattedRelative())")
-                    .font(.subheadline)
-                    .foregroundColor(Color(UIColor.secondaryLabel))
-                Spacer()
-                Text("\(mesocycle.weeks.count) \((mesocycle.weeks.count == 1) ? "week" : "weeks")")
-                    .font(.subheadline)
-                    .foregroundColor(Color(UIColor.secondaryLabel))
-            }
-        }
-        .opacity(isPast ? 0.5 : 1.0)
     }
 }

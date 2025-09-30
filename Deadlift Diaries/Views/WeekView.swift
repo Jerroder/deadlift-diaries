@@ -22,120 +22,116 @@ struct WeekView: View {
         mesocycle.weeks.sorted { $0.startDate < $1.startDate }
     }
     
-    var body: some View {
-        List(selection: $selectedWeekIDs) {
-            buildWeekRows
-        }
-        .navigationTitle(mesocycle.name)
-        .navigationBarBackButtonHidden(editMode?.wrappedValue.isEditing == true)
-        .onAppear {
-            selectedWeekIDs.removeAll()
-        }
-        .sheet(isPresented: $isShowingMesocyclePicker) {
-            mesocyclePickerSheet
-        }
-        .toolbar {
-            ToolbarItem(placement: .topBarLeading) {
-                leadingToolbarItems
-            }
-            ToolbarItemGroup(placement: .primaryAction) {
-                trailingToolbarItems
-            }
-        }
-        .environment(\.editMode, Binding(
-            get: { editMode?.wrappedValue ?? .inactive },
-            set: { editMode?.wrappedValue = $0 }
-        ))
-    }
-    
-    // MARK: - Computed Properties for Views
-    
-    @ViewBuilder
-    private var buildWeekRows: some View {
-        ForEach(sortedWeeks, id: \.id) { week in
-            weekRow(for: week)
-                .swipeActions(edge: .trailing) {
-                    deleteSwipeAction(for: week)
-                }
-                .tag(week.id)
-        }
-    }
-    
-    @ViewBuilder
-    private var leadingToolbarItems: some View {
-        if editMode?.wrappedValue.isEditing == true {
-            if !selectedWeekIDs.isEmpty {
-                selectionMenu
-            }
-        }
-    }
+    // MARK: - ViewBuilder variables
     
     @ViewBuilder
     private var trailingToolbarItems: some View {
         EditButton()
-        addWeekButton
+        Button("", systemImage: "plus", action: addNewWeek)
+    }
+    
+    // MARK: - Main view
+    
+    var body: some View {
+        buildWeekRows()
+            .navigationTitle(mesocycle.name)
+            .navigationBarBackButtonHidden(editMode?.wrappedValue.isEditing == true)
+            .sheet(isPresented: $isShowingMesocyclePicker) {
+                mesocyclePickerSheet()
+            }
+            .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    leadingToolbarItems()
+                }
+                ToolbarItemGroup(placement: .primaryAction) {
+                    trailingToolbarItems
+                }
+            }
+            .environment(\.editMode, Binding(
+                get: { editMode?.wrappedValue ?? .inactive },
+                set: { editMode?.wrappedValue = $0 }
+            ))
+    }
+    
+    // MARK: - ViewBuilder functions
+    
+    @ViewBuilder
+    private func buildWeekRows() -> some View {
+        List(selection: $selectedWeekIDs) {
+            ForEach(sortedWeeks, id: \.id) { week in
+                let isPast = isWeekPast(week)
+                NavigationLink {
+                    WorkoutView(week: week, isTextFieldFocused: $isTextFieldFocused)
+                } label: {
+                    weekRow(week: week, isPast: isPast)
+                }
+                .swipeActions(edge: .trailing) {
+                    Button(role: .destructive) {
+                        deleteWeek(week)
+                    } label: {
+                        Label("Delete", systemImage: "trash")
+                    }
+                }
+                .tag(week.id)
+            }
+        }
     }
     
     @ViewBuilder
-    private var mesocyclePickerSheet: some View {
-        MesocyclePickerSheet(
-            currentMesocycleID: mesocycle.id,
-            onCopy: { targetMesocycle in
+    private func weekRow(week: Week, isPast: Bool) -> some View {
+        VStack(alignment: .leading) {
+            Text("Week \(week.number)")
+                .font(.headline)
+            Text("Start: \(week.startDate.formattedRelative())")
+                .font(.subheadline)
+                .foregroundColor(Color(UIColor.secondaryLabel))
+        }
+        .opacity(isPast ? 0.5 : 1.0)
+    }
+    
+    @ViewBuilder
+    private func mesocyclePickerSheet() -> some View {
+        let fetchDescriptor = FetchDescriptor<Mesocycle>(sortBy: [SortDescriptor(\.startDate)])
+        let targetMesocycles = (try? modelContext.fetch(fetchDescriptor))?.filter { $0.id != mesocycle.id } ?? []
+        
+        List(targetMesocycles) { targetMesocycle in
+            Button(action: {
                 copyWeeks(to: targetMesocycle)
                 isShowingMesocyclePicker = false
-            },
-            onCancel: { isShowingMesocyclePicker = false }
-        )
-    }
-    
-    // MARK: - Subviews
-    
-    @ViewBuilder
-    private func weekRow(for week: Week) -> some View {
-        let isPast = isWeekPast(week)
-        NavigationLink {
-            WorkoutView(week: week, isTextFieldFocused: $isTextFieldFocused)
-        } label: {
-            WeekRow(week: week, isPast: isPast)
+            }) {
+                VStack(alignment: .leading) {
+                    Text(targetMesocycle.name)
+                        .font(.headline)
+                    Text("Start: \(targetMesocycle.startDate.formatted(date: .abbreviated, time: .omitted))")
+                        .font(.subheadline)
+                        .foregroundColor(Color(UIColor.secondaryLabel))
+                }
+            }
+        }
+        .navigationTitle("Copy to Mesocycle")
+        .toolbar {
+            ToolbarItem(placement: .cancellationAction) {
+                Button("Cancel", action: { isShowingMesocyclePicker = false })
+            }
         }
     }
     
     @ViewBuilder
-    private func deleteSwipeAction(for week: Week) -> some View {
-        Button(role: .destructive) {
-            deleteWeek(week)
-        } label: {
-            Label("Delete", systemImage: "trash")
+    private func leadingToolbarItems() -> some View {
+        if editMode?.wrappedValue.isEditing == true {
+            if !selectedWeekIDs.isEmpty {
+                Menu {
+                    Button(action: { isShowingMesocyclePicker = true }) {
+                        Label("Copy", systemImage: "doc.on.doc")
+                    }
+                    Button(role: .destructive, action: deleteSelectedWeeks) {
+                        Label("Delete", systemImage: "trash")
+                    }
+                } label: {
+                    Image(systemName: "ellipsis")
+                }
+            }
         }
-    }
-    
-    @ViewBuilder
-    private var selectionMenu: some View {
-        Menu {
-            copyMenuItem
-            deleteMenuItem
-        } label: {
-            Image(systemName: "ellipsis")
-        }
-    }
-    
-    @ViewBuilder
-    private var copyMenuItem: some View {
-        Button(action: { isShowingMesocyclePicker = true }) {
-            Label("Copy", systemImage: "doc.on.doc")
-        }
-    }
-    
-    @ViewBuilder
-    private var deleteMenuItem: some View {
-        Button(role: .destructive, action: deleteSelectedWeeks) {
-            Label("Delete", systemImage: "trash")
-        }
-    }
-    
-    @ViewBuilder
-    private var addWeekButton: some View {
-        Button("", systemImage: "plus", action: addNewWeek)
     }
     
     // MARK: - Helper Functions
@@ -169,7 +165,7 @@ struct WeekView: View {
         guard !selectedWeeks.isEmpty else { return }
         
         let lastTargetWeek = targetMesocycle.weeks.sorted { $0.startDate < $1.startDate }.last
-
+        
         let baseStartDate = lastTargetWeek != nil ?
         Calendar.current.date(byAdding: .day, value: 7, to: lastTargetWeek!.startDate)! :
         targetMesocycle.startDate
@@ -252,61 +248,5 @@ struct WeekView: View {
             week.number = index + 1
         }
         mesocycle.numberOfWeeks = sortedWeeks.count
-    }
-}
-
-// MARK: - Subviews
-
-struct WeekRow: View {
-    let week: Week
-    let isPast: Bool
-    
-    var body: some View {
-        VStack(alignment: .leading) {
-            Text("Week \(week.number)")
-                .font(.headline)
-            Text("Start: \(week.startDate.formattedRelative())")
-                .font(.subheadline)
-                .foregroundColor(Color(UIColor.secondaryLabel))
-        }
-        .opacity(isPast ? 0.5 : 1.0)
-    }
-}
-
-struct MesocyclePickerSheet: View {
-    @Environment(\.modelContext) private var modelContext
-    let currentMesocycleID: UUID
-    let onCopy: (Mesocycle) -> Void
-    let onCancel: () -> Void
-    
-    private var targetMesocycles: [Mesocycle] {
-        let fetchDescriptor = FetchDescriptor<Mesocycle>(sortBy: [SortDescriptor(\.startDate)])
-        return (try? modelContext.fetch(fetchDescriptor))?.filter { $0.id != currentMesocycleID } ?? []
-    }
-    
-    var body: some View {
-        List(targetMesocycles) { targetMesocycle in
-            Button(action: { onCopy(targetMesocycle) }) {
-                MesocycleRow(mesocycle: targetMesocycle)
-            }
-        }
-        .navigationTitle("Copy to Mesocycle")
-        .toolbar {
-            ToolbarItem(placement: .cancellationAction) {
-                Button("Cancel", action: onCancel)
-            }
-        }
-        
-    }
-    
-    @ViewBuilder
-    private func MesocycleRow(mesocycle: Mesocycle) -> some View {
-        VStack(alignment: .leading) {
-            Text(mesocycle.name)
-                .font(.headline)
-            Text("Start: \(mesocycle.startDate.formatted(date: .abbreviated, time: .omitted))")
-                .font(.subheadline)
-                .foregroundColor(Color(UIColor.secondaryLabel))
-        }
     }
 }

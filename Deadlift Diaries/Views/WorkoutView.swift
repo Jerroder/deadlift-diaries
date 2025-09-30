@@ -39,44 +39,88 @@ struct WorkoutView: View {
         week.workouts.sorted(by: { $0.date < $1.date })
     }
     
-    var body: some View {
-        List(selection: $selectedWorkoutIDs) {
-            buildWorkoutRows()
-        }
-        .navigationTitle("Week \(week.number)")
-        .navigationBarBackButtonHidden(editMode?.wrappedValue.isEditing == true)
-        .onAppear {
-            selectedWorkoutIDs.removeAll()
-        }
-        .sheet(item: $selectedWorkout) { workout in
-            workoutEditSheet(workout: workout)
-        }
-        .sheet(isPresented: $isAddingNewWorkout) {
-            workoutEditSheet(workout: nil)
-        }
-        .sheet(isPresented: $isShowingWeekPicker) {
-            weekPickerSheet
-        }
-        .toolbar {
-            ToolbarItem(placement: .topBarLeading) {
-                leadingToolbarItems
-            }
-            ToolbarItemGroup(placement: .navigationBarTrailing) {
-                trailingToolbarItems
-            }
-        }
-        .environment(\.editMode, Binding(
-            get: { editMode?.wrappedValue ?? .inactive },
-            set: { editMode?.wrappedValue = $0 }
-        ))
-    }
-    
-    // MARK: - Computed Properties for Views
+    // MARK: - ViewBuilder variables
     
     @ViewBuilder
-    private func buildWorkoutRows() -> some View {
-        ForEach(sortedWorkouts) { workout in
-            workoutRow(for: workout)
+    private var trailingToolbarItems: some View {
+        EditButton()
+        Button("", systemImage: "plus") {
+            isAddingNewWorkout = true
+            newWorkoutName = ""
+            newWorkoutDate = calculateDefaultWorkoutDate()
+        }
+    }
+    
+    // MARK: - Main view
+    
+    var body: some View {
+        workoutRows()
+            .navigationTitle("Week \(week.number)")
+            .navigationBarBackButtonHidden(editMode?.wrappedValue.isEditing == true)
+            .sheet(item: $selectedWorkout) { workout in
+                workoutEditSheet(workout: workout)
+            }
+            .sheet(isPresented: $isAddingNewWorkout) {
+                workoutEditSheet(workout: nil)
+            }
+            .sheet(isPresented: $isShowingWeekPicker) {
+                weekPickerSheet()
+            }
+            .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    leadingToolbarItems()
+                }
+                ToolbarItemGroup(placement: .navigationBarTrailing) {
+                    trailingToolbarItems
+                }
+            }
+            .environment(\.editMode, Binding(
+                get: { editMode?.wrappedValue ?? .inactive },
+                set: { editMode?.wrappedValue = $0 }
+            ))
+    }
+    
+    // MARK: - ViewBuilder functions
+    
+    @ViewBuilder
+    private func workoutRows() -> some View {
+        List(selection: $selectedWorkoutIDs) {
+            ForEach(sortedWorkouts) { workout in
+                let isPast: Bool = Calendar.current.startOfDay(for: workout.date) < Calendar.current.startOfDay(for: Date())
+                Section {
+                    if editMode?.wrappedValue.isEditing == true {
+                        Button(action: {
+                            selectedWorkout = workout
+                        }) {
+                            HStack {
+                                Text(workout.name)
+                                    .font(.headline)
+                                Text(workout.date.formattedRelative())
+                                    .font(.subheadline)
+                                    .foregroundColor(Color(UIColor.secondaryLabel))
+                                Spacer()
+                            }
+                            .opacity(isPast ? 0.5 : 1.0)
+                            .contentShape(Rectangle())
+                        }
+                        .buttonStyle(PlainButtonStyle())
+                    } else {
+                        NavigationLink {
+                            ExerciseView(workout: workout, isTextFieldFocused: $isTextFieldFocused)
+                        } label: {
+                            HStack {
+                                Text(workout.name)
+                                    .font(.headline)
+                                Text(workout.date.formattedRelative())
+                                    .font(.subheadline)
+                                    .foregroundColor(Color(UIColor.secondaryLabel))
+                                Spacer()
+                            }
+                            .opacity(isPast ? 0.5 : 1.0)
+                            .contentShape(Rectangle())
+                        }
+                    }
+                }
                 .swipeActions(edge: .trailing) {
                     Button(role: .destructive) {
                         deleteWorkout(workout)
@@ -85,45 +129,6 @@ struct WorkoutView: View {
                     }
                 }
                 .tag(workout.id)
-        }
-    }
-    
-    @ViewBuilder
-    private func workoutRow(for workout: Workout) -> some View {
-        let isPast: Bool = Calendar.current.startOfDay(for: workout.date) < Calendar.current.startOfDay(for: Date())
-        
-        Section {
-            if editMode?.wrappedValue.isEditing == true {
-                Button(action: {
-                    selectedWorkout = workout
-                }) {
-                    HStack {
-                        Text(workout.name)
-                            .font(.headline)
-                        Text(workout.date.formattedRelative())
-                            .font(.subheadline)
-                            .foregroundColor(Color(UIColor.secondaryLabel))
-                        Spacer()
-                    }
-                    .opacity(isPast ? 0.5 : 1.0)
-                    .contentShape(Rectangle())
-                }
-                .buttonStyle(PlainButtonStyle())
-            } else {
-                NavigationLink {
-                    ExerciseView(workout: workout, isTextFieldFocused: $isTextFieldFocused)
-                } label: {
-                    HStack {
-                        Text(workout.name)
-                            .font(.headline)
-                        Text(workout.date.formattedRelative())
-                            .font(.subheadline)
-                            .foregroundColor(Color(UIColor.secondaryLabel))
-                        Spacer()
-                    }
-                    .opacity(isPast ? 0.5 : 1.0)
-                    .contentShape(Rectangle())
-                }
             }
         }
     }
@@ -150,7 +155,7 @@ struct WorkoutView: View {
                     displayedComponents: .date
                 )
             }
-            .withTextFieldToolbar(isKeyboardShowing: $isKeyboardShowing, isTextFieldFocused: $isTextFieldFocused)
+            // .withTextFieldToolbar(isKeyboardShowing: $isKeyboardShowing, isTextFieldFocused: $isTextFieldFocused)
             .navigationTitle(workout == nil ? "New Workout" : "Rename Workout")
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
@@ -177,7 +182,7 @@ struct WorkoutView: View {
     }
     
     @ViewBuilder
-    private var leadingToolbarItems: some View {
+    private func leadingToolbarItems() -> some View {
         if editMode?.wrappedValue.isEditing == true {
             if !selectedWorkoutIDs.isEmpty {
                 Menu {
@@ -199,17 +204,7 @@ struct WorkoutView: View {
     }
     
     @ViewBuilder
-    private var trailingToolbarItems: some View {
-        EditButton()
-        Button("", systemImage: "plus") {
-            isAddingNewWorkout = true
-            newWorkoutName = ""
-            newWorkoutDate = calculateDefaultWorkoutDate()
-        }
-    }
-    
-    @ViewBuilder
-    private var weekPickerSheet: some View {
+    private func weekPickerSheet() -> some View {
         List(availableWeeks) { targetWeek in
             Button(action: {
                 copyWorkouts(to: targetWeek)
