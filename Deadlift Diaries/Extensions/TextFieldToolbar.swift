@@ -8,24 +8,51 @@
 import SwiftUI
 
 struct TextFieldToolbar: ViewModifier {
-    @FocusState private var isFocused: Bool
+    @Binding var isKeyboardShowing: Bool
+    var isTextFieldFocused: FocusState<Bool>.Binding
     
     func body(content: Content) -> some View {
-        content
-            .focused($isFocused)
-            .toolbar {
-                ToolbarItemGroup(placement: .keyboard) {
-                    Spacer()
-                    Button("", systemImage: "checkmark") {
-                        isFocused = false
+        if #available(iOS 26.0, *) {
+            content
+                .safeAreaBar(edge: .bottom) {
+                    if isKeyboardShowing {
+                        HStack {
+                            Spacer()
+                            Button {
+                                print("before \(isTextFieldFocused.wrappedValue)")
+                                isTextFieldFocused.wrappedValue = false
+                                print("after \(isTextFieldFocused.wrappedValue)")
+                            } label: {
+                                Image(systemName: "checkmark")
+                                    .padding()
+                            }
+                            .buttonStyle(.plain)
+                            .glassEffect(.regular.interactive())
+                            .padding(.horizontal, 15)
+                            .padding(.bottom, 10)
+                        }
                     }
                 }
-            }
+                .detectKeyboard(isKeyboardShowing: $isKeyboardShowing)
+                .animation(.default, value: isKeyboardShowing)
+        } else {
+            content
+                .toolbar {
+                    ToolbarItemGroup(placement: .keyboard) {
+                        Spacer()
+                        Button("Done") {
+                            isTextFieldFocused.wrappedValue = false
+                        }
+                    }
+                }
+        }
     }
 }
 
 extension View {
-    func withTextFieldToolbar() -> some View {
-        self.modifier(TextFieldToolbar())
+    func withTextFieldToolbar(isKeyboardShowing: Binding<Bool>, isTextFieldFocused: FocusState<Bool>.Binding) -> some View {
+        self.modifier(
+            TextFieldToolbar(isKeyboardShowing: isKeyboardShowing, isTextFieldFocused: isTextFieldFocused)
+        )
     }
 }

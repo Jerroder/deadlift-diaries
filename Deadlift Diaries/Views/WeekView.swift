@@ -16,6 +16,8 @@ struct WeekView: View {
     @State private var selectedWeekIDs = Set<Week.ID>()
     @State private var isShowingMesocyclePicker = false
     
+    @FocusState.Binding var isTextFieldFocused: Bool
+    
     private var sortedWeeks: [Week] {
         mesocycle.weeks.sorted { $0.startDate < $1.startDate }
     }
@@ -92,7 +94,7 @@ struct WeekView: View {
     private func weekRow(for week: Week) -> some View {
         let isPast = isWeekPast(week)
         NavigationLink {
-            WorkoutView(week: week)
+            WorkoutView(week: week, isTextFieldFocused: $isTextFieldFocused)
         } label: {
             WeekRow(week: week, isPast: isPast)
         }
@@ -113,7 +115,7 @@ struct WeekView: View {
             copyMenuItem
             deleteMenuItem
         } label: {
-            Image(systemName: "ellipsis.circle")
+            Image(systemName: "ellipsis")
         }
     }
     
@@ -283,19 +285,18 @@ struct MesocyclePickerSheet: View {
     }
     
     var body: some View {
-        NavigationStack {
-            List(targetMesocycles) { targetMesocycle in
-                Button(action: { onCopy(targetMesocycle) }) {
-                    MesocycleRow(mesocycle: targetMesocycle)
-                }
-            }
-            .navigationTitle("Copy to Mesocycle")
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel", action: onCancel)
-                }
+        List(targetMesocycles) { targetMesocycle in
+            Button(action: { onCopy(targetMesocycle) }) {
+                MesocycleRow(mesocycle: targetMesocycle)
             }
         }
+        .navigationTitle("Copy to Mesocycle")
+        .toolbar {
+            ToolbarItem(placement: .cancellationAction) {
+                Button("Cancel", action: onCancel)
+            }
+        }
+        
     }
     
     @ViewBuilder

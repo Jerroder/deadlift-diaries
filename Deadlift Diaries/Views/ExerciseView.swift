@@ -40,6 +40,9 @@ struct ExerciseView: View {
     @State private var selectedExerciseIDs = Set<Exercise.ID>()
     @State private var isShowingWorkoutPicker = false
     
+    @State private var isKeyboardShowing = false
+    @FocusState.Binding var isTextFieldFocused: Bool
+    
     private let unit: Unit = isMetricSystem() ? Unit(symbol: "kg") : Unit(symbol: "lbs")
     
     private var availableWorkouts: [Workout] {
@@ -146,7 +149,7 @@ struct ExerciseView: View {
                 get: { exercise!.name },
                 set: { exercise!.name = $0 }
             ))
-            .withTextFieldToolbar()
+            .focused($isTextFieldFocused)
             
             Stepper(
                 "Sets: \(exercise == nil ? newExerciseSets : exercise!.sets)",
@@ -234,6 +237,7 @@ struct ExerciseView: View {
                 }
             }
         }
+        .withTextFieldToolbar(isKeyboardShowing: $isKeyboardShowing, isTextFieldFocused: $isTextFieldFocused)
     }
     
     @ViewBuilder
@@ -263,7 +267,7 @@ struct ExerciseView: View {
                     deleteSelectedExercises()
                 }
             } label: {
-                Image(systemName: "ellipsis.circle")
+                Image(systemName: "ellipsis")
             }
         }
     }
@@ -285,42 +289,40 @@ struct ExerciseView: View {
     
     @ViewBuilder
     private var workoutPickerSheet: some View {
-        NavigationStack {
-            let allWorkouts = workout.week?.mesocycle?.weeks.flatMap { $0.workouts } ?? []
-            let targetWorkouts = allWorkouts
-                .filter { $0.id != workout.id }
-                .sorted {
-                    guard let weekNumber1 = $0.week?.number,
-                          let weekNumber2 = $1.week?.number else {
-                        return $0.date < $1.date
-                    }
-                    if weekNumber1 != weekNumber2 {
-                        return weekNumber1 < weekNumber2
-                    } else {
-                        return $0.date < $1.date
-                    }
+        let allWorkouts = workout.week?.mesocycle?.weeks.flatMap { $0.workouts } ?? []
+        let targetWorkouts = allWorkouts
+            .filter { $0.id != workout.id }
+            .sorted {
+                guard let weekNumber1 = $0.week?.number,
+                      let weekNumber2 = $1.week?.number else {
+                    return $0.date < $1.date
                 }
-            
-            List(targetWorkouts) { targetWorkout in
-                Button(action: {
-                    copyExercises(to: targetWorkout)
-                    isShowingWorkoutPicker = false
-                }) {
-                    VStack(alignment: .leading) {
-                        Text(targetWorkout.name)
-                            .font(.headline)
-                        Text("Week \(targetWorkout.week?.number ?? 0)")
-                            .font(.subheadline)
-                            .foregroundColor(Color(UIColor.secondaryLabel))
-                    }
+                if weekNumber1 != weekNumber2 {
+                    return weekNumber1 < weekNumber2
+                } else {
+                    return $0.date < $1.date
                 }
             }
-            .navigationTitle("Copy to Workout")
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") {
-                        isShowingWorkoutPicker = false
-                    }
+        
+        List(targetWorkouts) { targetWorkout in
+            Button(action: {
+                copyExercises(to: targetWorkout)
+                isShowingWorkoutPicker = false
+            }) {
+                VStack(alignment: .leading) {
+                    Text(targetWorkout.name)
+                        .font(.headline)
+                    Text("Week \(targetWorkout.week?.number ?? 0)")
+                        .font(.subheadline)
+                        .foregroundColor(Color(UIColor.secondaryLabel))
+                }
+            }
+        }
+        .navigationTitle("Copy to Workout")
+        .toolbar {
+            ToolbarItem(placement: .cancellationAction) {
+                Button("Cancel") {
+                    isShowingWorkoutPicker = false
                 }
             }
         }

@@ -9,9 +9,11 @@ import SwiftData
 import SwiftUI
 
 struct ContentView: View {
+    @FocusState private var isTextFieldFocused: Bool
+    
     var body: some View {
         TabView {
-            MesocycleView().tabItem {
+            MesocycleView(isTextFieldFocused: $isTextFieldFocused).tabItem {
                 Image(systemName: "calendar")
                 Text("cycles".localized(comment: "Cycles"))
             }

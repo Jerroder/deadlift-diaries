@@ -23,23 +23,7 @@ struct TimerView: View {
     let orange = Color(red: 0xFF/255, green: 0xBC/255, blue: 0x8E/255)
     let yellow = Color(red: 0xFF/255, green: 0xD6/255, blue: 0x8E/255)
     
-    @AppStorage("selectedSoundID") private var selectedSoundID: Int = 1023
-    
-    private let soundOptions: [(id: UInt32, name: String)] = [
-        (1023, "Choo Choo"),
-        (1052, "Beep"),
-        (1057, "Tink"),
-        (1070, "Busy"),
-        (1071, "Congestion"),
-        (1075, "Key Tone"),
-        (1103, "Tink 2"),
-        (1110, "Begin"),
-        (1111, "Confirm"),
-        (1114, "End Record"),
-        (1255, "Short Double High"),
-        (1257, "Short Double Low"),
-        (1328, "News Flash"),
-    ]
+    @AppStorage("selectedSoundID") private var selectedSoundID: Int = 1075
     
     var body: some View {
         NavigationStack {
@@ -161,7 +145,10 @@ struct TimerView: View {
             .padding()
             .navigationTitle("Timer")
             .sheet(isPresented: $showingSoundPicker) {
-                soundPickerSheet()
+                SoundPickerSheet(
+                    selectedSoundID: $selectedSoundID,
+                    isPresented: $showingSoundPicker
+                )
             }
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
@@ -172,7 +159,7 @@ struct TimerView: View {
                             Label("settings".localized(comment: "Settings"), systemImage: "gear")
                         }
                     } label: {
-                        Image(systemName: "ellipsis.circle")
+                        Image(systemName: "ellipsis")
                     }
                 }
             }
@@ -182,35 +169,6 @@ struct TimerView: View {
                 restProgress = 1 - (CGFloat(timeRemaining) / CGFloat(restDuration))
             } else {
                 restProgress = 0
-            }
-        }
-    }
-    
-    @ViewBuilder
-    private func soundPickerSheet() -> some View {
-        NavigationView {
-            Form {
-                HStack {
-                    Text("Sound")
-                    Picker("Sound", selection: $selectedSoundID) {
-                        ForEach(soundOptions, id: \.id) { option in
-                            Text(option.name).tag(Int(option.id))
-                        }
-                    }
-                    .pickerStyle(.wheel)
-                    .onChange(of: selectedSoundID) { _, _ in
-                        AudioServicesPlaySystemSound(UInt32(selectedSoundID))
-                    }
-                }
-            }
-            .navigationTitle("Settings")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("", systemImage: "checkmark") {
-                        showingSoundPicker = false
-                    }
-                }
             }
         }
     }

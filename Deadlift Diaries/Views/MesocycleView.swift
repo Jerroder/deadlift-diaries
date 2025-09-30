@@ -20,6 +20,12 @@ struct MesocycleView: View {
     @State private var newMesocycleNumberOfWeeks = 4
     @State private var selectedMesocycleIDs = Set<Mesocycle.ID>()
     
+    @State private var isKeyboardShowing = false
+    @FocusState.Binding var isTextFieldFocused: Bool
+    
+    @AppStorage("selectedSoundID") private var selectedSoundID: Int = 1075
+    @State private var showingSoundPicker = false
+    
     var body: some View {
         NavigationStack {
             List(selection: $selectedMesocycleIDs) {
@@ -46,6 +52,12 @@ struct MesocycleView: View {
             }
             .sheet(isPresented: $isAddingNewMesocycle) {
                 mesocycleEditSheet(mesocycle: nil)
+            }
+            .sheet(isPresented: $showingSoundPicker) {
+                SoundPickerSheet(
+                    selectedSoundID: $selectedSoundID,
+                    isPresented: $showingSoundPicker
+                )
             }
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
@@ -88,7 +100,7 @@ struct MesocycleView: View {
                 .buttonStyle(PlainButtonStyle())
             } else {
                 NavigationLink {
-                    WeekView(mesocycle: mesocycle)
+                    WeekView(mesocycle: mesocycle, isTextFieldFocused: $isTextFieldFocused)
                 } label: {
                     MesocycleRow(mesocycle: mesocycle)
                         .contentShape(Rectangle())
@@ -109,18 +121,18 @@ struct MesocycleView: View {
                         Label("Delete", systemImage: "trash")
                     }
                 } label: {
-                    Image(systemName: "ellipsis.circle")
+                    Image(systemName: "ellipsis")
                 }
             }
         } else {
             Menu {
                 Button(action: {
-                    print("test")
+                    showingSoundPicker = true
                 }) {
-                    Label("info".localized(comment: "Info"), systemImage: "info.circle")
+                    Label("settings".localized(comment: "Settings"), systemImage: "gear")
                 }
             } label: {
-                Image(systemName: "ellipsis.circle")
+                Image(systemName: "ellipsis")
             }
         }
     }
@@ -133,7 +145,10 @@ struct MesocycleView: View {
                     get: { mesocycle!.name },
                     set: { mesocycle!.name = $0 }
                 ))
-                .withTextFieldToolbar()
+                .focused($isTextFieldFocused)
+                .onChange(of: isTextFieldFocused) { _, focused in
+                    print("cycle focus changed to: \(focused)")
+                }
                 DatePicker("Start Date", selection: mesocycle == nil ? $newMesocycleStartDate : Binding(
                     get: { mesocycle!.startDate },
                     set: { mesocycle!.startDate = $0 }
@@ -144,6 +159,7 @@ struct MesocycleView: View {
                             set: { _ in }
                         ), in: 1...12)
             }
+            .withTextFieldToolbar(isKeyboardShowing: $isKeyboardShowing, isTextFieldFocused: $isTextFieldFocused)
             .navigationTitle(mesocycle == nil ? "New Mesocycle" : "Edit Mesocycle")
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {

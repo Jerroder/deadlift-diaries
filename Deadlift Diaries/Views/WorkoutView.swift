@@ -19,6 +19,9 @@ struct WorkoutView: View {
     @State private var selectedWorkoutIDs = Set<Workout.ID>()
     @State private var isShowingWeekPicker = false
     
+    @State private var isKeyboardShowing = false
+    @FocusState.Binding var isTextFieldFocused: Bool
+    
     private var weekDateRange: ClosedRange<Date> {
         let startDate = week.startDate
         let endDate = Calendar.current.date(byAdding: .day, value: 6, to: startDate)!
@@ -108,7 +111,7 @@ struct WorkoutView: View {
                 .buttonStyle(PlainButtonStyle())
             } else {
                 NavigationLink {
-                    ExerciseView(workout: workout)
+                    ExerciseView(workout: workout, isTextFieldFocused: $isTextFieldFocused)
                 } label: {
                     HStack {
                         Text(workout.name)
@@ -133,7 +136,10 @@ struct WorkoutView: View {
                     get: { workout!.name },
                     set: { workout!.name = $0 }
                 ))
-                .withTextFieldToolbar()
+                .focused($isTextFieldFocused)
+                .onChange(of: isKeyboardShowing) { _, focused in
+                    print("workout focus changed to: \(focused)")
+                }
                 DatePicker(
                     "Date",
                     selection: workout == nil ? $newWorkoutDate : Binding(
@@ -144,6 +150,7 @@ struct WorkoutView: View {
                     displayedComponents: .date
                 )
             }
+            .withTextFieldToolbar(isKeyboardShowing: $isKeyboardShowing, isTextFieldFocused: $isTextFieldFocused)
             .navigationTitle(workout == nil ? "New Workout" : "Rename Workout")
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
@@ -185,7 +192,7 @@ struct WorkoutView: View {
                         Label("Delete", systemImage: "trash")
                     }
                 } label: {
-                    Image(systemName: "ellipsis.circle")
+                    Image(systemName: "ellipsis")
                 }
             }
         }
@@ -203,27 +210,25 @@ struct WorkoutView: View {
     
     @ViewBuilder
     private var weekPickerSheet: some View {
-        NavigationStack {
-            List(availableWeeks) { targetWeek in
-                Button(action: {
-                    copyWorkouts(to: targetWeek)
-                    isShowingWeekPicker = false
-                }) {
-                    VStack(alignment: .leading) {
-                        Text("Week \(targetWeek.number)")
-                            .font(.headline)
-                        Text("Start: \(targetWeek.startDate.formattedRelative())")
-                            .font(.subheadline)
-                            .foregroundColor(Color(UIColor.secondaryLabel))
-                    }
+        List(availableWeeks) { targetWeek in
+            Button(action: {
+                copyWorkouts(to: targetWeek)
+                isShowingWeekPicker = false
+            }) {
+                VStack(alignment: .leading) {
+                    Text("Week \(targetWeek.number)")
+                        .font(.headline)
+                    Text("Start: \(targetWeek.startDate.formattedRelative())")
+                        .font(.subheadline)
+                        .foregroundColor(Color(UIColor.secondaryLabel))
                 }
             }
-            .navigationTitle("Copy to Week")
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") {
-                        isShowingWeekPicker = false
-                    }
+        }
+        .navigationTitle("Copy to Week")
+        .toolbar {
+            ToolbarItem(placement: .cancellationAction) {
+                Button("Cancel") {
+                    isShowingWeekPicker = false
                 }
             }
         }
@@ -286,4 +291,3 @@ struct WorkoutView: View {
         return Calendar.current.date(byAdding: .day, value: 1, to: lastWorkout.date) ?? week.startDate
     }
 }
-
