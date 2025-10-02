@@ -9,8 +9,9 @@ import AudioToolbox
 import SwiftUI
 
 struct SoundPickerSheet: View {
-    @Binding var selectedSoundID: Int
     @Binding var isPresented: Bool
+    
+    @AppStorage("selectedSoundID") private var selectedSoundID: Int = 1075
     
     var body: some View {
         NavigationView {

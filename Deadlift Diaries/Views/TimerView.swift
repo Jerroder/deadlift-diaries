@@ -12,18 +12,10 @@ import SwiftUI
 struct TimerView: View {
     @AppStorage("totalSets") private var totalSets: Int = 5
     @AppStorage("currentSet") private var currentSet: Int = 1
-    @AppStorage("restDuration") private var restDuration: Int = 60
-    @AppStorage("timeRemaining") private var timeRemaining: Int = 60
+    @AppStorage("restDuration") private var restDuration: Double = 60.0
+    @AppStorage("timeRemaining") private var timeRemaining: Double = 60.0
     @State private var isTimerRunning: Bool = false
-    @State private var timer: DispatchSourceTimer?
-    @State private var restProgress: CGFloat = 0
-    @State private var backgroundTask: UIBackgroundTaskIdentifier = .invalid
     @State private var showingSoundPicker = false
-    
-    let orange = Color(red: 0xFF/255, green: 0xBC/255, blue: 0x8E/255)
-    let yellow = Color(red: 0xFF/255, green: 0xD6/255, blue: 0x8E/255)
-    
-    @AppStorage("selectedSoundID") private var selectedSoundID: Int = 1075
     
     var body: some View {
         NavigationStack {
@@ -38,8 +30,8 @@ struct TimerView: View {
                     Text("Rest Duration:")
                     
                     Picker("Rest Duration", selection: $restDuration) {
-                        ForEach(Array(stride(from: 5, through: 300, by: 5)), id: \.self) { duration in
-                            Text("\(duration) sec").tag(duration)
+                        ForEach(Array(stride(from: 5.0, through: 300.0, by: 5.0)), id: \.self) { duration in
+                            Text("\(Int(duration)) sec").tag(duration)
                         }
                     }
                     .pickerStyle(.wheel)
@@ -76,77 +68,19 @@ struct TimerView: View {
                     }
                 }
                 
-                //            Text("\(currentSet)/\(totalSets)")
-                //                .font(.title)
                 
-                GeometryReader { geometry in
-                    let squareWidth = geometry.size.width / CGFloat(2 * self.totalSets - 1)
-                    HStack(spacing: 4) {
-                        ForEach(1..<2*self.totalSets, id: \.self) { index in
-                            if index.isMultiple(of: 2) {
-                                let restNumber = index / 2
-                                if restNumber == self.currentSet && (self.isTimerRunning || self.restProgress > 0) {
-                                    ZStack(alignment: .leading) {
-                                        Rectangle()
-                                            .frame(width: squareWidth, height: 20)
-                                            .foregroundColor(.gray)
-                                            .cornerRadius(4)
-                                        Rectangle()
-                                            .frame(width: squareWidth * self.restProgress, height: 20)
-                                            .foregroundColor(yellow)
-                                            .cornerRadius(4)
-                                            .animation(.linear, value: self.restProgress)
-                                    }
-                                } else if restNumber < self.currentSet {
-                                    Rectangle()
-                                        .frame(width: squareWidth, height: 20)
-                                        .foregroundColor(orange)
-                                        .cornerRadius(4)
-                                } else {
-                                    Rectangle()
-                                        .frame(width: squareWidth, height: 20)
-                                        .foregroundColor(.gray)
-                                        .cornerRadius(4)
-                                }
-                            } else {
-                                let setNumber = (index + 1) / 2
-                                Rectangle()
-                                    .frame(width: squareWidth, height: 20)
-                                    .foregroundColor(setNumber <= self.currentSet ? .accentColor : .gray)
-                                    .cornerRadius(4)
-                            }
-                        }
-                    }
-                    .frame(width: geometry.size.width, height: 20)
-                }
-                .frame(height: 20)
-                .padding(.horizontal)
-                
-                Text("Remaining: \(timeRemaining) sec")
-                    .font(.title)
-                
-                HStack {
-                    Spacer()
-                    Button(action: toggleTimer) {
-                        Text(isTimerRunning ? "Pause" : "Start")
-                    }
-                    .disabled(currentSet >= totalSets)
-                    Spacer()
-                    Button("Reset") {
-                        timer?.cancel()
-                        isTimerRunning = false
-                        currentSet = 1
-                        timeRemaining = restDuration
-                        restProgress = 0
-                    }
-                    Spacer()
-                }
+                ProgressBarView(
+                    totalSets: totalSets,
+                    currentSet: $currentSet,
+                    restDuration: restDuration,
+                    timeRemaining: $timeRemaining,
+                    isTimerRunning: $isTimerRunning
+                )
             }
             .padding()
             .navigationTitle("Timer")
             .sheet(isPresented: $showingSoundPicker) {
                 SoundPickerSheet(
-                    selectedSoundID: $selectedSoundID,
                     isPresented: $showingSoundPicker
                 )
             }
@@ -164,28 +98,123 @@ struct TimerView: View {
                 }
             }
         }
-        .onAppear {
-            if timeRemaining < restDuration {
-                restProgress = 1 - (CGFloat(timeRemaining) / CGFloat(restDuration))
-            } else {
-                restProgress = 0
-            }
-        }
     }
+}
+
+struct ProgressBarView: View {
+    let totalSets: Int
+    @Binding var currentSet: Int
+    let restDuration: Double
+    @Binding var timeRemaining: Double
+    @Binding var isTimerRunning: Bool
     
-    private func colorForIndex(_ index: Int) -> Color {
-        if index.isMultiple(of: 2) {
-            let restNumber = index / 2
-            if restNumber < currentSet {
-                return orange
-            } else if restNumber == currentSet && isTimerRunning {
-                return yellow
-            } else {
-                return .gray
+    @AppStorage("selectedSoundID") private var selectedSoundID: Int = 1075
+    @AppStorage("elapsed") private var elapsed: Double = 0.0
+    
+    @State private var restProgress: CGFloat = 0
+    @State private var timer: DispatchSourceTimer?
+    @State private var backgroundTask: UIBackgroundTaskIdentifier = .invalid
+    @State private var timeStarted: Double?
+    
+    let orange = Color(red: 0xFF/255, green: 0xBC/255, blue: 0x8E/255)
+    let yellow = Color(red: 0xFF/255, green: 0xD6/255, blue: 0x8E/255)
+    
+    var body: some View {
+        VStack {
+            GeometryReader { geometry in
+                let squareWidth = geometry.size.width / CGFloat(2 * self.totalSets - 1)
+                HStack(spacing: 4) {
+                    ForEach(1..<2*self.totalSets, id: \.self) { index in
+                        if index.isMultiple(of: 2) {
+                            let restNumber = index / 2
+                            if restNumber == self.currentSet && (self.isTimerRunning || self.restProgress > 0) {
+                                ZStack(alignment: .leading) {
+                                    Rectangle()
+                                        .frame(width: squareWidth, height: 20)
+                                        .foregroundColor(.gray)
+                                        .cornerRadius(4)
+                                    Rectangle()
+                                        .frame(width: squareWidth * self.restProgress, height: 20)
+                                        .foregroundColor(yellow)
+                                        .cornerRadius(4)
+                                        .animation(.linear, value: self.restProgress)
+                                }
+                            } else if restNumber < self.currentSet {
+                                Rectangle()
+                                    .frame(width: squareWidth, height: 20)
+                                    .foregroundColor(orange)
+                                    .cornerRadius(4)
+                            } else {
+                                Rectangle()
+                                    .frame(width: squareWidth, height: 20)
+                                    .foregroundColor(.gray)
+                                    .cornerRadius(4)
+                            }
+                        } else {
+                            let setNumber = (index + 1) / 2
+                            Rectangle()
+                                .frame(width: squareWidth, height: 20)
+                                .foregroundColor(setNumber <= self.currentSet ? .accentColor : .gray)
+                                .cornerRadius(4)
+                        }
+                    }
+                }
+                .frame(width: geometry.size.width, height: 20)
             }
-        } else {
-            let setNumber = (index + 1) / 2
-            return setNumber <= currentSet ? .accentColor : .gray
+            .frame(height: 20)
+            .padding(.horizontal)
+            .onAppear {
+                if timeRemaining < restDuration {
+                    restProgress = 1 - (CGFloat(timeRemaining.rounded(.down)) / CGFloat(restDuration.rounded(.up)))
+                } else {
+                    restProgress = 0
+                }
+            }
+            
+            Text("Remaining: \(Int(timeRemaining.rounded(.down))) sec")
+                .font(.title)
+            
+            if #available(iOS 26.0, *) {
+                HStack {
+                    Spacer()
+                    Button(action: toggleTimer) {
+                        Text(isTimerRunning ? "Pause" : "Start")
+                    }
+                    .disabled(currentSet >= totalSets)
+                    .buttonStyle(.glassProminent)
+                    Spacer()
+                    Button("Reset") {
+                        timer?.cancel()
+                        isTimerRunning = false
+                        currentSet = 1
+                        timeRemaining = restDuration
+                        restProgress = 0
+                        timeStarted = nil
+                        elapsed = 0.0
+                    }
+                    .buttonStyle(.glass)
+                    Spacer()
+                }
+            } else {
+                HStack {
+                    Spacer()
+                    Button(action: toggleTimer) {
+                        Text(isTimerRunning ? "Pause" : "Start")
+                    }
+                    .disabled(currentSet >= totalSets)
+                    Spacer()
+                    Button("Reset") {
+                        timer?.cancel()
+                        isTimerRunning = false
+                        currentSet = 1
+                        timeRemaining = restDuration
+                        restProgress = 0
+                        timeStarted = nil
+                        elapsed = 0.0
+                    }
+                    Spacer()
+                }
+            }
         }
     }
     
@@ -203,37 +232,47 @@ struct TimerView: View {
             self.endBackgroundTask()
         }
         
+        timeStarted = Date.now.timeIntervalSince1970 * 1000
+        
         let queue = DispatchQueue(label: "com.jerroder.deadliftdiaries", qos: .background)
         timer = DispatchSource.makeTimerSource(queue: queue)
         timer?.schedule(deadline: .now(), repeating: .seconds(1))
-        timer?.setEventHandler {
-            DispatchQueue.main.async { [self] in
-                if timeRemaining > 0 {
-                    if timeRemaining == 1 {
-                        playSystemSound()
-                    }
-                    timeRemaining -= 1
-                    restProgress = 1 - (CGFloat(timeRemaining) / CGFloat(restDuration))
-                } else {
+        timer?.setEventHandler { [self] in
+            DispatchQueue.main.async {
+                let now = Date.now.timeIntervalSince1970 * 1000
+                let elapsed = max(0, now - (timeStarted ?? 0)) / 1000
+                let remaining = max(0, restDuration - elapsed - self.elapsed)
+                timeRemaining = remaining
+                restProgress = 1 - (CGFloat(timeRemaining.rounded(.down)) / CGFloat(restDuration.rounded(.up)))
+                
+                if timeRemaining <= 0 {
                     isTimerRunning = false
                     stopTimer()
                     if currentSet < totalSets {
                         currentSet += 1
                         timeRemaining = restDuration
                         restProgress = 0
+                        self.elapsed = 0.0
                     }
+                } else if timeRemaining <= 1 {
+                    playSystemSound()
                 }
             }
         }
         timer?.resume()
     }
-
     
     private func stopTimer() {
+        let now = Date.now.timeIntervalSince1970 * 1000
+        if let timeStarted = timeStarted {
+            elapsed += max(0, now - timeStarted) / 1000
+            timeRemaining = max(0, restDuration - elapsed)
+        }
         timer?.cancel()
         timer = nil
         endBackgroundTask()
     }
+
     
     private func endBackgroundTask() {
         if backgroundTask != .invalid {

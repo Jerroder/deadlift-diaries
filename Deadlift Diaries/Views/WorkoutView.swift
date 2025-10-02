@@ -235,11 +235,18 @@ struct WorkoutView: View {
         let selectedWorkouts = week.workouts.filter { selectedWorkoutIDs.contains($0.id) }
         let maxOrderIndex = targetWeek.workouts.map { $0.orderIndex }.max() ?? 0
         
+        let sourceWeekStart = Calendar.current.startOfDay(for: week.startDate)
+        let targetWeekStart = Calendar.current.startOfDay(for: targetWeek.startDate)
+        let dayOffset = Calendar.current.dateComponents([.day], from: sourceWeekStart, to: targetWeekStart).day!
+        
         for (index, workout) in selectedWorkouts.enumerated() {
+            let originalWorkoutDate = Calendar.current.startOfDay(for: workout.date)
+            let newWorkoutDate = Calendar.current.date(byAdding: .day, value: dayOffset, to: originalWorkoutDate)!
+            
             let newWorkout = Workout(
                 name: workout.name,
                 orderIndex: maxOrderIndex + index + 1,
-                date: workout.date
+                date: newWorkoutDate
             )
             targetWeek.workouts.append(newWorkout)
             newWorkout.week = targetWeek

@@ -17,12 +17,12 @@ final class Exercise  {
     var sets: Int
     var reps: Int?
     var duration: Int?
-    var restTime: Int
+    var restTime: Double
     var isTimeBased: Bool
     var orderIndex: Int
     var workout: Workout?
     
-    init(name: String, weight: Double? = nil, sets: Int, reps: Int? = nil, duration: Int? = nil, restTime: Int, isTimeBased: Bool, orderIndex: Int) {
+    init(name: String, weight: Double? = nil, sets: Int, reps: Int? = nil, duration: Int? = nil, restTime: Double, isTimeBased: Bool, orderIndex: Int) {
         self.id = UUID()
         self.name = name
         self.weight = weight

@@ -24,8 +24,6 @@ struct MesocycleView: View {
     
     @FocusState.Binding var isTextFieldFocused: Bool
     
-    @AppStorage("selectedSoundID") private var selectedSoundID: Int = 1075
-    
     // MARK: - ViewBuilder variables
     
     @ViewBuilder
@@ -56,7 +54,6 @@ struct MesocycleView: View {
                 }
                 .sheet(isPresented: $showingSoundPicker) {
                     SoundPickerSheet(
-                        selectedSoundID: $selectedSoundID,
                         isPresented: $showingSoundPicker
                     )
                 }

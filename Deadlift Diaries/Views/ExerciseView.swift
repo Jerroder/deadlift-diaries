@@ -32,16 +32,21 @@ struct ExerciseView: View {
     @State private var isAddingNewExercise = false
     @State private var newExerciseName = ""
     @State private var newExerciseSets = 5
-    @State private var newExerciseRestTime = 60
+    @State private var newExerciseRestTime: Double = 60
     @State private var newExerciseIsTimeBased = false
     @State private var newExerciseReps = 8
     @State private var newExerciseDuration = 30
     @State private var newExerciseWeight = 50.0
     @State private var selectedExerciseIDs = Set<Exercise.ID>()
     @State private var isShowingWorkoutPicker = false
+    @State private var expandedExerciseID: UUID?
     
     @State private var isKeyboardShowing = false
     @FocusState.Binding var isTextFieldFocused: Bool
+    
+    @State private var currentSets: [UUID: Int] = [:]
+    @State private var timeRemaining: [UUID: Double] = [:]
+    @State private var isTimerRunning: [UUID: Bool] = [:]
     
     private let unit: Unit = isMetricSystem() ? Unit(symbol: "kg") : Unit(symbol: "lbs")
     
@@ -108,28 +113,61 @@ struct ExerciseView: View {
     private func exerciseRow() -> some View {
         List(selection: $selectedExerciseIDs) {
             ForEach(sortedExercises, id: \.id) { exercise in
-                Group {
-                    if editMode?.wrappedValue.isEditing == true {
-                        Button(action: {
-                            selectedExercise = exercise
-                        }) {
-                            displayExercises(exercise: exercise, unit: unit)
-                                .contentShape(Rectangle())
+                displayExercise(for: exercise)
+                    .tag(exercise.id)
+            }
+        }
+    }
+    
+    @ViewBuilder
+    private func displayExercise(for exercise: Exercise) -> some View {
+        Group {
+            if editMode?.wrappedValue.isEditing == true {
+                Button(action: {
+                    selectedExercise = exercise
+                }) {
+                    displayExercises(exercise: exercise, unit: unit)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(PlainButtonStyle())
+            } else {
+                displayExercises(exercise: exercise, unit: unit)
+                    .onTapGesture {
+                        withAnimation {
+                            if expandedExerciseID == exercise.id {
+                                expandedExerciseID = nil
+                            } else {
+                                expandedExerciseID = exercise.id
+                            }
                         }
-                        .buttonStyle(PlainButtonStyle())
-                    } else {
-                        displayExercises(exercise: exercise, unit: unit)
-                            .contentShape(Rectangle())
                     }
+                
+                if expandedExerciseID == exercise.id {
+                    ProgressBarView(
+                        totalSets: exercise.sets,
+                        currentSet: Binding(
+                            get: { currentSets[exercise.id] ?? 1 },
+                            set: { currentSets[exercise.id] = $0 }
+                        ),
+                        restDuration: exercise.restTime,
+                        timeRemaining: Binding(
+                            get: { timeRemaining[exercise.id] ?? exercise.restTime },
+                            set: { timeRemaining[exercise.id] = $0 }
+                        ),
+                        isTimerRunning: Binding(
+                            get: { isTimerRunning[exercise.id] ?? false },
+                            set: { isTimerRunning[exercise.id] = $0 }
+                        )
+                    )
+                    .transition(.opacity)
                 }
-                .swipeActions(edge: .trailing) {
-                    Button(role: .destructive) {
-                        deleteExercise(exercise)
-                    } label: {
-                        Label("Delete", systemImage: "trash")
-                    }
-                }
-                .tag(exercise.id)
+            }
+        }
+        .swipeActions(edge: .trailing) {
+            Button(role: .destructive) {
+                deleteExercise(exercise)
+            } label: {
+                Label("Delete", systemImage: "trash")
             }
         }
     }
@@ -161,12 +199,13 @@ struct ExerciseView: View {
                         .foregroundColor(Color(UIColor.secondaryLabel))
                 }
                 
-                Text("Rest: \(exercise.restTime) sec")
+                Text("Rest: \(Int(exercise.restTime)) sec")
                     .font(.subheadline)
                     .foregroundColor(Color(UIColor.secondaryLabel))
             }
             Spacer()
         }
+        .contentShape(Rectangle())
     }
     
     @ViewBuilder
@@ -239,8 +278,8 @@ struct ExerciseView: View {
                             }
                         )
                 ) {
-                    ForEach(Array(stride(from: 5, through: 300, by: 5)), id: \.self) { time in
-                        Text("\(time) sec").tag(time)
+                    ForEach(Array(stride(from: 5.0, through: 300.0, by: 5.0)), id: \.self) { time in
+                        Text("\(Int(time)) sec").tag(time)
                     }
                 }
                 .pickerStyle(.wheel)
