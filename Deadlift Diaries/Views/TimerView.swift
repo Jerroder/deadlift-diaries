@@ -13,7 +13,7 @@ struct TimerView: View {
     @AppStorage("totalSets") private var totalSets: Int = 5
     @AppStorage("currentSet") private var currentSet: Int = 1
     @AppStorage("restDuration") private var restDuration: Double = 60.0
-    @AppStorage("timeRemaining") private var timeRemaining: Double = 60.0
+    @AppStorage("elapsed") private var elapsed: Double = 0.0
     @State private var isTimerRunning: Bool = false
     @State private var showingSoundPicker = false
     
@@ -37,31 +37,28 @@ struct TimerView: View {
                     .pickerStyle(.wheel)
                     .disabled(isTimerRunning)
                     .frame(height: 150)
-                    .onChange(of: restDuration) { oldValue, newValue in
-                        timeRemaining = newValue
-                    }
                     
                     if #available(iOS 26.0, *) {
                         VStack(spacing: 8) {
-                            Button("30s") { restDuration = 30; timeRemaining = 30 }
+                            Button("30s") { restDuration = 30 }
                                 .disabled(isTimerRunning)
-                            Button("60s") { restDuration = 60; timeRemaining = 60 }
+                            Button("60s") { restDuration = 60 }
                                 .disabled(isTimerRunning)
-                            Button("90s") { restDuration = 90; timeRemaining = 90 }
+                            Button("90s") { restDuration = 90 }
                                 .disabled(isTimerRunning)
-                            Button("120s") { restDuration = 120; timeRemaining = 120 }
+                            Button("120s") { restDuration = 120 }
                                 .disabled(isTimerRunning)
                         }
                         .buttonStyle(.glass)
                     } else {
                         VStack(spacing: 8) {
-                            Button("30s") { restDuration = 30; timeRemaining = 30 }
+                            Button("30s") { restDuration = 30 }
                                 .disabled(isTimerRunning)
-                            Button("60s") { restDuration = 60; timeRemaining = 60 }
+                            Button("60s") { restDuration = 60 }
                                 .disabled(isTimerRunning)
-                            Button("90s") { restDuration = 90; timeRemaining = 90 }
+                            Button("90s") { restDuration = 90 }
                                 .disabled(isTimerRunning)
-                            Button("120s") { restDuration = 120; timeRemaining = 120 }
+                            Button("120s") { restDuration = 120 }
                                 .disabled(isTimerRunning)
                         }
                         .buttonStyle(.bordered)
@@ -73,8 +70,8 @@ struct TimerView: View {
                     totalSets: totalSets,
                     currentSet: $currentSet,
                     restDuration: restDuration,
-                    timeRemaining: $timeRemaining,
-                    isTimerRunning: $isTimerRunning
+                    isTimerRunning: $isTimerRunning,
+                    elapsed: $elapsed
                 )
             }
             .padding()
@@ -105,16 +102,16 @@ struct ProgressBarView: View {
     let totalSets: Int
     @Binding var currentSet: Int
     let restDuration: Double
-    @Binding var timeRemaining: Double
     @Binding var isTimerRunning: Bool
+    @Binding var elapsed: Double
     
     @AppStorage("selectedSoundID") private var selectedSoundID: Int = 1075
-    @AppStorage("elapsed") private var elapsed: Double = 0.0
     
     @State private var restProgress: CGFloat = 0
     @State private var timer: DispatchSourceTimer?
     @State private var backgroundTask: UIBackgroundTaskIdentifier = .invalid
     @State private var timeStarted: Double?
+    @State private var timeRemaining: Double = 60.0
     
     let orange = Color(red: 0xFF/255, green: 0xBC/255, blue: 0x8E/255)
     let yellow = Color(red: 0xFF/255, green: 0xD6/255, blue: 0x8E/255)
@@ -215,6 +212,9 @@ struct ProgressBarView: View {
                     Spacer()
                 }
             }
+        }
+        .onAppear {
+            timeRemaining = max(0, restDuration - elapsed)
         }
     }
     

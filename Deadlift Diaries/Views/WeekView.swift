@@ -119,17 +119,23 @@ struct WeekView: View {
     @ViewBuilder
     private func leadingToolbarItems() -> some View {
         if editMode?.wrappedValue.isEditing == true {
-            if !selectedWeekIDs.isEmpty {
-                Menu {
+            Menu {
+                if selectedWeekIDs.isEmpty {
+                    Button(action: {
+                        selectedWeekIDs = Set(mesocycle.weeks.map { $0.id })
+                    }) {
+                        Label("Select all", systemImage: "checkmark.circle.fill")
+                    }
+                } else {
                     Button(action: { isShowingMesocyclePicker = true }) {
                         Label("Copy", systemImage: "doc.on.doc")
                     }
                     Button(role: .destructive, action: deleteSelectedWeeks) {
                         Label("Delete", systemImage: "trash")
                     }
-                } label: {
-                    Image(systemName: "ellipsis")
                 }
+            } label: {
+                Image(systemName: "ellipsis")
             }
         }
     }

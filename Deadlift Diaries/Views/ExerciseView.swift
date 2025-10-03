@@ -45,7 +45,6 @@ struct ExerciseView: View {
     @FocusState.Binding var isTextFieldFocused: Bool
     
     @State private var currentSets: [UUID: Int] = [:]
-    @State private var timeRemaining: [UUID: Double] = [:]
     @State private var isTimerRunning: [UUID: Bool] = [:]
     
     private let unit: Unit = isMetricSystem() ? Unit(symbol: "kg") : Unit(symbol: "lbs")
@@ -150,14 +149,14 @@ struct ExerciseView: View {
                             set: { currentSets[exercise.id] = $0 }
                         ),
                         restDuration: exercise.restTime,
-                        timeRemaining: Binding(
-                            get: { timeRemaining[exercise.id] ?? exercise.restTime },
-                            set: { timeRemaining[exercise.id] = $0 }
-                        ),
                         isTimerRunning: Binding(
                             get: { isTimerRunning[exercise.id] ?? false },
                             set: { isTimerRunning[exercise.id] = $0 }
-                        )
+                        ),
+                        elapsed: Binding(
+                            get: { exercise.elapsed },
+                            set: { exercise.elapsed = $0 }
+                                        )
                     )
                     .transition(.opacity)
                 }
@@ -346,13 +345,21 @@ struct ExerciseView: View {
     
     @ViewBuilder
     private func leadingToolbarItems() -> some View {
-        if editMode?.wrappedValue.isEditing == true, !selectedExerciseIDs.isEmpty {
+        if editMode?.wrappedValue.isEditing == true {
             Menu {
-                Button("Copy", systemImage: "document.on.document") {
-                    isShowingWorkoutPicker = true
-                }
-                Button("Delete", systemImage: "trash", role: .destructive) {
-                    deleteSelectedExercises()
+                if selectedExerciseIDs.isEmpty {
+                    Button(action: {
+                        selectedExerciseIDs = Set(workout.exercises.map { $0.id })
+                    }) {
+                        Label("Select all", systemImage: "checkmark.circle.fill")
+                    }
+                } else {
+                    Button("Copy", systemImage: "document.on.document") {
+                        isShowingWorkoutPicker = true
+                    }
+                    Button("Delete", systemImage: "trash", role: .destructive) {
+                        deleteSelectedExercises()
+                    }
                 }
             } label: {
                 Image(systemName: "ellipsis")

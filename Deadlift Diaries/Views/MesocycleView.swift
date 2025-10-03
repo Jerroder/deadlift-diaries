@@ -77,17 +77,23 @@ struct MesocycleView: View {
     @ViewBuilder
     private func leadingToolbarItems() -> some View {
         if editMode?.wrappedValue.isEditing == true {
-            if !selectedMesocycleIDs.isEmpty {
-                Menu {
+            Menu {
+                if selectedMesocycleIDs.isEmpty {
+                    Button(action: {
+                        selectedMesocycleIDs = Set(mesocycles.map { $0.id })
+                    }) {
+                        Label("Select all", systemImage: "checkmark.circle.fill")
+                    }
+                } else {
                     Button(action: duplicateSelectedMesocycles) {
                         Label("Duplicate", systemImage: "plus.square.on.square")
                     }
                     Button(role: .destructive, action: deleteSelectedMesocycles) {
                         Label("Delete", systemImage: "trash")
                     }
-                } label: {
-                    Image(systemName: "ellipsis")
                 }
+            } label: {
+                Image(systemName: "ellipsis")
             }
         } else {
             Menu {

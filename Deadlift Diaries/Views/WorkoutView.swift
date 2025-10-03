@@ -184,8 +184,14 @@ struct WorkoutView: View {
     @ViewBuilder
     private func leadingToolbarItems() -> some View {
         if editMode?.wrappedValue.isEditing == true {
-            if !selectedWorkoutIDs.isEmpty {
-                Menu {
+            Menu {
+                if selectedWorkoutIDs.isEmpty {
+                    Button(action: {
+                        selectedWorkoutIDs = Set(week.workouts.map { $0.id })
+                    }) {
+                        Label("Select all", systemImage: "checkmark.circle.fill")
+                    }
+                } else {
                     Button(action: {
                         isShowingWeekPicker = true
                     }) {
@@ -196,9 +202,9 @@ struct WorkoutView: View {
                     }) {
                         Label("Delete", systemImage: "trash")
                     }
-                } label: {
-                    Image(systemName: "ellipsis")
                 }
+            } label: {
+                Image(systemName: "ellipsis")
             }
         }
     }
