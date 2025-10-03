@@ -44,7 +44,6 @@ struct ExerciseView: View {
     @State private var isKeyboardShowing = false
     @FocusState.Binding var isTextFieldFocused: Bool
     
-    @State private var currentSets: [UUID: Int] = [:]
     @State private var isTimerRunning: [UUID: Bool] = [:]
     
     private let unit: Unit = isMetricSystem() ? Unit(symbol: "kg") : Unit(symbol: "lbs")
@@ -145,8 +144,8 @@ struct ExerciseView: View {
                     ProgressBarView(
                         totalSets: exercise.sets,
                         currentSet: Binding(
-                            get: { currentSets[exercise.id] ?? 1 },
-                            set: { currentSets[exercise.id] = $0 }
+                            get: { exercise.currentSet },
+                            set: { exercise.currentSet = $0 }
                         ),
                         restDuration: exercise.restTime,
                         isTimerRunning: Binding(
