@@ -40,9 +40,9 @@ extension ModelContainer {
 
 #Preview {
     @MainActor func makePreview() -> some View {
-        let exercise1 = Exercise(name: "Deadlift", weight: 150, sets: 5, reps: 8, restTime: 120, isTimeBased: false, orderIndex: 1)
-        let exercise2 = Exercise(name: "Plank", weight: 10, sets: 5, duration: 60, restTime: 60, isTimeBased: true, orderIndex: 2)
-        let exercise3 = Exercise(name: "Bench Press", weight: 110, sets: 5, reps: 8, restTime: 80, isTimeBased: false, orderIndex: 3)
+        let exercise1 = Exercise(name: "Deadlift", weight: 150, sets: 5, reps: 8, restTime: 120, isTimeBased: false, orderIndex: 1, timeBeforeNext: 75.0)
+        let exercise2 = Exercise(name: "Plank", weight: 10, sets: 5, duration: 60, restTime: 60, isTimeBased: true, orderIndex: 2, timeBeforeNext: 150.0)
+        let exercise3 = Exercise(name: "Bench Press", weight: 110, sets: 5, reps: 8, restTime: 80, isTimeBased: false, orderIndex: 3, timeBeforeNext: 30.0)
         let sampleWorkout1 = Workout(name: "Workout 1", orderIndex: 1)
         sampleWorkout1.exercises.append(exercise1)
         sampleWorkout1.exercises.append(exercise2)

@@ -316,7 +316,8 @@ struct MesocycleView: View {
                             duration: exercise.duration,
                             restTime: exercise.restTime,
                             isTimeBased: exercise.isTimeBased,
-                            orderIndex: exercise.orderIndex
+                            orderIndex: exercise.orderIndex,
+                            timeBeforeNext: exercise.timeBeforeNext
                         )
                         newWorkout.exercises.append(newExercise)
                         newExercise.workout = newWorkout

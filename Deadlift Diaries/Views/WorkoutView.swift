@@ -155,7 +155,7 @@ struct WorkoutView: View {
                     displayedComponents: .date
                 )
             }
-            // .withTextFieldToolbar(isKeyboardShowing: $isKeyboardShowing, isTextFieldFocused: $isTextFieldFocused)
+            .withTextFieldToolbar(isKeyboardShowing: $isKeyboardShowing, isTextFieldFocused: $isTextFieldFocused)
             .navigationTitle(workout == nil ? "New Workout" : "Rename Workout")
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
@@ -267,7 +267,8 @@ struct WorkoutView: View {
                     duration: exercise.duration,
                     restTime: exercise.restTime,
                     isTimeBased: exercise.isTimeBased,
-                    orderIndex: exercise.orderIndex
+                    orderIndex: exercise.orderIndex,
+                    timeBeforeNext: exercise.timeBeforeNext
                 )
                 newWorkout.exercises.append(newExercise)
                 newExercise.workout = newWorkout

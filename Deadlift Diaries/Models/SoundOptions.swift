@@ -10,6 +10,7 @@ import Foundation
 
 enum SoundOptions {
     static let all: [(id: UInt32, name: String)] = [
+        (0, "No sound"),
         (1023, "Choo Choo"),
         (1052, "Beep"),
         (1057, "Tink"),

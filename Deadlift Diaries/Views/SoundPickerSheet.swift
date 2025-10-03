@@ -25,7 +25,9 @@ struct SoundPickerSheet: View {
                     }
                     .pickerStyle(.wheel)
                     .onChange(of: selectedSoundID) { _, _ in
-                        AudioServicesPlaySystemSound(UInt32(selectedSoundID))
+                        if selectedSoundID != 0 {
+                            AudioServicesPlaySystemSound(UInt32(selectedSoundID))
+                        }
                     }
                 }
             }

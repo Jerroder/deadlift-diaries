@@ -32,11 +32,12 @@ struct ExerciseView: View {
     @State private var isAddingNewExercise = false
     @State private var newExerciseName = ""
     @State private var newExerciseSets = 5
-    @State private var newExerciseRestTime: Double = 60
+    @State private var newExerciseRestTime: Double = 60.0
     @State private var newExerciseIsTimeBased = false
     @State private var newExerciseReps = 8
     @State private var newExerciseDuration = 30
     @State private var newExerciseWeight = 50.0
+    @State private var newExerciseTimeBeforeNext: Double = 120.0
     @State private var selectedExerciseIDs = Set<Exercise.ID>()
     @State private var isShowingWorkoutPicker = false
     @State private var expandedExerciseID: UUID?
@@ -113,6 +114,7 @@ struct ExerciseView: View {
             ForEach(sortedExercises, id: \.id) { exercise in
                 displayExercise(for: exercise)
                     .tag(exercise.id)
+                    .opacity((exercise.sets == exercise.currentSet) ? 0.5 : 1)
             }
         }
     }
@@ -148,6 +150,7 @@ struct ExerciseView: View {
                             set: { exercise.currentSet = $0 }
                         ),
                         restDuration: exercise.restTime,
+                        timeBeforeNextExercise: exercise.timeBeforeNext,
                         isTimerRunning: Binding(
                             get: { isTimerRunning[exercise.id] ?? false },
                             set: { isTimerRunning[exercise.id] = $0 }
@@ -224,7 +227,8 @@ struct ExerciseView: View {
                                     duration: newExerciseIsTimeBased ? newExerciseDuration : nil,
                                     restTime: newExerciseRestTime,
                                     isTimeBased: newExerciseIsTimeBased,
-                                    orderIndex: orderIndex
+                                    orderIndex: orderIndex,
+                                    timeBeforeNext: newExerciseTimeBeforeNext
                                 )
                                 workout.exercises.append(exercise)
                                 exercise.workout = workout
@@ -338,6 +342,28 @@ struct ExerciseView: View {
                     .keyboardType(.decimalPad)
                 }
             }
+            
+            HStack {
+                Text("Time before next exercise:")
+                Picker("Time before next exercise", selection:
+                        Binding(
+                            get: { exercise == nil ? newExerciseTimeBeforeNext : exercise!.timeBeforeNext },
+                            set: { newValue in
+                                if exercise == nil {
+                                    newExerciseTimeBeforeNext = newValue
+                                } else {
+                                    exercise!.timeBeforeNext = newValue
+                                }
+                            }
+                        )
+                ) {
+                    ForEach(Array(stride(from: 5.0, through: 300.0, by: 5.0)), id: \.self) { time in
+                        Text("\(Int(time)) sec").tag(time)
+                    }
+                }
+                .pickerStyle(.wheel)
+                .frame(height: 150)
+            }
         }
         .withTextFieldToolbar(isKeyboardShowing: $isKeyboardShowing, isTextFieldFocused: $isTextFieldFocused)
     }
@@ -424,7 +450,8 @@ struct ExerciseView: View {
                 duration: exercise.duration,
                 restTime: exercise.restTime,
                 isTimeBased: exercise.isTimeBased,
-                orderIndex: maxOrderIndex + index + 1
+                orderIndex: maxOrderIndex + index + 1,
+                timeBeforeNext: exercise.timeBeforeNext
             )
             targetWorkout.exercises.append(newExercise)
             newExercise.workout = targetWorkout
