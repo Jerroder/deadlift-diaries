@@ -114,7 +114,7 @@ struct ExerciseView: View {
             ForEach(sortedExercises, id: \.id) { exercise in
                 displayExercise(for: exercise)
                     .tag(exercise.id)
-                    .opacity((exercise.sets == exercise.currentSet) ? 0.5 : 1)
+                    .opacity((exercise.sets == exercise.currentSet - 1) ? 0.5 : 1)
             }
         }
     }
