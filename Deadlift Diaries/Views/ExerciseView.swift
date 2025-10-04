@@ -158,7 +158,7 @@ struct ExerciseView: View {
                         elapsed: Binding(
                             get: { exercise.elapsed },
                             set: { exercise.elapsed = $0 }
-                                        )
+                        )
                     )
                     .transition(.opacity)
                 }

@@ -12,15 +12,20 @@ import SwiftUI
 struct TimerView: View {
     @AppStorage("totalSets") private var totalSets: Int = 5
     @AppStorage("currentSet") private var currentSet: Int = 1
+    @AppStorage("isTimeBased") private var isTimeBased: Bool = false
+    @AppStorage("duration") private var duration: Double = 30.0
     @AppStorage("restDuration") private var restDuration: Double = 60.0
     @AppStorage("timeBeforeNext") private var timeBeforeNext: Double = 120.0
     @AppStorage("elapsed") private var elapsed: Double = 0.0
+    
     @State private var isTimerRunning: Bool = false
     @State private var showingSoundPicker = false
+    @State private var showingRestPicker = false
+    @State private var showingTimeBeforeNextPicker = false
     
     var body: some View {
         NavigationStack {
-            VStack(spacing: 20) {
+            Form {
                 Stepper("Total Sets: \(totalSets)", value: $totalSets, in: 1...20)
                     .onChange(of: totalSets) { oldValue, newValue in
                         if currentSet > newValue {
@@ -28,55 +33,107 @@ struct TimerView: View {
                         }
                     }
                 
+                
                 HStack {
-                    Text("Rest Duration:")
-                    
-                    Picker("Rest Duration", selection: $restDuration) {
-                        ForEach(Array(stride(from: 5.0, through: 300.0, by: 5.0)), id: \.self) { duration in
-                            Text("\(Int(duration)) sec").tag(duration)
+                    Button(action: {
+                        withAnimation {
+                            showingRestPicker.toggle()
                         }
+                    }) {
+                        HStack {
+                            HStack(spacing: 4) {
+                                Text("Rest duration")
+                                Text("  \(Int(restDuration))s ")
+                                    .font(.subheadline)
+                                    .foregroundColor(Color(UIColor.secondaryLabel))
+                                Image(systemName: showingRestPicker ? "chevron.up" : "chevron.down")
+                                    .font(.caption)
+                            }
+                            .fixedSize()
+                            Spacer()
+                        }
+                        .contentShape(Rectangle())
                     }
-                    .pickerStyle(.wheel)
+                    .buttonStyle(.plain)
                     .disabled(isTimerRunning)
-                    .frame(height: 150)
                     
                     if #available(iOS 26.0, *) {
-                        VStack(spacing: 8) {
-                            Button("30s") { restDuration = 30 }
-                                .disabled(isTimerRunning)
-                            Button("60s") { restDuration = 60 }
-                                .disabled(isTimerRunning)
-                            Button("90s") { restDuration = 90 }
-                                .disabled(isTimerRunning)
-                            Button("120s") { restDuration = 120 }
-                                .disabled(isTimerRunning)
+                        Grid(horizontalSpacing: 8, verticalSpacing: 8) {
+                            GridRow {
+                                Button("30s") { restDuration = 30 }
+                                    .disabled(isTimerRunning)
+                                Button("60s") { restDuration = 60 }
+                                    .disabled(isTimerRunning)
+                            }
+                            GridRow {
+                                Button("90s") { restDuration = 90 }
+                                    .disabled(isTimerRunning)
+                                Button("120s") { restDuration = 120 }
+                                    .disabled(isTimerRunning)
+                            }
                         }
                         .buttonStyle(.glass)
                     } else {
-                        VStack(spacing: 8) {
-                            Button("30s") { restDuration = 30 }
-                                .disabled(isTimerRunning)
-                            Button("60s") { restDuration = 60 }
-                                .disabled(isTimerRunning)
-                            Button("90s") { restDuration = 90 }
-                                .disabled(isTimerRunning)
-                            Button("120s") { restDuration = 120 }
-                                .disabled(isTimerRunning)
+                        Grid(horizontalSpacing: 8, verticalSpacing: 8) {
+                            GridRow {
+                                Button("30s") { restDuration = 30 }
+                                    .disabled(isTimerRunning)
+                                Button("60s") { restDuration = 60 }
+                                    .disabled(isTimerRunning)
+                            }
+                            GridRow {
+                                Button("90s") { restDuration = 90 }
+                                    .disabled(isTimerRunning)
+                                Button("120s") { restDuration = 120 }
+                                    .disabled(isTimerRunning)
+                            }
                         }
                         .buttonStyle(.bordered)
                     }
                 }
                 
-                HStack {
-                    Text("Time before next exercise:")
-                    Picker("Time before next exercise", selection: $timeBeforeNext) {
+                if showingRestPicker {
+                    Picker("Rest duration", selection: $restDuration) {
                         ForEach(Array(stride(from: 5.0, through: 300.0, by: 5.0)), id: \.self) { duration in
-                            Text("\(Int(duration)) sec").tag(duration)
+                            Text("\(Int(duration)) seconds").tag(duration)
                         }
                     }
                     .pickerStyle(.wheel)
                     .disabled(isTimerRunning)
-                    .frame(height: 150)
+                }
+                
+                if isTimeBased {
+                    Stepper("Duration: \(Int(duration)) sec", value: $duration, in: 10...600, step: 5)
+                }
+                
+                Button(action: {
+                    withAnimation {
+                        showingTimeBeforeNextPicker.toggle()
+                    }
+                }) {
+                    HStack {
+                        Text("Time before next exercise")
+                        Text(" \(Int(timeBeforeNext))s")
+                            .font(.subheadline)
+                            .foregroundColor(Color(UIColor.secondaryLabel))
+                        Image(systemName: showingTimeBeforeNextPicker ? "chevron.up" : "chevron.down")
+                            .font(.caption)
+                        Spacer()
+                    }
+                    .fixedSize()
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .disabled(isTimerRunning)
+                
+                if showingTimeBeforeNextPicker {
+                    Picker("Time before next exercise", selection: $timeBeforeNext) {
+                        ForEach(Array(stride(from: 5.0, through: 300.0, by: 5.0)), id: \.self) { duration in
+                            Text("\(Int(duration)) seconds").tag(duration)
+                        }
+                    }
+                    .pickerStyle(.wheel)
+                    .disabled(isTimerRunning)
                 }
                 
                 ProgressBarView(
@@ -88,7 +145,6 @@ struct TimerView: View {
                     elapsed: $elapsed
                 )
             }
-            .padding()
             .navigationTitle("Timer")
             .sheet(isPresented: $showingSoundPicker) {
                 SoundPickerSheet(
@@ -105,6 +161,18 @@ struct TimerView: View {
                         }
                     } label: {
                         Image(systemName: "ellipsis")
+                    }
+                }
+                ToolbarItem(placement: .topBarTrailing) {
+                    Toggle(isOn: Binding(
+                        get: { isTimeBased },
+                        set: { newValue in
+                            withAnimation {
+                                isTimeBased = newValue
+                            }
+                        }
+                    )) {
+                        Label("Time based exercise", systemImage: "gauge.with.needle")
                     }
                 }
             }
@@ -251,6 +319,22 @@ struct ProgressBarView: View {
                             .frame(width: squareWidth, height: 20)
                             .foregroundColor(setNumber <= self.currentSet ? .accentColor : .gray)
                             .cornerRadius(4)
+                            .onTapGesture {
+                                if !isTimerRunning {
+                                    timer?.cancel()
+                                    isTimerRunning = false
+                                    currentSet = setNumber
+                                    if currentSet == totalSets {
+                                        isExerciseDone = true
+                                    } else {
+                                        isExerciseDone = false
+                                    }
+                                    timeRemaining = self.realDuration
+                                    restProgress = 0
+                                    timeStarted = nil
+                                    elapsed = 0.0
+                                }
+                            }
                     }
                 }
             }
