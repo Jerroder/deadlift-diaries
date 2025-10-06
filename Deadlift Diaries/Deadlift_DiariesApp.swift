@@ -10,6 +10,22 @@ import SwiftUI
 
 @main
 struct Deadlift_DiariesApp: App {
+    let container: ModelContainer
+    
+    init() {
+        let isICouldEnabled = UserDefaults.standard.bool(forKey: "isICouldEnabled")
+        do {
+            container = try ModelContainer(
+                for: Mesocycle.self,
+                configurations: ModelConfiguration(
+                    cloudKitDatabase: isICouldEnabled ? .automatic : .none
+                )
+            )
+        } catch {
+            fatalError("Failed to configure ModelContainer: \(error)")
+        }
+    }
+    
     var body: some Scene {
         WindowGroup {
             ContentView()

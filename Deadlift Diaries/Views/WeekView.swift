@@ -19,7 +19,7 @@ struct WeekView: View {
     @FocusState.Binding var isTextFieldFocused: Bool
     
     private var sortedWeeks: [Week] {
-        mesocycle.weeks.sorted { $0.startDate < $1.startDate }
+        mesocycle.weeks!.sorted { $0.startDate < $1.startDate }
     }
     
     // MARK: - ViewBuilder variables
@@ -122,7 +122,7 @@ struct WeekView: View {
             Menu {
                 if selectedWeekIDs.isEmpty {
                     Button(action: {
-                        selectedWeekIDs = Set(mesocycle.weeks.map { $0.id })
+                        selectedWeekIDs = Set(mesocycle.weeks!.map { $0.id })
                     }) {
                         Label("Select all", systemImage: "checkmark.circle.fill")
                     }
@@ -153,7 +153,7 @@ struct WeekView: View {
         let newWeekStartDate: Date = Calendar.current.date(byAdding: .day, value: 7, to: lastWeekStartDate)!
         
         let newWeek: Week = Week(number: newWeekNumber, startDate: newWeekStartDate)
-        mesocycle.weeks.append(newWeek)
+        mesocycle.weeks!.append(newWeek)
         newWeek.mesocycle = mesocycle
         modelContext.insert(newWeek)
         mesocycle.numberOfWeeks = sortedWeeks.count + 1
@@ -170,14 +170,14 @@ struct WeekView: View {
         let selectedWeeks: [Week] = sortedWeeks.filter { selectedWeekIDs.contains($0.id) }
         guard !selectedWeeks.isEmpty else { return }
         
-        let lastTargetWeek: Week? = targetMesocycle.weeks.sorted { $0.startDate < $1.startDate }.last
+        let lastTargetWeek: Week? = targetMesocycle.weeks!.sorted { $0.startDate < $1.startDate }.last
         
         let baseStartDate: Date = lastTargetWeek != nil ?
         Calendar.current.date(byAdding: .day, value: 7, to: lastTargetWeek!.startDate)! :
         targetMesocycle.startDate
         
         var lastCopiedWeekStartDate: Date = baseStartDate
-        let maxWeekNumber: Int = targetMesocycle.weeks.map { $0.number }.max() ?? 0
+        let maxWeekNumber: Int = targetMesocycle.weeks!.map { $0.number }.max() ?? 0
         
         for (index, week) in selectedWeeks.enumerated() {
             let newWeekNumber: Int = maxWeekNumber + 1 + index
@@ -189,17 +189,17 @@ struct WeekView: View {
             lastCopiedWeekStartDate = newWeekStartDate
         }
         
-        targetMesocycle.numberOfWeeks = targetMesocycle.weeks.count
+        targetMesocycle.numberOfWeeks = targetMesocycle.weeks!.count
         selectedWeekIDs.removeAll()
     }
     
     private func copyWeek(_ week: Week, to targetMesocycle: Mesocycle, newNumber: Int, newStartDate: Date) {
         let newWeek: Week = Week(number: newNumber, startDate: newStartDate)
-        targetMesocycle.weeks.append(newWeek)
+        targetMesocycle.weeks!.append(newWeek)
         newWeek.mesocycle = targetMesocycle
         modelContext.insert(newWeek)
         
-        for workout in week.workouts.sorted(by: { $0.date < $1.date }) {
+        for workout in week.workouts!.sorted(by: { $0.date < $1.date }) {
             copyWorkout(workout, to: newWeek, originalWeekStartDate: week.startDate, newWeekStartDate: newStartDate)
         }
     }
@@ -214,11 +214,11 @@ struct WeekView: View {
             orderIndex: workout.orderIndex,
             date: newWorkoutDate
         )
-        newWeek.workouts.append(newWorkout)
+        newWeek.workouts!.append(newWorkout)
         newWorkout.week = newWeek
         modelContext.insert(newWorkout)
         
-        for exercise in workout.exercises.sorted(by: { $0.orderIndex < $1.orderIndex }) {
+        for exercise in workout.exercises!.sorted(by: { $0.orderIndex < $1.orderIndex }) {
             copyExercise(exercise, to: newWorkout)
         }
     }
@@ -235,7 +235,7 @@ struct WeekView: View {
             orderIndex: exercise.orderIndex,
             timeBeforeNext: exercise.timeBeforeNext
         )
-        newWorkout.exercises.append(newExercise)
+        newWorkout.exercises!.append(newExercise)
         newExercise.workout = newWorkout
         modelContext.insert(newExercise)
     }

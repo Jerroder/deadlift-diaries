@@ -10,14 +10,14 @@ import SwiftData
 
 @Model
 final class Workout: Codable {
-    @Attribute(.unique) var id: UUID
+    var id: UUID = UUID()
     
-    var name: String
+    var name: String = ""
     var week: Week?
-    var orderIndex: Int
-    var date: Date
+    var orderIndex: Int = 0
+    var date: Date = Date()
     
-    @Relationship(deleteRule: .cascade) var exercises: [Exercise]
+    @Relationship(deleteRule: .cascade) var exercises: [Exercise]?
     
     init(name: String, orderIndex: Int, date: Date = Date()) {
         self.id = UUID()

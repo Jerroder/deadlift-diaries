@@ -181,7 +181,7 @@ struct TimerView: View {
             }
             .navigationTitle("Timer")
             .sheet(isPresented: $showingSoundPickerSheet) {
-                SoundPickerSheet(
+                SettingsSheet(
                     isPresented: $showingSoundPickerSheet,
                     mesocycles: nil
                 )

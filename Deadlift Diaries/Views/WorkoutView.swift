@@ -30,13 +30,13 @@ struct WorkoutView: View {
     
     private var availableWeeks: [Week] {
         guard let mesocycle = week.mesocycle else { return [] }
-        return mesocycle.weeks
+        return mesocycle.weeks!
             .filter { $0.id != week.id }
             .sorted { $0.startDate < $1.startDate }
     }
     
     private var sortedWorkouts: [Workout] {
-        week.workouts.sorted(by: { $0.date < $1.date })
+        week.workouts!.sorted(by: { $0.date < $1.date })
     }
     
     // MARK: - ViewBuilder variables
@@ -161,9 +161,9 @@ struct WorkoutView: View {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("", systemImage: "checkmark") {
                         if workout == nil {
-                            let orderIndex: Int = (week.workouts.map { $0.orderIndex }.max() ?? 0) + 1
+                            let orderIndex: Int = (week.workouts!.map { $0.orderIndex }.max() ?? 0) + 1
                             let workout: Workout = Workout(name: newWorkoutName, orderIndex: orderIndex, date: newWorkoutDate)
-                            week.workouts.append(workout)
+                            week.workouts!.append(workout)
                             workout.week = week
                             modelContext.insert(workout)
                         }
@@ -187,7 +187,7 @@ struct WorkoutView: View {
             Menu {
                 if selectedWorkoutIDs.isEmpty {
                     Button(action: {
-                        selectedWorkoutIDs = Set(week.workouts.map { $0.id })
+                        selectedWorkoutIDs = Set(week.workouts!.map { $0.id })
                     }) {
                         Label("Select all", systemImage: "checkmark.circle.fill")
                     }
@@ -238,8 +238,8 @@ struct WorkoutView: View {
     // MARK: - Helper Functions
     
     private func copyWorkouts(to targetWeek: Week) {
-        let selectedWorkouts: [Workout] = week.workouts.filter { selectedWorkoutIDs.contains($0.id) }
-        let maxOrderIndex: Int = targetWeek.workouts.map { $0.orderIndex }.max() ?? 0
+        let selectedWorkouts: [Workout] = week.workouts!.filter { selectedWorkoutIDs.contains($0.id) }
+        let maxOrderIndex: Int = targetWeek.workouts!.map { $0.orderIndex }.max() ?? 0
         
         let sourceWeekStart: Date = Calendar.current.startOfDay(for: week.startDate)
         let targetWeekStart: Date = Calendar.current.startOfDay(for: targetWeek.startDate)
@@ -254,11 +254,11 @@ struct WorkoutView: View {
                 orderIndex: maxOrderIndex + index + 1,
                 date: newWorkoutDate
             )
-            targetWeek.workouts.append(newWorkout)
+            targetWeek.workouts!.append(newWorkout)
             newWorkout.week = targetWeek
             modelContext.insert(newWorkout)
             
-            for exercise in workout.exercises {
+            for exercise in workout.exercises! {
                 let newExercise: Exercise = Exercise(
                     name: exercise.name,
                     weight: exercise.weight,
@@ -270,7 +270,7 @@ struct WorkoutView: View {
                     orderIndex: exercise.orderIndex,
                     timeBeforeNext: exercise.timeBeforeNext
                 )
-                newWorkout.exercises.append(newExercise)
+                newWorkout.exercises!.append(newExercise)
                 newExercise.workout = newWorkout
                 modelContext.insert(newExercise)
             }
@@ -279,13 +279,13 @@ struct WorkoutView: View {
     }
     
     private func deleteWorkout(_ workout: Workout) {
-        if let index: Int = week.workouts.firstIndex(where: { $0.id == workout.id }) {
-            modelContext.delete(week.workouts[index])
+        if let index: Int = week.workouts!.firstIndex(where: { $0.id == workout.id }) {
+            modelContext.delete(week.workouts![index])
         }
     }
     
     private func deleteSelectedWorkouts() {
-        let workoutsToDelete: [Workout] = week.workouts.filter { selectedWorkoutIDs.contains($0.id) }
+        let workoutsToDelete: [Workout] = week.workouts!.filter { selectedWorkoutIDs.contains($0.id) }
         for workout in workoutsToDelete {
             modelContext.delete(workout)
         }
@@ -294,7 +294,7 @@ struct WorkoutView: View {
     }
     
     private func calculateDefaultWorkoutDate() -> Date {
-        guard let lastWorkout: Workout = week.workouts.sorted(by: { $0.date < $1.date }).last else {
+        guard let lastWorkout: Workout = week.workouts!.sorted(by: { $0.date < $1.date }).last else {
             return week.startDate
         }
         return Calendar.current.date(byAdding: .day, value: 1, to: lastWorkout.date) ?? week.startDate

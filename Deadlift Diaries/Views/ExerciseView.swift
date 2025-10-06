@@ -39,11 +39,11 @@ struct ExerciseView: View {
     
     private var availableWorkouts: [Workout] {
         guard let mesocycle = workout.week?.mesocycle else { return [] }
-        return mesocycle.weeks.flatMap { $0.workouts }.filter { $0.id != workout.id }
+        return mesocycle.weeks!.flatMap { $0.workouts! }.filter { $0.id != workout.id }
     }
     
     private var sortedExercises: [Exercise] {
-        workout.exercises.sorted { $0.orderIndex < $1.orderIndex }
+        workout.exercises!.sorted { $0.orderIndex < $1.orderIndex }
     }
     
     // MARK: - ViewBuilder variables
@@ -218,7 +218,7 @@ struct ExerciseView: View {
                     ToolbarItem(placement: .confirmationAction) {
                         Button("", systemImage: "checkmark") {
                             if exercise == nil {
-                                let orderIndex: Int = (workout.exercises.map { $0.orderIndex }.max() ?? 0) + 1
+                                let orderIndex: Int = (workout.exercises!.map { $0.orderIndex }.max() ?? 0) + 1
                                 let exercise: Exercise = Exercise(
                                     name: newExerciseName,
                                     weight: newExerciseIsTimeBased ? nil : newExerciseWeight,
@@ -230,7 +230,7 @@ struct ExerciseView: View {
                                     orderIndex: orderIndex,
                                     timeBeforeNext: newExerciseTimeBeforeNext
                                 )
-                                workout.exercises.append(exercise)
+                                workout.exercises!.append(exercise)
                                 exercise.workout = workout
                                 modelContext.insert(exercise)
                             }
@@ -439,7 +439,7 @@ struct ExerciseView: View {
             Menu {
                 if selectedExerciseIDs.isEmpty {
                     Button(action: {
-                        selectedExerciseIDs = Set(workout.exercises.map { $0.id })
+                        selectedExerciseIDs = Set(workout.exercises!.map { $0.id })
                     }) {
                         Label("Select all", systemImage: "checkmark.circle.fill")
                     }
@@ -459,7 +459,7 @@ struct ExerciseView: View {
     
     @ViewBuilder
     private func workoutPickerSheet() -> some View {
-        let allWorkouts: [Workout] = workout.week?.mesocycle?.weeks.flatMap { $0.workouts } ?? []
+        let allWorkouts: [Workout] = workout.week?.mesocycle?.weeks!.flatMap { $0.workouts! } ?? []
         let targetWorkouts: [Workout] = allWorkouts
             .filter { $0.id != workout.id }
             .sorted {
@@ -501,10 +501,10 @@ struct ExerciseView: View {
     // MARK: - Helper Functions
     
     private func copyExercises(to targetWorkout: Workout) {
-        let selectedExercises: [Exercise] = workout.exercises
+        let selectedExercises: [Exercise] = workout.exercises!
             .filter { selectedExerciseIDs.contains($0.id) }
             .sorted { $0.orderIndex < $1.orderIndex }
-        let maxOrderIndex: Int = targetWorkout.exercises.map { $0.orderIndex }.max() ?? 0
+        let maxOrderIndex: Int = targetWorkout.exercises!.map { $0.orderIndex }.max() ?? 0
         
         for (index, exercise) in selectedExercises.enumerated() {
             let newExercise: Exercise = Exercise(
@@ -518,7 +518,7 @@ struct ExerciseView: View {
                 orderIndex: maxOrderIndex + index + 1,
                 timeBeforeNext: exercise.timeBeforeNext
             )
-            targetWorkout.exercises.append(newExercise)
+            targetWorkout.exercises!.append(newExercise)
             newExercise.workout = targetWorkout
             modelContext.insert(newExercise)
         }
@@ -526,13 +526,13 @@ struct ExerciseView: View {
     }
     
     private func deleteExercise(_ exercise: Exercise) {
-        if let index: Int = workout.exercises.firstIndex(where: { $0.id == exercise.id }) {
-            workout.exercises.remove(at: index)
+        if let index: Int = workout.exercises!.firstIndex(where: { $0.id == exercise.id }) {
+            workout.exercises!.remove(at: index)
         }
     }
     
     private func deleteSelectedExercises() {
-        let exercisesToDelete: [Exercise] = workout.exercises.filter { selectedExerciseIDs.contains($0.id) }
+        let exercisesToDelete: [Exercise] = workout.exercises!.filter { selectedExerciseIDs.contains($0.id) }
         for exercise in exercisesToDelete {
             modelContext.delete(exercise)
         }

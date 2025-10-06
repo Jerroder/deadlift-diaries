@@ -10,20 +10,20 @@ import SwiftData
 
 @Model
 final class Exercise: Codable  {
-    @Attribute(.unique) var id: UUID
+    var id: UUID = UUID()
     
-    var name: String
+    var name: String = ""
     var weight: Double?
-    var sets: Int
+    var sets: Int = 5
     var reps: Int?
     var duration: Double?
-    var restTime: Double
-    var isTimeBased: Bool
-    var orderIndex: Int
+    var restTime: Double = 30.0
+    var isTimeBased: Bool = false
+    var orderIndex: Int = 0
     var workout: Workout?
-    var elapsed: Double
-    var currentSet: Int
-    var timeBeforeNext: Double
+    var elapsed: Double = 0.0
+    var currentSet: Int = 1
+    var timeBeforeNext: Double = 120.0
     
     init(name: String, weight: Double? = nil, sets: Int, reps: Int? = nil, duration: Double? = 30.0, restTime: Double, isTimeBased: Bool, orderIndex: Int, timeBeforeNext: Double) {
         self.id = UUID()

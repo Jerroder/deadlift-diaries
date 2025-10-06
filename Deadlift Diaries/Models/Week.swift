@@ -10,13 +10,13 @@ import SwiftData
 
 @Model
 final class Week: Codable {
-    @Attribute(.unique) var id: UUID
+    var id: UUID = UUID()
     
-    var number: Int
-    var startDate: Date
+    var number: Int = 1
+    var startDate: Date = Date()
     var mesocycle: Mesocycle?
     
-    @Relationship(deleteRule: .cascade) var workouts: [Workout]
+    @Relationship(deleteRule: .cascade) var workouts: [Workout]?
     
     init(number: Int, startDate: Date) {
         self.id = UUID()

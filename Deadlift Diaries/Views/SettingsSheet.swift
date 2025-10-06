@@ -8,7 +8,7 @@
 import AudioToolbox
 import SwiftUI
 
-struct SoundPickerSheet: View {
+struct SettingsSheet: View {
     @Environment(\.modelContext) private var modelContext
     @Binding var isPresented: Bool
     let mesocycles: [Mesocycle]?
@@ -16,6 +16,7 @@ struct SoundPickerSheet: View {
     @State private var showingShareSheet = false
     @State private var isShowingDocumentPicker = false
     
+    @AppStorage("isICouldEnabled") private var isICouldEnabled = false
     @AppStorage("selectedSoundID") private var selectedSoundID: Int = 1075
     
     var body: some View {
@@ -36,18 +37,21 @@ struct SoundPickerSheet: View {
                     }
                 }
                 
-                if let mesocycles = mesocycles, !mesocycles.isEmpty {
-                    Section {
+                Section {
+                    Toggle("Enable iCloud Sync", isOn: $isICouldEnabled)
+                        .padding()
+                }
+                
+                Section {
+                    if let mesocycles = mesocycles, !mesocycles.isEmpty {
                         Button("Export") {
                             saveAndShareJSON(mesocycles)
                             showingShareSheet = true
                         }
                         .frame(maxWidth: .infinity, alignment: .center)
                     }
-                }
-                
-                if mesocycles != nil {
-                    Section {
+                    
+                    if mesocycles != nil {
                         Button("Import") {
                             isShowingDocumentPicker = true
                         }

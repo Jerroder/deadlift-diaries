@@ -53,7 +53,7 @@ struct MesocycleView: View {
                     mesocycleEditSheet(mesocycle: nil)
                 }
                 .sheet(isPresented: $showingSoundPicker) {
-                    SoundPickerSheet(
+                    SettingsSheet(
                         isPresented: $showingSoundPicker,
                         mesocycles: mesocycles
                     )
@@ -163,7 +163,7 @@ struct MesocycleView: View {
                     .font(.subheadline)
                     .foregroundColor(Color(UIColor.secondaryLabel))
                 Spacer()
-                Text("\(mesocycle.weeks.count) \((mesocycle.weeks.count == 1) ? "week" : "weeks")")
+                Text("\(mesocycle.weeks!.count) \((mesocycle.weeks!.count == 1) ? "week" : "weeks")")
                     .font(.subheadline)
                     .foregroundColor(Color(UIColor.secondaryLabel))
             }
@@ -187,9 +187,9 @@ struct MesocycleView: View {
                     get: { mesocycle!.startDate },
                     set: { mesocycle!.startDate = $0 }
                 ), displayedComponents: .date)
-                Stepper("Number of Weeks: \(mesocycle == nil ? newMesocycleNumberOfWeeks : mesocycle!.weeks.count)",
+                Stepper("Number of Weeks: \(mesocycle == nil ? newMesocycleNumberOfWeeks : mesocycle!.weeks!.count)",
                         value: mesocycle == nil ? $newMesocycleNumberOfWeeks : Binding(
-                            get: { mesocycle!.weeks.count },
+                            get: { mesocycle!.weeks!.count },
                             set: { _ in }
                         ), in: 1...12)
             }
@@ -199,7 +199,7 @@ struct MesocycleView: View {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("", systemImage: "checkmark") {
                         if let mesocycle: Mesocycle = mesocycle {
-                            updateWeeks(for: mesocycle, newStartDate: mesocycle.startDate, newWeekCount: mesocycle.weeks.count)
+                            updateWeeks(for: mesocycle, newStartDate: mesocycle.startDate, newWeekCount: mesocycle.weeks!.count)
                             updateWorkoutDates(for: mesocycle)
                         } else {
                             let orderIndex: Int = (mesocycles.map { $0.orderIndex }.max() ?? 0) + 1
@@ -236,9 +236,9 @@ struct MesocycleView: View {
     }
     
     private func updateWeeks(for mesocycle: Mesocycle, newStartDate: Date, newWeekCount: Int) {
-        let currentWeekCount: Int = mesocycle.weeks.count
+        let currentWeekCount: Int = mesocycle.weeks!.count
         
-        for (index, week) in mesocycle.weeks.sorted(by: { $0.number < $1.number }).enumerated() {
+        for (index, week) in mesocycle.weeks!.sorted(by: { $0.number < $1.number }).enumerated() {
             week.startDate = Calendar.current.date(byAdding: .day, value: index * 7, to: newStartDate)!
         }
         
@@ -246,12 +246,12 @@ struct MesocycleView: View {
             for weekNumber in currentWeekCount + 1...newWeekCount {
                 let weekStartDate: Date = Calendar.current.date(byAdding: .day, value: (weekNumber - 1) * 7, to: newStartDate)!
                 let newWeek: Week = Week(number: weekNumber, startDate: weekStartDate)
-                mesocycle.weeks.append(newWeek)
+                mesocycle.weeks!.append(newWeek)
                 newWeek.mesocycle = mesocycle
                 modelContext.insert(newWeek)
             }
         } else if newWeekCount < currentWeekCount {
-            let weeksToRemove: ArraySlice<Week> = mesocycle.weeks.sorted { $0.number > $1.number }.prefix(currentWeekCount - newWeekCount)
+            let weeksToRemove: ArraySlice<Week> = mesocycle.weeks!.sorted { $0.number > $1.number }.prefix(currentWeekCount - newWeekCount)
             for week in weeksToRemove {
                 modelContext.delete(week)
             }
@@ -261,8 +261,8 @@ struct MesocycleView: View {
     }
     
     private func updateWorkoutDates(for mesocycle: Mesocycle) {
-        for week in mesocycle.weeks {
-            for workout in week.workouts {
+        for week in mesocycle.weeks! {
+            for workout in week.workouts! {
                 let weekStartDate: Date = week.startDate
                 let weekEndDate: Date = Calendar.current.date(byAdding: .day, value: 6, to: weekStartDate)!
                 
@@ -289,14 +289,14 @@ struct MesocycleView: View {
             )
             modelContext.insert(newMesocycle)
             
-            for week in mesocycle.weeks.sorted(by: { $0.number < $1.number }) {
+            for week in mesocycle.weeks!.sorted(by: { $0.number < $1.number }) {
                 let newWeekStartDate: Date = Calendar.current.date(byAdding: .day, value: (week.number - 1) * 7, to: newStartDate)!
                 let newWeek: Week = Week(number: week.number, startDate: newWeekStartDate)
-                newMesocycle.weeks.append(newWeek)
+                newMesocycle.weeks!.append(newWeek)
                 newWeek.mesocycle = newMesocycle
                 modelContext.insert(newWeek)
                 
-                for workout in week.workouts.sorted(by: { $0.date < $1.date }) {
+                for workout in week.workouts!.sorted(by: { $0.date < $1.date }) {
                     let daysFromWeekStart: Int = Calendar.current.dateComponents([.day], from: week.startDate, to: workout.date).day ?? 0
                     let newWorkoutDate: Date = Calendar.current.date(byAdding: .day, value: daysFromWeekStart, to: newWeekStartDate)!
                     let newWorkout: Workout = Workout(
@@ -304,11 +304,11 @@ struct MesocycleView: View {
                         orderIndex: workout.orderIndex,
                         date: newWorkoutDate
                     )
-                    newWeek.workouts.append(newWorkout)
+                    newWeek.workouts!.append(newWorkout)
                     newWorkout.week = newWeek
                     modelContext.insert(newWorkout)
                     
-                    for exercise in workout.exercises.sorted(by: { $0.orderIndex < $1.orderIndex }) {
+                    for exercise in workout.exercises!.sorted(by: { $0.orderIndex < $1.orderIndex }) {
                         let newExercise: Exercise = Exercise(
                             name: exercise.name,
                             weight: exercise.weight,
@@ -320,13 +320,13 @@ struct MesocycleView: View {
                             orderIndex: exercise.orderIndex,
                             timeBeforeNext: exercise.timeBeforeNext
                         )
-                        newWorkout.exercises.append(newExercise)
+                        newWorkout.exercises!.append(newExercise)
                         newExercise.workout = newWorkout
                         modelContext.insert(newExercise)
                     }
                 }
                 
-                newMesocycle.numberOfWeeks = mesocycle.weeks.count
+                newMesocycle.numberOfWeeks = mesocycle.weeks!.count
             }
             
             selectedMesocycleIDs.removeAll()
