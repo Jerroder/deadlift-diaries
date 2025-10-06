@@ -9,7 +9,7 @@ import Foundation
 import SwiftData
 
 @Model
-final class Workout: Encodable {
+final class Workout: Codable {
     @Attribute(.unique) var id: UUID
     
     var name: String
@@ -38,5 +38,14 @@ final class Workout: Encodable {
         try container.encode(orderIndex, forKey: .orderIndex)
         try container.encode(date, forKey: .date)
         try container.encode(exercises, forKey: .exercises)
+    }
+    
+    required init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        self.id = try container.decode(UUID.self, forKey: .id)
+        self.name = try container.decode(String.self, forKey: .name)
+        self.orderIndex = try container.decode(Int.self, forKey: .orderIndex)
+        self.date = try container.decode(Date.self, forKey: .date)
+        self.exercises = try container.decode([Exercise].self, forKey: .exercises)
     }
 }

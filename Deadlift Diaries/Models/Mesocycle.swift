@@ -9,7 +9,7 @@ import Foundation
 import SwiftData
 
 @Model
-final class Mesocycle: Encodable {
+final class Mesocycle: Codable {
     @Attribute(.unique) var id: UUID
     
     var name: String
@@ -39,5 +39,15 @@ final class Mesocycle: Encodable {
         try container.encode(numberOfWeeks, forKey: .numberOfWeeks)
         try container.encode(orderIndex, forKey: .orderIndex)
         try container.encode(weeks, forKey: .weeks)
+    }
+    
+    required init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        self.id = try container.decode(UUID.self, forKey: .id)
+        self.name = try container.decode(String.self, forKey: .name)
+        self.startDate = try container.decode(Date.self, forKey: .startDate)
+        self.numberOfWeeks = try container.decode(Int.self, forKey: .numberOfWeeks)
+        self.orderIndex = try container.decode(Int.self, forKey: .orderIndex)
+        self.weeks = try container.decode([Week].self, forKey: .weeks)
     }
 }

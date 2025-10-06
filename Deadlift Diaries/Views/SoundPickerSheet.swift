@@ -9,10 +9,12 @@ import AudioToolbox
 import SwiftUI
 
 struct SoundPickerSheet: View {
+    @Environment(\.modelContext) private var modelContext
     @Binding var isPresented: Bool
     let mesocycles: [Mesocycle]?
     
     @State private var showingShareSheet = false
+    @State private var isShowingDocumentPicker = false
     
     @AppStorage("selectedSoundID") private var selectedSoundID: Int = 1075
     
@@ -36,9 +38,18 @@ struct SoundPickerSheet: View {
                 
                 if let mesocycles = mesocycles, !mesocycles.isEmpty {
                     Section {
-                        Button("Export app data") {
+                        Button("Export") {
                             saveAndShareJSON(mesocycles)
                             showingShareSheet = true
+                        }
+                        .frame(maxWidth: .infinity, alignment: .center)
+                    }
+                }
+                
+                if mesocycles != nil {
+                    Section {
+                        Button("Import") {
+                            isShowingDocumentPicker = true
                         }
                         .frame(maxWidth: .infinity, alignment: .center)
                     }
@@ -47,7 +58,15 @@ struct SoundPickerSheet: View {
             .navigationTitle("Settings")
             .navigationBarTitleDisplayMode(.inline)
             .sheet(isPresented: $showingShareSheet) {
-                ActivityViewController(activityItems: [FileManager.default.temporaryDirectory.appendingPathComponent("deadliftdiaries_export.json")], applicationActivities: nil)
+                ActivityViewController(activityItems: [FileManager.default.temporaryDirectory.appendingPathComponent("deadliftdiaries.json")], applicationActivities: nil)
+            }
+            .sheet(isPresented: $isShowingDocumentPicker) {
+                DocumentPicker { mesocycles in
+                    for mesocycle in mesocycles {
+                        modelContext.insert(mesocycle)
+                    }
+                    try? modelContext.save()
+                }
             }
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {

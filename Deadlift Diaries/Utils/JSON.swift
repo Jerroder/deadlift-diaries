@@ -26,7 +26,7 @@ func saveAndShareJSON(_ mesocycles: [Mesocycle]) {
     guard let jsonData = exportToJSON(mesocycles) else { return }
     
     let tempURL = FileManager.default.temporaryDirectory
-        .appendingPathComponent("deadliftdiaries_export.json")
+        .appendingPathComponent("deadliftdiaries.json")
     
     do {
         try jsonData.write(to: tempURL)
@@ -52,4 +52,42 @@ struct ActivityViewController: UIViewControllerRepresentable {
     }
     
     func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {}
+}
+
+struct DocumentPicker: UIViewControllerRepresentable {
+    var onPick: ([Mesocycle]) -> Void
+    
+    func makeUIViewController(context: Context) -> UIDocumentPickerViewController {
+        let picker = UIDocumentPickerViewController(forOpeningContentTypes: [UTType.json], asCopy: true)
+        picker.allowsMultipleSelection = false
+        picker.delegate = context.coordinator
+        return picker
+    }
+    
+    func updateUIViewController(_ uiViewController: UIDocumentPickerViewController, context: Context) {}
+    
+    func makeCoordinator() -> Coordinator {
+        Coordinator(onPick: onPick)
+    }
+    
+    class Coordinator: NSObject, UIDocumentPickerDelegate {
+        var onPick: ([Mesocycle]) -> Void
+        
+        init(onPick: @escaping ([Mesocycle]) -> Void) {
+            self.onPick = onPick
+        }
+        
+        func documentPicker(_ controller: UIDocumentPickerViewController, didPickDocumentsAt urls: [URL]) {
+            guard let url = urls.first else { return }
+            do {
+                let data = try Data(contentsOf: url)
+                let decoder = JSONDecoder()
+                decoder.dateDecodingStrategy = .iso8601
+                let mesocycles = try decoder.decode([Mesocycle].self, from: data)
+                onPick(mesocycles)
+            } catch {
+                print("Error loading or decoding file: \(error)")
+            }
+        }
+    }
 }
