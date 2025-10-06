@@ -5,8 +5,6 @@
 //  Created by Jerroder on 2025-06-06.
 //
 
-import AudioToolbox
-import AVFoundation
 import SwiftUI
 
 struct TimerView: View {
@@ -19,9 +17,10 @@ struct TimerView: View {
     @AppStorage("elapsed") private var elapsed: Double = 0.0
     
     @State private var isTimerRunning: Bool = false
-    @State private var showingSoundPicker = false
-    @State private var showingRestPicker = false
-    @State private var showingTimeBeforeNextPicker = false
+    @State private var showingSoundPickerSheet: Bool = false
+    @State private var showingRestPicker: Bool = false
+    @State private var showingDurationPicker: Bool = false
+    @State private var showingTimeBeforeNextPicker: Bool = false
     
     var body: some View {
         NavigationStack {
@@ -33,11 +32,12 @@ struct TimerView: View {
                         }
                     }
                 
-                
                 HStack {
                     Button(action: {
                         withAnimation {
                             showingRestPicker.toggle()
+                            showingDurationPicker = false
+                            showingTimeBeforeNextPicker = false
                         }
                     }) {
                         HStack {
@@ -103,12 +103,44 @@ struct TimerView: View {
                 }
                 
                 if isTimeBased {
-                    Stepper("Duration: \(Int(duration)) sec", value: $duration, in: 10...600, step: 5)
+                    Button(action: {
+                        withAnimation {
+                            showingDurationPicker.toggle()
+                            showingRestPicker = false
+                            showingTimeBeforeNextPicker = false
+                        }
+                    }) {
+                        HStack {
+                            Text("Exercise duration")
+                            Text(" \(Int(duration))s")
+                                .font(.subheadline)
+                                .foregroundColor(Color(UIColor.secondaryLabel))
+                            Image(systemName: showingDurationPicker ? "chevron.up" : "chevron.down")
+                                .font(.caption)
+                            Spacer()
+                        }
+                        .fixedSize()
+                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .disabled(isTimerRunning)
+                    
+                    if showingDurationPicker {
+                        Picker("Exercise duration", selection: $duration) {
+                            ForEach(Array(stride(from: 5.0, through: 300.0, by: 5.0)), id: \.self) { duration in
+                                Text("\(Int(duration)) seconds").tag(duration)
+                            }
+                        }
+                        .pickerStyle(.wheel)
+                        .disabled(isTimerRunning)
+                    }
                 }
                 
                 Button(action: {
                     withAnimation {
                         showingTimeBeforeNextPicker.toggle()
+                        showingRestPicker = false
+                        showingDurationPicker = false
                     }
                 }) {
                     HStack {
@@ -142,20 +174,22 @@ struct TimerView: View {
                     restDuration: restDuration,
                     timeBeforeNextExercise: timeBeforeNext,
                     isTimerRunning: $isTimerRunning,
-                    elapsed: $elapsed
+                    elapsed: $elapsed,
+                    isTimeBased: isTimeBased,
+                    duration: duration
                 )
             }
             .navigationTitle("Timer")
-            .sheet(isPresented: $showingSoundPicker) {
+            .sheet(isPresented: $showingSoundPickerSheet) {
                 SoundPickerSheet(
-                    isPresented: $showingSoundPicker
+                    isPresented: $showingSoundPickerSheet
                 )
             }
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     Menu {
                         Button(action: {
-                            showingSoundPicker = true
+                            showingSoundPickerSheet = true
                         }) {
                             Label("settings".localized(comment: "Settings"), systemImage: "gear")
                         }
@@ -175,273 +209,6 @@ struct TimerView: View {
                         Label("Time based exercise", systemImage: "gauge.with.needle")
                     }
                 }
-            }
-        }
-    }
-}
-
-struct ProgressBarView: View {
-    let totalSets: Int
-    @Binding var currentSet: Int
-    let restDuration: Double
-    let timeBeforeNextExercise: Double
-    @Binding var isTimerRunning: Bool
-    @Binding var elapsed: Double
-    
-    @AppStorage("selectedSoundID") private var selectedSoundID: Int = 1075
-    @AppStorage("isExerciseDone") private var isExerciseDone: Bool = false
-    
-    @State private var restProgress: CGFloat = 0
-    @State private var timer: DispatchSourceTimer?
-    @State private var backgroundTask: UIBackgroundTaskIdentifier = .invalid
-    @State private var timeStarted: Double?
-    @State private var timeRemaining: Double = 60.0
-    
-    let orange = Color(red: 0xFF/255, green: 0xBC/255, blue: 0x8E/255)
-    let yellow = Color(red: 0xFF/255, green: 0xD6/255, blue: 0x8E/255)
-    
-    var realDuration: Double {
-        isExerciseDone ? timeBeforeNextExercise : restDuration
-    }
-    
-    // MARK: - Main view
-    
-    var body: some View {
-        VStack {
-            progressBar()
-                .frame(height: 20)
-                .padding(.horizontal)
-            
-            Text("Remaining: \(Int(timeRemaining.rounded(.down))) sec")
-                .font(.title)
-            
-            if #available(iOS 26.0, *) {
-                HStack {
-                    Spacer()
-                    Button(action: toggleTimer) {
-                        Text(isTimerRunning ? "Pause" : "Start")
-                    }
-                    .disabled(currentSet > totalSets)
-                    .buttonStyle(.glassProminent)
-                    Spacer()
-                    Button("Reset") {
-                        timer?.cancel()
-                        isTimerRunning = false
-                        currentSet = 1
-                        isExerciseDone = totalSets == 1 ? true : false
-                        timeRemaining = realDuration
-                        restProgress = 0
-                        timeStarted = nil
-                        elapsed = 0.0
-                    }
-                    .buttonStyle(.glass)
-                    Spacer()
-                }
-            } else {
-                HStack {
-                    Spacer()
-                    Button(action: toggleTimer) {
-                        Text(isTimerRunning ? "Pause" : "Start")
-                    }
-                    .disabled(currentSet > totalSets)
-                    Spacer()
-                    Button("Reset") {
-                        timer?.cancel()
-                        isTimerRunning = false
-                        currentSet = 1
-                        isExerciseDone = totalSets == 1 ? true : false
-                        timeRemaining = realDuration
-                        restProgress = 0
-                        timeStarted = nil
-                        elapsed = 0.0
-                    }
-                    Spacer()
-                }
-            }
-        }
-        .onAppear {
-            timeRemaining = max(0, realDuration - elapsed)
-            if timeRemaining < realDuration {
-                restProgress = 1 - (CGFloat(timeRemaining.rounded(.down)) / CGFloat(realDuration.rounded(.up)))
-            } else {
-                restProgress = 0
-            }
-        }
-        .onChange(of: restDuration) { _, _ in
-            timeRemaining = restDuration
-        }
-        .onChange(of: totalSets) { oldValue, newValue in
-            if newValue == 1 {
-                isExerciseDone = true
-            } else {
-                isExerciseDone = false
-            }
-            timeRemaining = realDuration
-        }
-    }
-    
-    // MARK: - ViewBuilder functions
-    
-    @ViewBuilder
-    private func progressBar() -> some View {
-        GeometryReader { geometry in
-            let squareWidth = geometry.size.width / CGFloat(2 * self.totalSets)
-            HStack(spacing: 4) {
-                ForEach(1..<2*self.totalSets + 1, id: \.self) { index in
-                    if index.isMultiple(of: 2) {
-                        let restNumber = index / 2
-                        if restNumber == self.currentSet && (self.isTimerRunning || self.restProgress > 0) {
-                            ZStack(alignment: .leading) {
-                                Rectangle()
-                                    .frame(width: squareWidth, height: 20)
-                                    .foregroundColor(.gray)
-                                    .cornerRadius(4)
-                                Rectangle()
-                                    .frame(width: squareWidth * self.restProgress, height: 20)
-                                    .foregroundColor(yellow)
-                                    .cornerRadius(4)
-                                    .animation(.linear, value: self.restProgress)
-                            }
-                        } else if restNumber < self.currentSet {
-                            Rectangle()
-                                .frame(width: squareWidth, height: 20)
-                                .foregroundColor(orange)
-                                .cornerRadius(4)
-                        } else {
-                            Rectangle()
-                                .frame(width: squareWidth, height: 20)
-                                .foregroundColor(.gray)
-                                .cornerRadius(4)
-                        }
-                    } else {
-                        let setNumber = (index + 1) / 2
-                        Rectangle()
-                            .frame(width: squareWidth, height: 20)
-                            .foregroundColor(setNumber <= self.currentSet ? .accentColor : .gray)
-                            .cornerRadius(4)
-                            .onTapGesture {
-                                if !isTimerRunning {
-                                    timer?.cancel()
-                                    isTimerRunning = false
-                                    currentSet = setNumber
-                                    if currentSet == totalSets {
-                                        isExerciseDone = true
-                                    } else {
-                                        isExerciseDone = false
-                                    }
-                                    timeRemaining = self.realDuration
-                                    restProgress = 0
-                                    timeStarted = nil
-                                    elapsed = 0.0
-                                }
-                            }
-                    }
-                }
-            }
-            .frame(width: geometry.size.width, height: 20)
-        }
-    }
-    
-    // MARK: - Helper Functions
-    
-    private func toggleTimer() {
-        if isTimerRunning {
-            stopTimer()
-        } else {
-            startTimer()
-        }
-        isTimerRunning.toggle()
-    }
-    
-    private func startTimer() {
-        backgroundTask = UIApplication.shared.beginBackgroundTask { [self] in
-            self.endBackgroundTask()
-        }
-        
-        timeStarted = Date.now.timeIntervalSince1970 * 1000
-        
-        let queue = DispatchQueue(label: "com.jerroder.deadliftdiaries", qos: .background)
-        timer = DispatchSource.makeTimerSource(queue: queue)
-        timer?.schedule(deadline: .now(), repeating: .seconds(1))
-        timer?.setEventHandler { [self] in
-            DispatchQueue.main.async {
-                let now = Date.now.timeIntervalSince1970 * 1000
-                let elapsed = max(0, now - (timeStarted ?? 0)) / 1000
-                let remaining = max(0, realDuration - elapsed - self.elapsed)
-                timeRemaining = remaining
-                restProgress = 1 - (CGFloat(timeRemaining.rounded(.down)) / CGFloat(realDuration.rounded(.up)))
-                
-                if timeRemaining <= 0 {
-                    isTimerRunning = false
-                    stopTimer()
-                    if currentSet < totalSets {
-                        currentSet += 1
-                        timeRemaining = restDuration
-                        restProgress = 0
-                        self.elapsed = 0.0
-                    }
-                    
-                    if currentSet == totalSets && isExerciseDone {
-                        currentSet += 1
-                    }
-                    if currentSet == totalSets {
-                        isExerciseDone = true
-                        timeRemaining = timeBeforeNextExercise
-                    }
-                } else if timeRemaining <= 1 {
-                    playSystemSound()
-                }
-            }
-        }
-        timer?.resume()
-    }
-    
-    private func stopTimer() {
-        let now = Date.now.timeIntervalSince1970 * 1000
-        if let timeStarted = timeStarted {
-            elapsed += max(0, now - timeStarted) / 1000
-            timeRemaining = max(0, realDuration - elapsed)
-        }
-        timer?.cancel()
-        timer = nil
-        endBackgroundTask()
-    }
-
-    
-    private func endBackgroundTask() {
-        if backgroundTask != .invalid {
-            UIApplication.shared.endBackgroundTask(backgroundTask)
-            backgroundTask = .invalid
-        }
-    }
-    
-    private func playSystemSound() {
-        let audioSession = AVAudioSession.sharedInstance()
-        do {
-            try audioSession.setCategory(.ambient, options: .duckOthers)
-            try audioSession.setActive(true)
-        } catch {
-            print("Failed to set audio session category: \(error)")
-        }
-        
-        if selectedSoundID != 0 {
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                AudioServicesPlaySystemSound(UInt32(selectedSoundID))
-            }
-            
-            let duration: Double = selectedSoundID == 1328 ? 2.0 : 1.0
-            DispatchQueue.main.asyncAfter(deadline: .now() + duration) {
-                do {
-                    try audioSession.setActive(false)
-                } catch {
-                    print("Failed to deactivate audio session: \(error)")
-                }
-            }
-        } else {
-            do {
-                try audioSession.setActive(false)
-            } catch {
-                print("Failed to deactivate audio session: \(error)")
             }
         }
     }

@@ -13,8 +13,8 @@ struct WeekView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.editMode) private var editMode
     
-    @State private var selectedWeekIDs = Set<Week.ID>()
-    @State private var isShowingMesocyclePicker = false
+    @State private var selectedWeekIDs: Set<UUID> = Set<Week.ID>()
+    @State private var isShowingMesocyclePicker: Bool = false
     
     @FocusState.Binding var isTextFieldFocused: Bool
     
@@ -59,7 +59,7 @@ struct WeekView: View {
     private func buildWeekRows() -> some View {
         List(selection: $selectedWeekIDs) {
             ForEach(sortedWeeks, id: \.id) { week in
-                let isPast = isWeekPast(week)
+                let isPast: Bool = isWeekPast(week)
                 NavigationLink {
                     WorkoutView(week: week, isTextFieldFocused: $isTextFieldFocused)
                 } label: {
@@ -91,8 +91,8 @@ struct WeekView: View {
     
     @ViewBuilder
     private func mesocyclePickerSheet() -> some View {
-        let fetchDescriptor = FetchDescriptor<Mesocycle>(sortBy: [SortDescriptor(\.startDate)])
-        let targetMesocycles = (try? modelContext.fetch(fetchDescriptor))?.filter { $0.id != mesocycle.id } ?? []
+        let fetchDescriptor: FetchDescriptor<Mesocycle> = FetchDescriptor<Mesocycle>(sortBy: [SortDescriptor(\.startDate)])
+        let targetMesocycles: [Mesocycle] = (try? modelContext.fetch(fetchDescriptor))?.filter { $0.id != mesocycle.id } ?? []
         
         List(targetMesocycles) { targetMesocycle in
             Button(action: {
@@ -143,16 +143,16 @@ struct WeekView: View {
     // MARK: - Helper Functions
     
     private func isWeekPast(_ week: Week) -> Bool {
-        let endDate = Calendar.current.date(byAdding: .day, value: 6, to: week.startDate)!
+        let endDate: Date = Calendar.current.date(byAdding: .day, value: 6, to: week.startDate)!
         return Calendar.current.startOfDay(for: endDate) < Calendar.current.startOfDay(for: Date())
     }
     
     private func addNewWeek() {
-        let newWeekNumber = (sortedWeeks.map { $0.number }.max() ?? 0) + 1
-        let lastWeekStartDate = sortedWeeks.last?.startDate ?? mesocycle.startDate
-        let newWeekStartDate = Calendar.current.date(byAdding: .day, value: 7, to: lastWeekStartDate)!
+        let newWeekNumber: Int = (sortedWeeks.map { $0.number }.max() ?? 0) + 1
+        let lastWeekStartDate: Date = sortedWeeks.last?.startDate ?? mesocycle.startDate
+        let newWeekStartDate: Date = Calendar.current.date(byAdding: .day, value: 7, to: lastWeekStartDate)!
         
-        let newWeek = Week(number: newWeekNumber, startDate: newWeekStartDate)
+        let newWeek: Week = Week(number: newWeekNumber, startDate: newWeekStartDate)
         mesocycle.weeks.append(newWeek)
         newWeek.mesocycle = mesocycle
         modelContext.insert(newWeek)
@@ -160,28 +160,28 @@ struct WeekView: View {
     }
     
     private func deleteWeek(_ week: Week) {
-        if let index = sortedWeeks.firstIndex(where: { $0.id == week.id }) {
+        if let index: Int = sortedWeeks.firstIndex(where: { $0.id == week.id }) {
             modelContext.delete(sortedWeeks[index])
             renumberWeeks()
         }
     }
     
     private func copyWeeks(to targetMesocycle: Mesocycle) {
-        let selectedWeeks = sortedWeeks.filter { selectedWeekIDs.contains($0.id) }
+        let selectedWeeks: [Week] = sortedWeeks.filter { selectedWeekIDs.contains($0.id) }
         guard !selectedWeeks.isEmpty else { return }
         
-        let lastTargetWeek = targetMesocycle.weeks.sorted { $0.startDate < $1.startDate }.last
+        let lastTargetWeek: Week? = targetMesocycle.weeks.sorted { $0.startDate < $1.startDate }.last
         
-        let baseStartDate = lastTargetWeek != nil ?
+        let baseStartDate: Date = lastTargetWeek != nil ?
         Calendar.current.date(byAdding: .day, value: 7, to: lastTargetWeek!.startDate)! :
         targetMesocycle.startDate
         
-        var lastCopiedWeekStartDate = baseStartDate
-        let maxWeekNumber = targetMesocycle.weeks.map { $0.number }.max() ?? 0
+        var lastCopiedWeekStartDate: Date = baseStartDate
+        let maxWeekNumber: Int = targetMesocycle.weeks.map { $0.number }.max() ?? 0
         
         for (index, week) in selectedWeeks.enumerated() {
-            let newWeekNumber = maxWeekNumber + 1 + index
-            let newWeekStartDate = index == 0 ?
+            let newWeekNumber: Int = maxWeekNumber + 1 + index
+            let newWeekStartDate: Date = index == 0 ?
             lastCopiedWeekStartDate :
             Calendar.current.date(byAdding: .day, value: 7, to: lastCopiedWeekStartDate)!
             
@@ -194,7 +194,7 @@ struct WeekView: View {
     }
     
     private func copyWeek(_ week: Week, to targetMesocycle: Mesocycle, newNumber: Int, newStartDate: Date) {
-        let newWeek = Week(number: newNumber, startDate: newStartDate)
+        let newWeek: Week = Week(number: newNumber, startDate: newStartDate)
         targetMesocycle.weeks.append(newWeek)
         newWeek.mesocycle = targetMesocycle
         modelContext.insert(newWeek)
@@ -205,11 +205,11 @@ struct WeekView: View {
     }
     
     private func copyWorkout(_ workout: Workout, to newWeek: Week, originalWeekStartDate: Date, newWeekStartDate: Date) {
-        let daysOffset = Calendar.current.dateComponents([.day], from: originalWeekStartDate, to: newWeekStartDate).day ?? 0
+        let daysOffset: Int = Calendar.current.dateComponents([.day], from: originalWeekStartDate, to: newWeekStartDate).day ?? 0
         
-        let newWorkoutDate = Calendar.current.date(byAdding: .day, value: daysOffset, to: workout.date)!
+        let newWorkoutDate: Date = Calendar.current.date(byAdding: .day, value: daysOffset, to: workout.date)!
         
-        let newWorkout = Workout(
+        let newWorkout: Workout = Workout(
             name: workout.name,
             orderIndex: workout.orderIndex,
             date: newWorkoutDate
@@ -224,7 +224,7 @@ struct WeekView: View {
     }
     
     private func copyExercise(_ exercise: Exercise, to newWorkout: Workout) {
-        let newExercise = Exercise(
+        let newExercise: Exercise = Exercise(
             name: exercise.name,
             weight: exercise.weight,
             sets: exercise.sets,
@@ -241,7 +241,7 @@ struct WeekView: View {
     }
     
     private func deleteSelectedWeeks() {
-        let weeksToDelete = sortedWeeks.filter { selectedWeekIDs.contains($0.id) }
+        let weeksToDelete: [Week] = sortedWeeks.filter { selectedWeekIDs.contains($0.id) }
         for week in weeksToDelete {
             modelContext.delete(week)
         }

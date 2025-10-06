@@ -9,7 +9,7 @@ import SwiftUI
 import SwiftData
 
 func isMetricSystem() -> Bool {
-    let locale = Locale.current
+    let locale: Locale = Locale.current
     switch locale.measurementSystem {
         case .metric:
             return true
@@ -29,20 +29,23 @@ struct ExerciseView: View {
     @Environment(\.editMode) private var editMode
     
     @State private var selectedExercise: Exercise?
-    @State private var isAddingNewExercise = false
-    @State private var newExerciseName = ""
-    @State private var newExerciseSets = 5
+    @State private var isAddingNewExercise: Bool = false
+    @State private var newExerciseName: String = ""
+    @State private var newExerciseSets: Int = 5
     @State private var newExerciseRestTime: Double = 60.0
-    @State private var newExerciseIsTimeBased = false
-    @State private var newExerciseReps = 8
-    @State private var newExerciseDuration = 30
-    @State private var newExerciseWeight = 50.0
+    @State private var newExerciseIsTimeBased: Bool = false
+    @State private var newExerciseReps: Int = 8
+    @State private var newExerciseDuration: Double = 30.0
+    @State private var newExerciseWeight: Double = 50.0
     @State private var newExerciseTimeBeforeNext: Double = 120.0
-    @State private var selectedExerciseIDs = Set<Exercise.ID>()
-    @State private var isShowingWorkoutPicker = false
+    @State private var selectedExerciseIDs: Set<UUID> = Set<Exercise.ID>()
+    @State private var isShowingWorkoutPicker: Bool = false
     @State private var expandedExerciseID: UUID?
+    @State private var showingRestPicker: Bool = false
+    @State private var showingDurationPicker: Bool = false
+    @State private var showingTimeBeforeNextPicker: Bool = false
     
-    @State private var isKeyboardShowing = false
+    @State private var isKeyboardShowing: Bool = false
     @FocusState.Binding var isTextFieldFocused: Bool
     
     @State private var isTimerRunning: [UUID: Bool] = [:]
@@ -92,6 +95,16 @@ struct ExerciseView: View {
             .sheet(isPresented: $isShowingWorkoutPicker) {
                 workoutPickerSheet()
             }
+            .onChange(of: isAddingNewExercise) {
+                showingRestPicker = false
+                showingDurationPicker = false
+                showingTimeBeforeNextPicker = false
+            }
+            .onChange(of: selectedExercise) {
+                showingRestPicker = false
+                showingDurationPicker = false
+                showingTimeBeforeNextPicker = false
+            }
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     leadingToolbarItems()
@@ -114,7 +127,7 @@ struct ExerciseView: View {
             ForEach(sortedExercises, id: \.id) { exercise in
                 displayExercise(for: exercise)
                     .tag(exercise.id)
-                    .opacity((exercise.sets == exercise.currentSet - 1) ? 0.5 : 1)
+                    .opacity(((exercise.isTimeBased ? exercise.sets * 2 : exercise.sets) == exercise.currentSet - 1) ? 0.5 : 1)
             }
         }
     }
@@ -158,7 +171,9 @@ struct ExerciseView: View {
                         elapsed: Binding(
                             get: { exercise.elapsed },
                             set: { exercise.elapsed = $0 }
-                        )
+                        ),
+                        isTimeBased: exercise.isTimeBased,
+                        duration: exercise.duration ?? 30.0
                     )
                     .transition(.opacity)
                 }
@@ -181,7 +196,7 @@ struct ExerciseView: View {
                     .font(.headline)
                 
                 if exercise.isTimeBased {
-                    Text("Duration: \(exercise.duration ?? 0) sec")
+                    Text("Duration: \(Int(exercise.duration ?? 0)) sec")
                         .font(.subheadline)
                         .foregroundColor(Color(UIColor.secondaryLabel))
                 } else {
@@ -218,8 +233,8 @@ struct ExerciseView: View {
                     ToolbarItem(placement: .confirmationAction) {
                         Button("", systemImage: "checkmark") {
                             if exercise == nil {
-                                let orderIndex = (workout.exercises.map { $0.orderIndex }.max() ?? 0) + 1
-                                let exercise = Exercise(
+                                let orderIndex: Int = (workout.exercises.map { $0.orderIndex }.max() ?? 0) + 1
+                                let exercise: Exercise = Exercise(
                                     name: newExerciseName,
                                     weight: newExerciseIsTimeBased ? nil : newExerciseWeight,
                                     sets: newExerciseSets,
@@ -251,7 +266,7 @@ struct ExerciseView: View {
     @ViewBuilder
     private func exerciseEditForm(exercise: Exercise?) -> some View {
         Form {
-            TextField("Exercise Name", text: exercise == nil ? $newExerciseName : Binding(
+            TextField("Exercise name", text: exercise == nil ? $newExerciseName : Binding(
                 get: { exercise!.name },
                 set: { exercise!.name = $0 }
             ))
@@ -266,29 +281,48 @@ struct ExerciseView: View {
                 in: 1...20
             )
             
-            HStack {
-                Text("Rest Time:")
-                Picker("Rest Time", selection:
-                        Binding(
-                            get: { exercise == nil ? newExerciseRestTime : exercise!.restTime },
-                            set: { newValue in
-                                if exercise == nil {
-                                    newExerciseRestTime = newValue
-                                } else {
-                                    exercise!.restTime = newValue
-                                }
-                            }
-                        )
-                ) {
-                    ForEach(Array(stride(from: 5.0, through: 300.0, by: 5.0)), id: \.self) { time in
-                        Text("\(Int(time)) sec").tag(time)
+            Button(action: {
+                withAnimation {
+                    showingRestPicker.toggle()
+                    showingDurationPicker = false
+                    showingTimeBeforeNextPicker = false
+                }
+            }) {
+                HStack {
+                    HStack(spacing: 4) {
+                        Text("Rest duration")
+                        Text("  \(Int(exercise == nil ? newExerciseRestTime : exercise!.restTime))s ")
+                            .font(.subheadline)
+                            .foregroundColor(Color(UIColor.secondaryLabel))
+                        Image(systemName: showingRestPicker ? "chevron.up" : "chevron.down")
+                            .font(.caption)
+                    }
+                    .fixedSize()
+                    Spacer()
+                }
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            
+            if showingRestPicker {
+                Picker("Rest duration", selection: Binding(
+                    get: { exercise == nil ? newExerciseRestTime : exercise!.restTime },
+                    set: { newValue in
+                        if exercise == nil {
+                            newExerciseRestTime = newValue
+                        } else {
+                            exercise!.restTime = newValue
+                        }
+                    }
+                )) {
+                    ForEach(Array(stride(from: 5.0, through: 300.0, by: 5.0)), id: \.self) { duration in
+                        Text("\(Int(duration)) seconds").tag(duration)
                     }
                 }
                 .pickerStyle(.wheel)
-                .frame(height: 150)
             }
             
-            Toggle("Time Based", isOn: Binding(
+            Toggle("Time based", isOn: Binding(
                 get: { exercise == nil ? newExerciseIsTimeBased : exercise!.isTimeBased },
                 set: { newValue in
                     withAnimation {
@@ -302,15 +336,44 @@ struct ExerciseView: View {
             ))
             
             if exercise == nil ? newExerciseIsTimeBased : exercise!.isTimeBased {
-                Stepper(
-                    "Duration: \(exercise == nil ? newExerciseDuration : exercise!.duration ?? 30) sec",
-                    value: exercise == nil ? $newExerciseDuration : Binding(
-                        get: { exercise!.duration ?? 30 },
-                        set: { exercise!.duration = $0 }
-                    ),
-                    in: 10...600,
-                    step: 5
-                )
+                Button(action: {
+                    withAnimation {
+                        showingDurationPicker.toggle()
+                        showingRestPicker = false
+                        showingTimeBeforeNextPicker = false
+                    }
+                }) {
+                    HStack {
+                        Text("Exercise duration")
+                        Text(" \(Int((exercise == nil ? newExerciseDuration : exercise!.duration) ?? 30.0))s")
+                            .font(.subheadline)
+                            .foregroundColor(Color(UIColor.secondaryLabel))
+                        Image(systemName: showingDurationPicker ? "chevron.up" : "chevron.down")
+                            .font(.caption)
+                        Spacer()
+                    }
+                    .fixedSize()
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                
+                if showingDurationPicker {
+                    Picker("Exercise duration", selection: Binding(
+                        get: { (exercise == nil ? newExerciseDuration : exercise!.duration) ?? 30.0 },
+                        set: { newValue in
+                            if exercise == nil {
+                                newExerciseDuration = newValue
+                            } else {
+                                exercise!.duration = newValue
+                            }
+                        }
+                    )) {
+                        ForEach(Array(stride(from: 5.0, through: 600.0, by: 5.0)), id: \.self) { duration in
+                            Text("\(Int(duration)) seconds").tag(duration)
+                        }
+                    }
+                    .pickerStyle(.wheel)
+                }
             } else {
                 Stepper(
                     "Reps: \(exercise == nil ? newExerciseReps : exercise!.reps ?? 10)",
@@ -343,26 +406,43 @@ struct ExerciseView: View {
                 }
             }
             
-            HStack {
-                Text("Time before next exercise:")
-                Picker("Time before next exercise", selection:
-                        Binding(
-                            get: { exercise == nil ? newExerciseTimeBeforeNext : exercise!.timeBeforeNext },
-                            set: { newValue in
-                                if exercise == nil {
-                                    newExerciseTimeBeforeNext = newValue
-                                } else {
-                                    exercise!.timeBeforeNext = newValue
-                                }
-                            }
-                        )
-                ) {
-                    ForEach(Array(stride(from: 5.0, through: 300.0, by: 5.0)), id: \.self) { time in
-                        Text("\(Int(time)) sec").tag(time)
+            Button(action: {
+                withAnimation {
+                    showingTimeBeforeNextPicker.toggle()
+                    showingRestPicker = false
+                    showingDurationPicker = false
+                }
+            }) {
+                HStack {
+                    Text("Time before next exercise")
+                    Text(" \(Int(exercise == nil ? newExerciseTimeBeforeNext : exercise!.timeBeforeNext))s")
+                        .font(.subheadline)
+                        .foregroundColor(Color(UIColor.secondaryLabel))
+                    Image(systemName: showingTimeBeforeNextPicker ? "chevron.up" : "chevron.down")
+                        .font(.caption)
+                    Spacer()
+                }
+                .fixedSize()
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            
+            if showingTimeBeforeNextPicker {
+                Picker("Time before next exercise", selection: Binding(
+                    get: { exercise == nil ? newExerciseTimeBeforeNext : exercise!.timeBeforeNext },
+                    set: { newValue in
+                        if exercise == nil {
+                            newExerciseTimeBeforeNext = newValue
+                        } else {
+                            exercise!.timeBeforeNext = newValue
+                        }
+                    }
+                )) {
+                    ForEach(Array(stride(from: 5.0, through: 300.0, by: 5.0)), id: \.self) { duration in
+                        Text("\(Int(duration)) seconds").tag(duration)
                     }
                 }
                 .pickerStyle(.wheel)
-                .frame(height: 150)
             }
         }
         .withTextFieldToolbar(isKeyboardShowing: $isKeyboardShowing, isTextFieldFocused: $isTextFieldFocused)
@@ -394,8 +474,8 @@ struct ExerciseView: View {
     
     @ViewBuilder
     private func workoutPickerSheet() -> some View {
-        let allWorkouts = workout.week?.mesocycle?.weeks.flatMap { $0.workouts } ?? []
-        let targetWorkouts = allWorkouts
+        let allWorkouts: [Workout] = workout.week?.mesocycle?.weeks.flatMap { $0.workouts } ?? []
+        let targetWorkouts: [Workout] = allWorkouts
             .filter { $0.id != workout.id }
             .sorted {
                 guard let weekNumber1 = $0.week?.number,
@@ -436,13 +516,13 @@ struct ExerciseView: View {
     // MARK: - Helper Functions
     
     private func copyExercises(to targetWorkout: Workout) {
-        let selectedExercises = workout.exercises
+        let selectedExercises: [Exercise] = workout.exercises
             .filter { selectedExerciseIDs.contains($0.id) }
             .sorted { $0.orderIndex < $1.orderIndex }
-        let maxOrderIndex = targetWorkout.exercises.map { $0.orderIndex }.max() ?? 0
+        let maxOrderIndex: Int = targetWorkout.exercises.map { $0.orderIndex }.max() ?? 0
         
         for (index, exercise) in selectedExercises.enumerated() {
-            let newExercise = Exercise(
+            let newExercise: Exercise = Exercise(
                 name: exercise.name,
                 weight: exercise.weight,
                 sets: exercise.sets,
@@ -461,13 +541,13 @@ struct ExerciseView: View {
     }
     
     private func deleteExercise(_ exercise: Exercise) {
-        if let index = workout.exercises.firstIndex(where: { $0.id == exercise.id }) {
+        if let index: Int = workout.exercises.firstIndex(where: { $0.id == exercise.id }) {
             workout.exercises.remove(at: index)
         }
     }
     
     private func deleteSelectedExercises() {
-        let exercisesToDelete = workout.exercises.filter { selectedExerciseIDs.contains($0.id) }
+        let exercisesToDelete: [Exercise] = workout.exercises.filter { selectedExerciseIDs.contains($0.id) }
         for exercise in exercisesToDelete {
             modelContext.delete(exercise)
         }

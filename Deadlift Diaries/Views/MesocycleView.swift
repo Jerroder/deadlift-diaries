@@ -14,13 +14,13 @@ struct MesocycleView: View {
     @Query(sort: \Mesocycle.startDate) private var mesocycles: [Mesocycle]
     
     @State private var selectedMesocycle: Mesocycle?
-    @State private var isAddingNewMesocycle = false
-    @State private var newMesocycleName = ""
-    @State private var newMesocycleStartDate = Date()
-    @State private var newMesocycleNumberOfWeeks = 4
-    @State private var selectedMesocycleIDs = Set<Mesocycle.ID>()
-    @State private var isKeyboardShowing = false
-    @State private var showingSoundPicker = false
+    @State private var isAddingNewMesocycle: Bool = false
+    @State private var newMesocycleName: String = ""
+    @State private var newMesocycleStartDate: Date = Date()
+    @State private var newMesocycleNumberOfWeeks: Int = 4
+    @State private var selectedMesocycleIDs: Set<UUID> = Set<Mesocycle.ID>()
+    @State private var isKeyboardShowing: Bool = false
+    @State private var showingSoundPicker: Bool = false
     
     @FocusState.Binding var isTextFieldFocused: Bool
     
@@ -139,7 +139,7 @@ struct MesocycleView: View {
         }
         .swipeActions(edge: .trailing) {
             Button(role: .destructive) {
-                if let index = mesocycles.firstIndex(where: { $0.id == mesocycle.id }) {
+                if let index: Int = mesocycles.firstIndex(where: { $0.id == mesocycle.id }) {
                     modelContext.delete(mesocycles[index])
                 }
             } label: {
@@ -151,8 +151,8 @@ struct MesocycleView: View {
     
     @ViewBuilder
     private func mesocycleRow(mesocycle: Mesocycle) -> some View {
-        let endDate = Calendar.current.date(byAdding: .day, value: (mesocycle.numberOfWeeks * 7) - 1, to: mesocycle.startDate)!
-        let isPast = Calendar.current.startOfDay(for: endDate) < Calendar.current.startOfDay(for: Date())
+        let endDate: Date = Calendar.current.date(byAdding: .day, value: (mesocycle.numberOfWeeks * 7) - 1, to: mesocycle.startDate)!
+        let isPast: Bool = Calendar.current.startOfDay(for: endDate) < Calendar.current.startOfDay(for: Date())
         
         VStack(alignment: .leading) {
             Text(mesocycle.name)
@@ -197,12 +197,12 @@ struct MesocycleView: View {
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("", systemImage: "checkmark") {
-                        if let mesocycle = mesocycle {
+                        if let mesocycle: Mesocycle = mesocycle {
                             updateWeeks(for: mesocycle, newStartDate: mesocycle.startDate, newWeekCount: mesocycle.weeks.count)
                             updateWorkoutDates(for: mesocycle)
                         } else {
-                            let orderIndex = (mesocycles.map { $0.orderIndex }.max() ?? 0) + 1
-                            let mesocycle = Mesocycle(
+                            let orderIndex: Int = (mesocycles.map { $0.orderIndex }.max() ?? 0) + 1
+                            let mesocycle: Mesocycle = Mesocycle(
                                 name: newMesocycleName,
                                 startDate: newMesocycleStartDate,
                                 numberOfWeeks: newMesocycleNumberOfWeeks,
@@ -227,7 +227,7 @@ struct MesocycleView: View {
     // MARK: - Helper Functions
     
     private func calculateStartDateForNewMesocycle() -> Date {
-        guard let lastMesocycle = mesocycles.sorted(by: { $0.orderIndex > $1.orderIndex }).first else {
+        guard let lastMesocycle: Mesocycle = mesocycles.sorted(by: { $0.orderIndex > $1.orderIndex }).first else {
             return Date()
         }
         
@@ -235,7 +235,7 @@ struct MesocycleView: View {
     }
     
     private func updateWeeks(for mesocycle: Mesocycle, newStartDate: Date, newWeekCount: Int) {
-        let currentWeekCount = mesocycle.weeks.count
+        let currentWeekCount: Int = mesocycle.weeks.count
         
         for (index, week) in mesocycle.weeks.sorted(by: { $0.number < $1.number }).enumerated() {
             week.startDate = Calendar.current.date(byAdding: .day, value: index * 7, to: newStartDate)!
@@ -243,14 +243,14 @@ struct MesocycleView: View {
         
         if newWeekCount > currentWeekCount {
             for weekNumber in currentWeekCount + 1...newWeekCount {
-                let weekStartDate = Calendar.current.date(byAdding: .day, value: (weekNumber - 1) * 7, to: newStartDate)!
-                let newWeek = Week(number: weekNumber, startDate: weekStartDate)
+                let weekStartDate: Date = Calendar.current.date(byAdding: .day, value: (weekNumber - 1) * 7, to: newStartDate)!
+                let newWeek: Week = Week(number: weekNumber, startDate: weekStartDate)
                 mesocycle.weeks.append(newWeek)
                 newWeek.mesocycle = mesocycle
                 modelContext.insert(newWeek)
             }
         } else if newWeekCount < currentWeekCount {
-            let weeksToRemove = mesocycle.weeks.sorted { $0.number > $1.number }.prefix(currentWeekCount - newWeekCount)
+            let weeksToRemove: ArraySlice<Week> = mesocycle.weeks.sorted { $0.number > $1.number }.prefix(currentWeekCount - newWeekCount)
             for week in weeksToRemove {
                 modelContext.delete(week)
             }
@@ -262,8 +262,8 @@ struct MesocycleView: View {
     private func updateWorkoutDates(for mesocycle: Mesocycle) {
         for week in mesocycle.weeks {
             for workout in week.workouts {
-                let weekStartDate = week.startDate
-                let weekEndDate = Calendar.current.date(byAdding: .day, value: 6, to: weekStartDate)!
+                let weekStartDate: Date = week.startDate
+                let weekEndDate: Date = Calendar.current.date(byAdding: .day, value: 6, to: weekStartDate)!
                 
                 if workout.date < weekStartDate || workout.date > weekEndDate {
                     workout.date = weekStartDate
@@ -273,14 +273,14 @@ struct MesocycleView: View {
     }
     
     private func duplicateSelectedMesocycles() {
-        let selectedMesocycles = mesocycles.filter { selectedMesocycleIDs.contains($0.id) }
-        let maxOrderIndex = mesocycles.map { $0.orderIndex }.max() ?? 0
+        let selectedMesocycles: [Mesocycle] = mesocycles.filter { selectedMesocycleIDs.contains($0.id) }
+        let maxOrderIndex: Int = mesocycles.map { $0.orderIndex }.max() ?? 0
         
         for (index, mesocycle) in selectedMesocycles.enumerated() {
-            let newOrderIndex = maxOrderIndex + index + 1
-            let newStartDate = Calendar.current.date(byAdding: .day, value: mesocycle.numberOfWeeks * 7, to: mesocycle.startDate) ?? Date()
+            let newOrderIndex: Int = maxOrderIndex + index + 1
+            let newStartDate: Date = Calendar.current.date(byAdding: .day, value: mesocycle.numberOfWeeks * 7, to: mesocycle.startDate) ?? Date()
             
-            let newMesocycle = Mesocycle(
+            let newMesocycle: Mesocycle = Mesocycle(
                 name: "\(mesocycle.name) Copy",
                 startDate: newStartDate,
                 numberOfWeeks: 0,
@@ -289,16 +289,16 @@ struct MesocycleView: View {
             modelContext.insert(newMesocycle)
             
             for week in mesocycle.weeks.sorted(by: { $0.number < $1.number }) {
-                let newWeekStartDate = Calendar.current.date(byAdding: .day, value: (week.number - 1) * 7, to: newStartDate)!
-                let newWeek = Week(number: week.number, startDate: newWeekStartDate)
+                let newWeekStartDate: Date = Calendar.current.date(byAdding: .day, value: (week.number - 1) * 7, to: newStartDate)!
+                let newWeek: Week = Week(number: week.number, startDate: newWeekStartDate)
                 newMesocycle.weeks.append(newWeek)
                 newWeek.mesocycle = newMesocycle
                 modelContext.insert(newWeek)
                 
                 for workout in week.workouts.sorted(by: { $0.date < $1.date }) {
-                    let daysFromWeekStart = Calendar.current.dateComponents([.day], from: week.startDate, to: workout.date).day ?? 0
-                    let newWorkoutDate = Calendar.current.date(byAdding: .day, value: daysFromWeekStart, to: newWeekStartDate)!
-                    let newWorkout = Workout(
+                    let daysFromWeekStart: Int = Calendar.current.dateComponents([.day], from: week.startDate, to: workout.date).day ?? 0
+                    let newWorkoutDate: Date = Calendar.current.date(byAdding: .day, value: daysFromWeekStart, to: newWeekStartDate)!
+                    let newWorkout: Workout = Workout(
                         name: workout.name,
                         orderIndex: workout.orderIndex,
                         date: newWorkoutDate
@@ -308,7 +308,7 @@ struct MesocycleView: View {
                     modelContext.insert(newWorkout)
                     
                     for exercise in workout.exercises.sorted(by: { $0.orderIndex < $1.orderIndex }) {
-                        let newExercise = Exercise(
+                        let newExercise: Exercise = Exercise(
                             name: exercise.name,
                             weight: exercise.weight,
                             sets: exercise.sets,
@@ -333,7 +333,7 @@ struct MesocycleView: View {
     }
     
     private func deleteSelectedMesocycles() {
-        let mesocyclesToDelete = mesocycles.filter { selectedMesocycleIDs.contains($0.id) }
+        let mesocyclesToDelete: [Mesocycle] = mesocycles.filter { selectedMesocycleIDs.contains($0.id) }
         for mesocycle in mesocyclesToDelete {
             modelContext.delete(mesocycle)
         }

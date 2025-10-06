@@ -16,7 +16,7 @@ final class Exercise  {
     var weight: Double?
     var sets: Int
     var reps: Int?
-    var duration: Int?
+    var duration: Double?
     var restTime: Double
     var isTimeBased: Bool
     var orderIndex: Int
@@ -25,7 +25,7 @@ final class Exercise  {
     var currentSet: Int
     var timeBeforeNext: Double
     
-    init(name: String, weight: Double? = nil, sets: Int, reps: Int? = nil, duration: Int? = nil, restTime: Double, isTimeBased: Bool, orderIndex: Int, timeBeforeNext: Double) {
+    init(name: String, weight: Double? = nil, sets: Int, reps: Int? = nil, duration: Double? = 30.0, restTime: Double, isTimeBased: Bool, orderIndex: Int, timeBeforeNext: Double) {
         self.id = UUID()
         self.name = name
         self.weight = weight
