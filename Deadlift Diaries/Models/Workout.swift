@@ -9,7 +9,7 @@ import Foundation
 import SwiftData
 
 @Model
-final class Workout {
+final class Workout: Encodable {
     @Attribute(.unique) var id: UUID
     
     var name: String
@@ -25,5 +25,18 @@ final class Workout {
         self.exercises = []
         self.orderIndex = orderIndex
         self.date = date
+    }
+    
+    enum CodingKeys: CodingKey {
+        case id, name, orderIndex, date, exercises
+    }
+    
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(id, forKey: .id)
+        try container.encode(name, forKey: .name)
+        try container.encode(orderIndex, forKey: .orderIndex)
+        try container.encode(date, forKey: .date)
+        try container.encode(exercises, forKey: .exercises)
     }
 }

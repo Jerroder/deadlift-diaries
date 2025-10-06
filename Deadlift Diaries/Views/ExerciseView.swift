@@ -8,21 +8,6 @@
 import SwiftUI
 import SwiftData
 
-func isMetricSystem() -> Bool {
-    let locale: Locale = Locale.current
-    switch locale.measurementSystem {
-        case .metric:
-            return true
-
-        case .us: fallthrough
-        case .uk:
-            return false
-
-        default:
-            return false
-    }
-}
-
 struct ExerciseView: View {
     let workout: Workout
     @Environment(\.modelContext) private var modelContext

@@ -9,7 +9,7 @@ import Foundation
 import SwiftData
 
 @Model
-final class Exercise  {
+final class Exercise: Encodable  {
     @Attribute(.unique) var id: UUID
     
     var name: String
@@ -38,5 +38,25 @@ final class Exercise  {
         self.elapsed = 0.0
         self.currentSet = 1
         self.timeBeforeNext = timeBeforeNext
+    }
+    
+    enum CodingKeys: CodingKey {
+        case id, name, weight, sets, reps, duration, restTime, isTimeBased, orderIndex, elapsed, currentSet, timeBeforeNext
+    }
+    
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(id, forKey: .id)
+        try container.encode(name, forKey: .name)
+        try container.encode(weight, forKey: .weight)
+        try container.encode(sets, forKey: .sets)
+        try container.encode(reps, forKey: .reps)
+        try container.encode(duration, forKey: .duration)
+        try container.encode(restTime, forKey: .restTime)
+        try container.encode(isTimeBased, forKey: .isTimeBased)
+        try container.encode(orderIndex, forKey: .orderIndex)
+        try container.encode(elapsed, forKey: .elapsed)
+        try container.encode(currentSet, forKey: .currentSet)
+        try container.encode(timeBeforeNext, forKey: .timeBeforeNext)
     }
 }

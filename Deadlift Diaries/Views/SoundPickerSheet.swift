@@ -10,6 +10,9 @@ import SwiftUI
 
 struct SoundPickerSheet: View {
     @Binding var isPresented: Bool
+    let mesocycles: [Mesocycle]?
+    
+    @State private var showingShareSheet = false
     
     @AppStorage("selectedSoundID") private var selectedSoundID: Int = 1075
     
@@ -30,9 +33,22 @@ struct SoundPickerSheet: View {
                         }
                     }
                 }
+                
+                if let mesocycles = mesocycles, !mesocycles.isEmpty {
+                    Section {
+                        Button("Export app data") {
+                            saveAndShareJSON(mesocycles)
+                            showingShareSheet = true
+                        }
+                        .frame(maxWidth: .infinity, alignment: .center)
+                    }
+                }
             }
             .navigationTitle("Settings")
             .navigationBarTitleDisplayMode(.inline)
+            .sheet(isPresented: $showingShareSheet) {
+                ActivityViewController(activityItems: [FileManager.default.temporaryDirectory.appendingPathComponent("deadliftdiaries_export.json")], applicationActivities: nil)
+            }
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("", systemImage: "checkmark") {

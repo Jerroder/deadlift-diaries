@@ -54,7 +54,8 @@ struct MesocycleView: View {
                 }
                 .sheet(isPresented: $showingSoundPicker) {
                     SoundPickerSheet(
-                        isPresented: $showingSoundPicker
+                        isPresented: $showingSoundPicker,
+                        mesocycles: mesocycles
                     )
                 }
                 .toolbar {

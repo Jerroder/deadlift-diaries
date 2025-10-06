@@ -182,7 +182,8 @@ struct TimerView: View {
             .navigationTitle("Timer")
             .sheet(isPresented: $showingSoundPickerSheet) {
                 SoundPickerSheet(
-                    isPresented: $showingSoundPickerSheet
+                    isPresented: $showingSoundPickerSheet,
+                    mesocycles: nil
                 )
             }
             .toolbar {
