@@ -58,6 +58,9 @@ struct SettingsSheet: View {
                         .frame(maxWidth: .infinity, alignment: .center)
                     }
                 }
+                .alignmentGuide(.listRowSeparatorLeading) { g in
+                    g[.leading]
+                }
             }
             .navigationTitle("Settings")
             .navigationBarTitleDisplayMode(.inline)
