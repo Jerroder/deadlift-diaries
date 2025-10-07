@@ -128,8 +128,10 @@ struct ExerciseView: View {
                 if let partner = partner(for: exercise), partner.orderIndex > exercise.orderIndex {
                     displayExercise(for: exercise)
                         .tag(exercise.id)
+                        .opacity(((exercise.isTimeBased ? exercise.sets * 2 : exercise.sets) == exercise.currentSet - 1) ? 0.5 : 1) 
                     displayExercise(for: partner, isSuperset: true)
                         .tag(partner.id)
+                        .opacity(((exercise.isTimeBased ? exercise.sets * 2 : exercise.sets) == exercise.currentSet - 1) ? 0.5 : 1)
                 } else if exercise.supersetPartnerID == nil {
                     displayExercise(for: exercise)
                         .tag(exercise.id)
