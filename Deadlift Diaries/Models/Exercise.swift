@@ -24,8 +24,9 @@ final class Exercise: Codable  {
     var elapsed: Double = 0.0
     var currentSet: Int = 1
     var timeBeforeNext: Double = 120.0
+    var supersetPartnerID: UUID?
     
-    init(name: String, weight: Double? = nil, sets: Int, reps: Int? = nil, duration: Double? = 30.0, restTime: Double, isTimeBased: Bool, orderIndex: Int, timeBeforeNext: Double) {
+    init(name: String, weight: Double? = nil, sets: Int, reps: Int? = nil, duration: Double? = 30.0, restTime: Double, isTimeBased: Bool, orderIndex: Int, timeBeforeNext: Double, supersetPartnerID: UUID? = nil) {
         self.id = UUID()
         self.name = name
         self.weight = weight
@@ -38,10 +39,11 @@ final class Exercise: Codable  {
         self.elapsed = 0.0
         self.currentSet = 1
         self.timeBeforeNext = timeBeforeNext
+        self.supersetPartnerID = supersetPartnerID
     }
     
     enum CodingKeys: CodingKey {
-        case id, name, weight, sets, reps, duration, restTime, isTimeBased, orderIndex, elapsed, currentSet, timeBeforeNext
+        case id, name, weight, sets, reps, duration, restTime, isTimeBased, orderIndex, elapsed, currentSet, timeBeforeNext, supersetPartnerID
     }
     
     func encode(to encoder: Encoder) throws {
@@ -58,6 +60,7 @@ final class Exercise: Codable  {
         try container.encode(elapsed, forKey: .elapsed)
         try container.encode(currentSet, forKey: .currentSet)
         try container.encode(timeBeforeNext, forKey: .timeBeforeNext)
+        try container.encode(supersetPartnerID, forKey: .supersetPartnerID)
     }
     
     required init(from decoder: Decoder) throws {
@@ -74,5 +77,6 @@ final class Exercise: Codable  {
         self.elapsed = try container.decode(Double.self, forKey: .elapsed)
         self.currentSet = try container.decode(Int.self, forKey: .currentSet)
         self.timeBeforeNext = try container.decode(Double.self, forKey: .timeBeforeNext)
+        self.supersetPartnerID = try container.decode(UUID.self, forKey: .supersetPartnerID)
     }
 }

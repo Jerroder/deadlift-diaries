@@ -39,7 +39,7 @@ struct SettingsSheet: View {
                 
                 Section {
                     Toggle("Enable iCloud Sync", isOn: $isICouldEnabled)
-                        .padding()
+                        .padding([.leading, .trailing])
                 }
                 
                 Section {
