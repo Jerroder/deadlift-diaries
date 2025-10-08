@@ -199,15 +199,38 @@ struct TimerView: View {
                     }
                 }
                 ToolbarItem(placement: .topBarTrailing) {
-                    Toggle(isOn: Binding(
-                        get: { isTimeBased },
-                        set: { newValue in
-                            withAnimation {
-                                isTimeBased = newValue
+                    if #available(iOS 26.0, *) {
+                        if isTimeBased {
+                            Button(action: {
+                                withAnimation {
+                                    isTimeBased.toggle()
+                                }
+                            }) {
+                                Label("Time based exercise", systemImage: "gauge.with.needle")
                             }
+                            .buttonStyle(.glassProminent)
+                        } else {
+                            Button(action: {
+                                withAnimation {
+                                    isTimeBased.toggle()
+                                }
+                            }) {
+                                Label("Time based exercise", systemImage: "gauge.with.needle")
+                            }
+                            .glassEffect()
+                            .padding([.leading, .trailing], -4)
                         }
-                    )) {
-                        Label("Time based exercise", systemImage: "gauge.with.needle")
+                    } else {
+                        Toggle(isOn: Binding(
+                            get: { isTimeBased },
+                            set: { newValue in
+                                withAnimation {
+                                    isTimeBased = newValue
+                                }
+                            }
+                        )) {
+                            Label("Time based exercise", systemImage: "gauge.with.needle")
+                        }
                     }
                 }
             }
