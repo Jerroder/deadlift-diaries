@@ -22,14 +22,6 @@ struct WeekView: View {
         mesocycle.weeks!.sorted { $0.startDate < $1.startDate }
     }
     
-    // MARK: - ViewBuilder variables
-    
-    @ViewBuilder
-    private var trailingToolbarItems: some View {
-        EditButton()
-        Button("", systemImage: "plus", action: addNewWeek)
-    }
-    
     // MARK: - Main view
     
     var body: some View {
@@ -39,12 +31,32 @@ struct WeekView: View {
             .sheet(isPresented: $isShowingMesocyclePicker) {
                 mesocyclePickerSheet()
             }
+            .safeAreaInset(edge: .bottom, alignment: .trailing) {
+                if #available(iOS 26.0, *) {
+                    Button(action: addNewWeek) {
+                        Image(systemName: "plus")
+                            .font(.system(size: 22))
+                            .padding([.leading, .trailing], 0)
+                            .padding([.top, .bottom], 6)
+                    }
+                    .padding()
+                    .buttonStyle(.glassProminent)
+                } else {
+                    Button(action: addNewWeek) {
+                        Image(systemName: "plus")
+                            .font(.system(size: 22))
+                            .padding([.leading, .trailing], 0)
+                            .padding([.top, .bottom], 6)
+                    }
+                    .padding()
+                }
+            }
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     leadingToolbarItems()
                 }
                 ToolbarItemGroup(placement: .primaryAction) {
-                    trailingToolbarItems
+                    EditButton()
                 }
             }
             .environment(\.editMode, Binding(
@@ -206,7 +218,6 @@ struct WeekView: View {
     
     private func copyWorkout(_ workout: Workout, to newWeek: Week, originalWeekStartDate: Date, newWeekStartDate: Date) {
         let daysOffset: Int = Calendar.current.dateComponents([.day], from: originalWeekStartDate, to: newWeekStartDate).day ?? 0
-        
         let newWorkoutDate: Date = Calendar.current.date(byAdding: .day, value: daysOffset, to: workout.date)!
         
         let newWorkout: Workout = Workout(
@@ -218,10 +229,38 @@ struct WeekView: View {
         newWorkout.week = newWeek
         modelContext.insert(newWorkout)
         
-        for exercise in workout.exercises!.sorted(by: { $0.orderIndex < $1.orderIndex }) {
-            copyExercise(exercise, to: newWorkout)
+        let exercises = workout.exercises!.sorted { $0.orderIndex < $1.orderIndex }
+        var exerciseMapping: [UUID: UUID] = [:]
+        
+        for exercise in exercises {
+            let newExercise: Exercise = Exercise(
+                name: exercise.name,
+                weight: exercise.weight,
+                sets: exercise.sets,
+                reps: exercise.reps,
+                duration: exercise.duration,
+                restTime: exercise.restTime,
+                isTimeBased: exercise.isTimeBased,
+                orderIndex: exercise.orderIndex,
+                timeBeforeNext: exercise.timeBeforeNext
+            )
+            newWorkout.exercises!.append(newExercise)
+            newExercise.workout = newWorkout
+            modelContext.insert(newExercise)
+            
+            exerciseMapping[exercise.id] = newExercise.id
+        }
+        
+        for exercise in exercises {
+            if let partnerID = exercise.supersetPartnerID,
+               let newPartnerID = exerciseMapping[partnerID] {
+                if let newExercise = newWorkout.exercises!.first(where: { $0.id == exerciseMapping[exercise.id] }) {
+                    newExercise.supersetPartnerID = newPartnerID
+                }
+            }
         }
     }
+
     
     private func copyExercise(_ exercise: Exercise, to newWorkout: Workout) {
         let newExercise: Exercise = Exercise(

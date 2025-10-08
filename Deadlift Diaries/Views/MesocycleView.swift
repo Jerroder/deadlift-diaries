@@ -24,19 +24,6 @@ struct MesocycleView: View {
     
     @FocusState.Binding var isTextFieldFocused: Bool
     
-    // MARK: - ViewBuilder variables
-    
-    @ViewBuilder
-    private var addMesocycleButton: some View {
-        EditButton()
-        Button("", systemImage: "plus", action: {
-            isAddingNewMesocycle = true
-            newMesocycleName = ""
-            newMesocycleStartDate = calculateStartDateForNewMesocycle()
-            newMesocycleNumberOfWeeks = 4
-        })
-    }
-    
     // MARK: - Main view
     
     var body: some View {
@@ -58,12 +45,42 @@ struct MesocycleView: View {
                         mesocycles: mesocycles
                     )
                 }
+                .safeAreaInset(edge: .bottom, alignment: .trailing) {
+                    if #available(iOS 26.0, *) {
+                        Button(action: {
+                            isAddingNewMesocycle = true
+                            newMesocycleName = ""
+                            newMesocycleStartDate = calculateStartDateForNewMesocycle()
+                            newMesocycleNumberOfWeeks = 4
+                        }) {
+                            Image(systemName: "plus")
+                                .font(.system(size: 22))
+                                .padding([.leading, .trailing], 0)
+                                .padding([.top, .bottom], 6)
+                        }
+                        .padding()
+                        .buttonStyle(.glassProminent)
+                    } else {
+                        Button(action: {
+                            isAddingNewMesocycle = true
+                            newMesocycleName = ""
+                            newMesocycleStartDate = calculateStartDateForNewMesocycle()
+                            newMesocycleNumberOfWeeks = 4
+                        }) {
+                            Image(systemName: "plus")
+                                .font(.system(size: 22))
+                                .padding([.leading, .trailing], 0)
+                                .padding([.top, .bottom], 6)
+                        }
+                        .padding()
+                    }
+                }
                 .toolbar {
                     ToolbarItem(placement: .navigationBarLeading) {
                         leadingToolbarItems()
                     }
                     ToolbarItemGroup(placement: .navigationBarTrailing) {
-                        addMesocycleButton
+                        EditButton()
                     }
                 }
                 .environment(\.editMode, Binding(
@@ -308,7 +325,10 @@ struct MesocycleView: View {
                     newWorkout.week = newWeek
                     modelContext.insert(newWorkout)
                     
-                    for exercise in workout.exercises!.sorted(by: { $0.orderIndex < $1.orderIndex }) {
+                    let exercises = workout.exercises!.sorted { $0.orderIndex < $1.orderIndex }
+                    var exerciseMapping: [UUID: UUID] = [:]
+                    
+                    for exercise in exercises {
                         let newExercise: Exercise = Exercise(
                             name: exercise.name,
                             weight: exercise.weight,
@@ -323,14 +343,25 @@ struct MesocycleView: View {
                         newWorkout.exercises!.append(newExercise)
                         newExercise.workout = newWorkout
                         modelContext.insert(newExercise)
+                        
+                        exerciseMapping[exercise.id] = newExercise.id
+                    }
+                    
+                    for exercise in exercises {
+                        if let partnerID = exercise.supersetPartnerID,
+                           let newPartnerID = exerciseMapping[partnerID] {
+                            if let newExercise = newWorkout.exercises!.first(where: { $0.id == exerciseMapping[exercise.id] }) {
+                                newExercise.supersetPartnerID = newPartnerID
+                            }
+                        }
                     }
                 }
-                
-                newMesocycle.numberOfWeeks = mesocycle.weeks!.count
             }
             
-            selectedMesocycleIDs.removeAll()
+            newMesocycle.numberOfWeeks = mesocycle.weeks!.count
         }
+        
+        selectedMesocycleIDs.removeAll()
     }
     
     private func deleteSelectedMesocycles() {

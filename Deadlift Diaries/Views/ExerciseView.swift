@@ -53,31 +53,6 @@ struct ExerciseView: View {
         workout.exercises!.sorted { $0.orderIndex < $1.orderIndex }
     }
     
-    // MARK: - ViewBuilder variables
-    
-    @ViewBuilder
-    private var trailingToolbarItems: some View {
-        EditButton()
-        Button("", systemImage: "plus", action: {
-            isAddingNewExercise = true
-            newExerciseName = ""
-            newExerciseSets = 5
-            newExerciseRestTime = 60
-            newExerciseIsTimeBased = false
-            newExerciseReps = 8
-            newExerciseDuration = 30
-            newExerciseWeight = 50.0
-            newExerciseTimeBeforeNext = 120.0
-            
-            isSuperset = false
-            newExercise2Name = ""
-            newExercise2IsTimeBased = false
-            newExercise2Reps = 8
-            newExercise2Duration = 30
-            newExercise2Weight = 50.0
-        })
-    }
-    
     var body: some View {
         exerciseRow()
             .listStyle(.plain)
@@ -105,12 +80,66 @@ struct ExerciseView: View {
                 showingDurationPicker = false
                 showingTimeBeforeNextPicker = false
             }
+            .safeAreaInset(edge: .bottom, alignment: .trailing) {
+                if #available(iOS 26.0, *) {
+                    Button(action: {
+                        isAddingNewExercise = true
+                        newExerciseName = ""
+                        newExerciseSets = 5
+                        newExerciseRestTime = 60
+                        newExerciseIsTimeBased = false
+                        newExerciseReps = 8
+                        newExerciseDuration = 30
+                        newExerciseWeight = 50.0
+                        newExerciseTimeBeforeNext = 120.0
+                        
+                        isSuperset = false
+                        newExercise2Name = ""
+                        newExercise2IsTimeBased = false
+                        newExercise2Reps = 8
+                        newExercise2Duration = 30
+                        newExercise2Weight = 50.0
+                    }) {
+                        Image(systemName: "plus")
+                            .font(.system(size: 22))
+                            .padding([.leading, .trailing], 0)
+                            .padding([.top, .bottom], 6)
+                    }
+                    .padding()
+                    .buttonStyle(.glassProminent)
+                } else {
+                    Button(action: {
+                        isAddingNewExercise = true
+                        newExerciseName = ""
+                        newExerciseSets = 5
+                        newExerciseRestTime = 60
+                        newExerciseIsTimeBased = false
+                        newExerciseReps = 8
+                        newExerciseDuration = 30
+                        newExerciseWeight = 50.0
+                        newExerciseTimeBeforeNext = 120.0
+                        
+                        isSuperset = false
+                        newExercise2Name = ""
+                        newExercise2IsTimeBased = false
+                        newExercise2Reps = 8
+                        newExercise2Duration = 30
+                        newExercise2Weight = 50.0
+                    }) {
+                        Image(systemName: "plus")
+                            .font(.system(size: 22))
+                            .padding([.leading, .trailing], 0)
+                            .padding([.top, .bottom], 6)
+                    }
+                    .padding()
+                }
+            }
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     leadingToolbarItems()
                 }
                 ToolbarItemGroup(placement: .navigationBarTrailing) {
-                    trailingToolbarItems
+                    EditButton()
                 }
             }
             .environment(\.editMode, Binding(
@@ -128,14 +157,17 @@ struct ExerciseView: View {
                 if let partner = partner(for: exercise), partner.orderIndex > exercise.orderIndex {
                     displayExercise(for: exercise)
                         .tag(exercise.id)
-                        .opacity(((exercise.isTimeBased ? exercise.sets * 2 : exercise.sets) == exercise.currentSet - 1) ? 0.5 : 1) 
+                        .opacity(((exercise.isTimeBased ? exercise.sets * 2 : exercise.sets) == exercise.currentSet - 1) ? 0.5 : 1)
+                        .listRowSeparator(.hidden)
                     displayExercise(for: partner, isSuperset: true)
                         .tag(partner.id)
                         .opacity(((exercise.isTimeBased ? exercise.sets * 2 : exercise.sets) == exercise.currentSet - 1) ? 0.5 : 1)
+                        .listRowSeparator(.hidden)
                 } else if exercise.supersetPartnerID == nil {
                     displayExercise(for: exercise)
                         .tag(exercise.id)
                         .opacity(((exercise.isTimeBased ? exercise.sets * 2 : exercise.sets) == exercise.currentSet - 1) ? 0.5 : 1)
+                        .listRowSeparator(.hidden)
                 }
             }
         }
@@ -313,6 +345,25 @@ struct ExerciseView: View {
                         .toolbar {
                             ToolbarItem(placement: .confirmationAction) {
                                 Button("", systemImage: "checkmark") {
+                                    if isSuperset {
+                                        let partner = Exercise(
+                                            name: newExercise2Name,
+                                            weight: newExercise2IsTimeBased ? nil : newExercise2Weight,
+                                            sets: 0,
+                                            reps: newExercise2IsTimeBased ? nil : newExercise2Reps,
+                                            duration: newExercise2IsTimeBased ? newExercise2Duration : nil,
+                                            restTime: 0.0,
+                                            isTimeBased: newExercise2IsTimeBased,
+                                            orderIndex: exercise.orderIndex + 1,
+                                            timeBeforeNext: 0.0
+                                        )
+                                        partner.supersetPartnerID = exercise.id
+                                        exercise.supersetPartnerID = partner.id
+                                        workout.exercises!.append(partner)
+                                        partner.workout = workout
+                                        modelContext.insert(partner)
+                                        workout.exercises!.sort { $0.orderIndex < $1.orderIndex }
+                                    }
                                     try? modelContext.save()
                                     selectedExercise = nil
                                 }
@@ -757,23 +808,64 @@ struct ExerciseView: View {
         let selectedExercises: [Exercise] = workout.exercises!
             .filter { selectedExerciseIDs.contains($0.id) }
             .sorted { $0.orderIndex < $1.orderIndex }
-        let maxOrderIndex: Int = targetWorkout.exercises!.map { $0.orderIndex }.max() ?? 0
         
-        for (index, exercise) in selectedExercises.enumerated() {
-            let newExercise: Exercise = Exercise(
-                name: exercise.name,
-                weight: exercise.weight,
-                sets: exercise.sets,
-                reps: exercise.reps,
-                duration: exercise.duration,
-                restTime: exercise.restTime,
-                isTimeBased: exercise.isTimeBased,
-                orderIndex: maxOrderIndex + index + 1,
-                timeBeforeNext: exercise.timeBeforeNext
-            )
-            targetWorkout.exercises!.append(newExercise)
-            newExercise.workout = targetWorkout
-            modelContext.insert(newExercise)
+        let maxOrderIndex: Int = targetWorkout.exercises!.map { $0.orderIndex }.max() ?? 0
+        var newOrderIndex = maxOrderIndex + 1
+        
+        for exercise in selectedExercises {
+            if let partner = partner(for: exercise) {
+                let newExercise1 = Exercise(
+                    name: exercise.name,
+                    weight: exercise.weight,
+                    sets: exercise.sets,
+                    reps: exercise.reps,
+                    duration: exercise.duration,
+                    restTime: exercise.restTime,
+                    isTimeBased: exercise.isTimeBased,
+                    orderIndex: newOrderIndex,
+                    timeBeforeNext: exercise.timeBeforeNext
+                )
+                let newExercise2 = Exercise(
+                    name: partner.name,
+                    weight: partner.weight,
+                    sets: partner.sets,
+                    reps: partner.reps,
+                    duration: partner.duration,
+                    restTime: partner.restTime,
+                    isTimeBased: partner.isTimeBased,
+                    orderIndex: newOrderIndex + 1,
+                    timeBeforeNext: partner.timeBeforeNext
+                )
+                newExercise1.supersetPartnerID = newExercise2.id
+                newExercise2.supersetPartnerID = newExercise1.id
+                
+                targetWorkout.exercises!.append(newExercise1)
+                targetWorkout.exercises!.append(newExercise2)
+                newExercise1.workout = targetWorkout
+                newExercise2.workout = targetWorkout
+                
+                modelContext.insert(newExercise1)
+                modelContext.insert(newExercise2)
+                
+                newOrderIndex += 2
+            } else {
+                let newExercise: Exercise = Exercise(
+                    name: exercise.name,
+                    weight: exercise.weight,
+                    sets: exercise.sets,
+                    reps: exercise.reps,
+                    duration: exercise.duration,
+                    restTime: exercise.restTime,
+                    isTimeBased: exercise.isTimeBased,
+                    orderIndex: newOrderIndex,
+                    timeBeforeNext: exercise.timeBeforeNext
+                )
+                targetWorkout.exercises!.append(newExercise)
+                newExercise.workout = targetWorkout
+                modelContext.insert(newExercise)
+                
+                newOrderIndex += 1
+            }
         }
         selectedExerciseIDs.removeAll()
     }

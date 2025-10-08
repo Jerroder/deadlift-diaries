@@ -39,18 +39,6 @@ struct WorkoutView: View {
         week.workouts!.sorted(by: { $0.date < $1.date })
     }
     
-    // MARK: - ViewBuilder variables
-    
-    @ViewBuilder
-    private var trailingToolbarItems: some View {
-        EditButton()
-        Button("", systemImage: "plus") {
-            isAddingNewWorkout = true
-            newWorkoutName = ""
-            newWorkoutDate = calculateDefaultWorkoutDate()
-        }
-    }
-    
     // MARK: - Main view
     
     var body: some View {
@@ -66,12 +54,40 @@ struct WorkoutView: View {
             .sheet(isPresented: $isShowingWeekPicker) {
                 weekPickerSheet()
             }
+            .safeAreaInset(edge: .bottom, alignment: .trailing) {
+                if #available(iOS 26.0, *) {
+                    Button(action: {
+                        isAddingNewWorkout = true
+                        newWorkoutName = ""
+                        newWorkoutDate = calculateDefaultWorkoutDate()
+                    }) {
+                        Image(systemName: "plus")
+                            .font(.system(size: 22))
+                            .padding([.leading, .trailing], 0)
+                            .padding([.top, .bottom], 6)
+                    }
+                    .padding()
+                    .buttonStyle(.glassProminent)
+                } else {
+                    Button(action: {
+                        isAddingNewWorkout = true
+                        newWorkoutName = ""
+                        newWorkoutDate = calculateDefaultWorkoutDate()
+                    }) {
+                        Image(systemName: "plus")
+                            .font(.system(size: 22))
+                            .padding([.leading, .trailing], 0)
+                            .padding([.top, .bottom], 6)
+                    }
+                    .padding()
+                }
+            }
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     leadingToolbarItems()
                 }
                 ToolbarItemGroup(placement: .navigationBarTrailing) {
-                    trailingToolbarItems
+                    EditButton()
                 }
             }
             .environment(\.editMode, Binding(
@@ -258,6 +274,9 @@ struct WorkoutView: View {
             newWorkout.week = targetWeek
             modelContext.insert(newWorkout)
             
+            let exercises = workout.exercises!.sorted { $0.orderIndex < $1.orderIndex }
+            var exerciseMapping: [UUID: UUID] = [:]
+            
             for exercise in workout.exercises! {
                 let newExercise: Exercise = Exercise(
                     name: exercise.name,
@@ -273,6 +292,17 @@ struct WorkoutView: View {
                 newWorkout.exercises!.append(newExercise)
                 newExercise.workout = newWorkout
                 modelContext.insert(newExercise)
+                
+                exerciseMapping[exercise.id] = newExercise.id
+            }
+            
+            for exercise in exercises {
+                if let partnerID = exercise.supersetPartnerID,
+                   let newPartnerID = exerciseMapping[partnerID] {
+                    if let newExercise = newWorkout.exercises!.first(where: { $0.id == exerciseMapping[exercise.id] }) {
+                        newExercise.supersetPartnerID = newPartnerID
+                    }
+                }
             }
         }
         selectedWorkoutIDs.removeAll()
