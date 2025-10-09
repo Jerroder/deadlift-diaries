@@ -18,6 +18,8 @@ struct SettingsSheet: View {
     
     @AppStorage("isICouldEnabled") private var isICouldEnabled = false
     @AppStorage("selectedSoundID") private var selectedSoundID: Int = 1075
+    @AppStorage("isContinuousModeEnabled") private var isContinuousModeEnabled: Bool = true
+    @AppStorage("autoResetTimer") private var autoResetTimer: Bool = false
     
     var body: some View {
         NavigationView {
@@ -39,6 +41,13 @@ struct SettingsSheet: View {
                 
                 Section {
                     Toggle("Enable iCloud Sync", isOn: $isICouldEnabled)
+                        .padding([.leading, .trailing])
+                }
+                
+                Section {
+                    Toggle("Stop timer between sets and rest", isOn: $isContinuousModeEnabled)
+                        .padding([.leading, .trailing])
+                    Toggle("Automatically reset timer at the end of an exercise", isOn: $autoResetTimer)
                         .padding([.leading, .trailing])
                 }
                 

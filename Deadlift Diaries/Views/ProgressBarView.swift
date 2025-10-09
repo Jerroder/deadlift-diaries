@@ -21,6 +21,8 @@ struct ProgressBarView: View {
     
     @AppStorage("selectedSoundID") private var selectedSoundID: Int = 1075
     @AppStorage("isExerciseDone") private var isExerciseDone: Bool = false
+    @AppStorage("isContinuousModeEnabled") private var isContinuousModeEnabled: Bool = true
+    @AppStorage("autoResetTimer") private var autoResetTimer: Bool = false
     
     @State private var restProgress: CGFloat = 0
     @State private var timer: DispatchSourceTimer?
@@ -84,6 +86,7 @@ struct ProgressBarView: View {
                         restProgress = 0
                         timeStarted = nil
                         elapsed = 0.0
+                        endBackgroundTask()
                     }
                     .buttonStyle(.glass)
                     Spacer()
@@ -106,6 +109,7 @@ struct ProgressBarView: View {
                         restProgress = 0
                         timeStarted = nil
                         elapsed = 0.0
+                        endBackgroundTask()
                     }
                     Spacer()
                 }
@@ -376,8 +380,12 @@ struct ProgressBarView: View {
                     if isTimeBased {
                         isExerciseInterval.toggle()
                     }
-                    isTimerRunning = false
-                    stopTimer()
+                    if isTimeBased && isContinuousModeEnabled && !isExerciseDone {
+                        stopTimer()
+                        startTimer()
+                    } else {
+                        toggleTimer()
+                    }
                     if currentSet < nbSet {
                         currentSet += 1
                         timeRemaining = realDuration
@@ -387,6 +395,21 @@ struct ProgressBarView: View {
                     
                     if currentSet == nbSet && isExerciseDone {
                         currentSet += 1
+                    }
+                    if currentSet > nbSet && isExerciseDone {
+                        stopTimer()
+                        if autoResetTimer {
+                            timer?.cancel()
+                            isTimerRunning = false
+                            currentSet = 1
+                            isExerciseDone = (totalSets == 1 && !isTimeBased) ? true : false
+                            isExerciseInterval = true
+                            timeRemaining = realDuration
+                            restProgress = 0
+                            timeStarted = nil
+                            self.elapsed = 0.0
+                            endBackgroundTask()
+                        }
                     }
                     if currentSet == nbSet {
                         isExerciseDone = true
