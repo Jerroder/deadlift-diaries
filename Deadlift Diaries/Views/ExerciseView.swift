@@ -8,6 +8,10 @@
 import SwiftUI
 import SwiftData
 
+enum FocusableField: Hashable {
+    case exerciseName, exerciseWeight, supersetName, supersetWeight
+}
+
 struct ExerciseView: View {
     let workout: Workout
     @Environment(\.modelContext) private var modelContext
@@ -38,7 +42,7 @@ struct ExerciseView: View {
     @State private var newExercise2Weight: Double = 50.0
     
     @State private var isKeyboardShowing: Bool = false
-    @FocusState.Binding var isTextFieldFocused: Bool
+    @FocusState private var focusedField: FocusableField?
     
     @State private var isTimerRunning: [UUID: Bool] = [:]
     
@@ -331,11 +335,13 @@ struct ExerciseView: View {
                                 Button("", systemImage: "checkmark") {
                                     try? modelContext.save()
                                     selectedExercise = nil
+                                    focusedField = nil
                                 }
                             }
                             ToolbarItem(placement: .cancellationAction) {
                                 Button("", systemImage: "xmark") {
                                     selectedExercise = nil
+                                    focusedField = nil
                                 }
                             }
                         }
@@ -366,11 +372,13 @@ struct ExerciseView: View {
                                     }
                                     try? modelContext.save()
                                     selectedExercise = nil
+                                    focusedField = nil
                                 }
                             }
                             ToolbarItem(placement: .cancellationAction) {
                                 Button("", systemImage: "xmark") {
                                     selectedExercise = nil
+                                    focusedField = nil
                                 }
                             }
                         }
@@ -431,12 +439,14 @@ struct ExerciseView: View {
                                 }
                                 selectedExercise = nil
                                 isAddingNewExercise = false
+                                focusedField = nil
                             }
                         }
                         ToolbarItem(placement: .cancellationAction) {
                             Button("", systemImage: "xmark") {
                                 selectedExercise = nil
                                 isAddingNewExercise = false
+                                focusedField = nil
                             }
                         }
                     }
@@ -455,6 +465,9 @@ struct ExerciseView: View {
                         if !newValue, let exercise = exercise1, exercise.supersetPartnerID != nil {
                             removeFromSuperset(exercise: exercise)
                         }
+                        if !newValue && (focusedField == .supersetName || focusedField == .supersetWeight) {
+                            focusedField = .exerciseWeight
+                        }
                     }
                 ))
                 
@@ -462,7 +475,7 @@ struct ExerciseView: View {
                     get: { exercise1!.name },
                     set: { exercise1!.name = $0 }
                 ))
-                .focused($isTextFieldFocused)
+                .focused($focusedField, equals: .exerciseName)
                 
                 Stepper(
                     "Sets: \(exercise1 == nil ? newExerciseSets : exercise1!.sets)",
@@ -595,7 +608,7 @@ struct ExerciseView: View {
                             )
                         )
                         .keyboardType(.decimalPad)
-                        .focused($isTextFieldFocused)
+                        .focused($focusedField, equals: .exerciseWeight)
                     }
                 }
                 
@@ -645,7 +658,7 @@ struct ExerciseView: View {
                         get: { exercise2!.name },
                         set: { exercise2!.name = $0 }
                     ))
-                    .focused($isTextFieldFocused)
+                    .focused($focusedField, equals: .supersetName)
                     
                     Toggle("Time based", isOn: Binding(
                         get: { exercise2 == nil ? newExercise2IsTimeBased : exercise2!.isTimeBased },
@@ -728,13 +741,13 @@ struct ExerciseView: View {
                                 )
                             )
                             .keyboardType(.decimalPad)
-                            .focused($isTextFieldFocused)
+                            .focused($focusedField, equals: .supersetWeight)
                         }
                     }
                 } /* Section */
             } /* if isSuperset */
         } /* Form */
-        .withTextFieldToolbar(isKeyboardShowing: $isKeyboardShowing, isTextFieldFocused: $isTextFieldFocused)
+        .withTextFieldToolbarDoneWithChevrons(isKeyboardShowing: $isKeyboardShowing, isSupersetToggleOn: $isSuperset, focusedField: _focusedField)
     }
     
     @ViewBuilder

@@ -122,7 +122,7 @@ struct WorkoutView: View {
                         .buttonStyle(PlainButtonStyle())
                     } else {
                         NavigationLink {
-                            ExerciseView(workout: workout, isTextFieldFocused: $isTextFieldFocused)
+                            ExerciseView(workout: workout)
                         } label: {
                             HStack {
                                 Text(workout.name)
@@ -171,7 +171,7 @@ struct WorkoutView: View {
                     displayedComponents: .date
                 )
             }
-            .withTextFieldToolbar(isKeyboardShowing: $isKeyboardShowing, isTextFieldFocused: $isTextFieldFocused)
+            .withTextFieldToolbarDone(isKeyboardShowing: $isKeyboardShowing, isTextFieldFocused: $isTextFieldFocused)
             .navigationTitle(workout == nil ? "New Workout" : "Rename Workout")
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {

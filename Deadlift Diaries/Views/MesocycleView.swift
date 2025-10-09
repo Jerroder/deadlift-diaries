@@ -210,7 +210,7 @@ struct MesocycleView: View {
                             set: { _ in }
                         ), in: 1...12)
             }
-            .withTextFieldToolbar(isKeyboardShowing: $isKeyboardShowing, isTextFieldFocused: $isTextFieldFocused)
+            .withTextFieldToolbarDone(isKeyboardShowing: $isKeyboardShowing, isTextFieldFocused: $isTextFieldFocused)
             .navigationTitle(mesocycle == nil ? "New Mesocycle" : "Edit Mesocycle")
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
