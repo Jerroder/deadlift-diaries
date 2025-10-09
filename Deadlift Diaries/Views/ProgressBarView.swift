@@ -21,7 +21,7 @@ struct ProgressBarView: View {
     
     @AppStorage("selectedSoundID") private var selectedSoundID: Int = 1075
     @AppStorage("isExerciseDone") private var isExerciseDone: Bool = false
-    @AppStorage("isContinuousModeEnabled") private var isContinuousModeEnabled: Bool = true
+    @AppStorage("isContinuousModeEnabled") private var isContinuousModeEnabled: Bool = false
     @AppStorage("autoResetTimer") private var autoResetTimer: Bool = false
     
     @State private var restProgress: CGFloat = 0

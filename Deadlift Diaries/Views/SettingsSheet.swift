@@ -18,7 +18,7 @@ struct SettingsSheet: View {
     
     @AppStorage("isICouldEnabled") private var isICouldEnabled = false
     @AppStorage("selectedSoundID") private var selectedSoundID: Int = 1075
-    @AppStorage("isContinuousModeEnabled") private var isContinuousModeEnabled: Bool = true
+    @AppStorage("isContinuousModeEnabled") private var isContinuousModeEnabled: Bool = false
     @AppStorage("autoResetTimer") private var autoResetTimer: Bool = false
     
     var body: some View {
@@ -45,7 +45,7 @@ struct SettingsSheet: View {
                 }
                 
                 Section {
-                    Toggle("Stop timer between sets and rest", isOn: $isContinuousModeEnabled)
+                    Toggle("Do not stop timer between sets and rest", isOn: $isContinuousModeEnabled)
                         .padding([.leading, .trailing])
                     Toggle("Automatically reset timer at the end of an exercise", isOn: $autoResetTimer)
                         .padding([.leading, .trailing])
