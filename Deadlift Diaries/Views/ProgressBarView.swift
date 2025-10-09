@@ -154,11 +154,11 @@ struct ProgressBarView: View {
                                 ZStack(alignment: .leading) {
                                     Rectangle()
                                         .frame(width: squareWidth, height: 20)
-                                        .foregroundColor(.gray)
+                                        .foregroundColor(orange.opacity(0.3))
                                         .cornerRadius(4)
                                     Rectangle()
                                         .frame(width: squareWidth * self.restProgress, height: 20)
-                                        .foregroundColor(yellow)
+                                        .foregroundColor(orange)
                                         .cornerRadius(4)
                                         .animation(.linear, value: self.restProgress)
                                 }
@@ -187,7 +187,7 @@ struct ProgressBarView: View {
                             } else {
                                 Rectangle()
                                     .frame(width: squareWidth, height: 20)
-                                    .foregroundColor(.gray)
+                                    .foregroundColor(orange.opacity(0.3))
                                     .cornerRadius(4)
                                     .onTapGesture {
                                         if !isTimerRunning {
@@ -212,11 +212,11 @@ struct ProgressBarView: View {
                                 ZStack(alignment: .leading) {
                                     Rectangle()
                                         .frame(width: squareWidth, height: 20)
-                                        .foregroundColor(.gray)
+                                        .foregroundColor(.accentColor.opacity(0.3))
                                         .cornerRadius(4)
                                     Rectangle()
                                         .frame(width: squareWidth * self.restProgress, height: 20)
-                                        .foregroundColor(green)
+                                        .foregroundColor(.accentColor)
                                         .cornerRadius(4)
                                         .animation(.linear, value: self.restProgress)
                                 }
@@ -245,7 +245,7 @@ struct ProgressBarView: View {
                             } else {
                                 Rectangle()
                                     .frame(width: squareWidth, height: 20)
-                                    .foregroundColor(.gray)
+                                    .foregroundColor(.accentColor.opacity(0.3))
                                     .cornerRadius(4)
                                     .onTapGesture {
                                         if !isTimerRunning {
@@ -272,11 +272,11 @@ struct ProgressBarView: View {
                                 ZStack(alignment: .leading) {
                                     Rectangle()
                                         .frame(width: squareWidth, height: 20)
-                                        .foregroundColor(.gray)
+                                        .foregroundColor(orange.opacity(0.3))
                                         .cornerRadius(4)
                                     Rectangle()
                                         .frame(width: squareWidth * self.restProgress, height: 20)
-                                        .foregroundColor(yellow)
+                                        .foregroundColor(orange)
                                         .cornerRadius(4)
                                         .animation(.linear, value: self.restProgress)
                                 }
@@ -288,7 +288,7 @@ struct ProgressBarView: View {
                             } else {
                                 Rectangle()
                                     .frame(width: squareWidth, height: 20)
-                                    .foregroundColor(.gray)
+                                    .foregroundColor(orange.opacity(0.3))
                                     .cornerRadius(4)
                             }
                         } else { // set
@@ -316,7 +316,7 @@ struct ProgressBarView: View {
                             } else {
                                 Rectangle()
                                     .frame(width: squareWidth, height: 20)
-                                    .foregroundColor(.gray)
+                                    .foregroundColor(.accentColor.opacity(0.3))
                                     .cornerRadius(4)
                                     .onTapGesture {
                                         if !isTimerRunning {
