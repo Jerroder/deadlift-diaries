@@ -25,9 +25,9 @@
 			path = "Deadlift Diaries";
 			sourceTree = "<group>";
 		};
-		46FAAD982DE333C60081CF50 /* Icons */ = {
+		4677AB542E990093006844E1 /* Images */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			path = Icons;
+			path = Images;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -46,8 +46,8 @@
 		465E04BE2DE1FCCC00CD70D8 = {
 			isa = PBXGroup;
 			children = (
+				4677AB542E990093006844E1 /* Images */,
 				465E04C92DE1FCCC00CD70D8 /* Deadlift Diaries */,
-				46FAAD982DE333C60081CF50 /* Icons */,
 				463AEADB2DF632CB00F1189B /* Localizable.xcstrings */,
 				463EC1B42DF4BCC200ED7B0F /* PrivacyInfo.xcprivacy */,
 				463EC1AD2DF37D5000ED7B0F /* README.md */,
@@ -72,7 +72,7 @@
 			);
 			fileSystemSynchronizedGroups = (
 				465E04C92DE1FCCC00CD70D8 /* Deadlift Diaries */,
-				46FAAD982DE333C60081CF50 /* Icons */,
+				4677AB542E990093006844E1 /* Images */,
 			);
 			name = "Deadlift Diaries";
 			packageProductDependencies = (
@@ -270,7 +270,7 @@
 		465E04EB2DE1FCCD00CD70D8 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_APPICON_NAME = icon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = "Deadlift Diaries/Deadlift Diaries.entitlements";
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
@@ -311,7 +311,7 @@
 		465E04EC2DE1FCCD00CD70D8 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_APPICON_NAME = icon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = "Deadlift Diaries/Deadlift Diaries.entitlements";
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Distribution";
