@@ -2,35 +2,24 @@
   "fill" : "automatic",
   "groups" : [
     {
+      "blur-material" : null,
       "layers" : [
         {
           "image-name" : "4.2.svg",
-          "name" : "4.2",
-          "position" : {
-            "scale" : 0.24,
-            "translation-in-points" : [
-              0,
-              0
-            ]
-          }
+          "name" : "4.2"
         },
         {
           "image-name" : "4.1.svg",
-          "name" : "4.1",
-          "position" : {
-            "scale" : 0.24,
-            "translation-in-points" : [
-              0,
-              0
-            ]
-          }
+          "name" : "4.1"
         }
       ],
+      "lighting" : "individual",
       "name" : "4",
       "shadow" : {
         "kind" : "neutral",
         "opacity" : 0.5
       },
+      "specular" : true,
       "translucency" : {
         "enabled" : true,
         "value" : 0.5
