@@ -24,6 +24,7 @@ struct ExerciseView: View {
     @State private var expandedExerciseID: UUID?
     @State private var showingRestPicker: Bool = false
     @State private var showingDurationPicker: Bool = false
+    @State private var showingDuration2Picker: Bool = false
     @State private var showingTimeBeforeNextPicker: Bool = false
     @State private var isSuperset: Bool = false
     
@@ -77,11 +78,13 @@ struct ExerciseView: View {
             .onChange(of: isAddingNewExercise) {
                 showingRestPicker = false
                 showingDurationPicker = false
+                showingDuration2Picker = false
                 showingTimeBeforeNextPicker = false
             }
             .onChange(of: selectedExercise) {
                 showingRestPicker = false
                 showingDurationPicker = false
+                showingDuration2Picker = false
                 showingTimeBeforeNextPicker = false
             }
             .safeAreaInset(edge: .bottom, alignment: .trailing) {
@@ -490,6 +493,7 @@ struct ExerciseView: View {
                     withAnimation {
                         showingRestPicker.toggle()
                         showingDurationPicker = false
+                        showingDuration2Picker = false
                         showingTimeBeforeNextPicker = false
                     }
                 }) {
@@ -544,6 +548,7 @@ struct ExerciseView: View {
                     Button(action: {
                         withAnimation {
                             showingDurationPicker.toggle()
+                            showingDuration2Picker = false
                             showingRestPicker = false
                             showingTimeBeforeNextPicker = false
                         }
@@ -617,6 +622,7 @@ struct ExerciseView: View {
                         showingTimeBeforeNextPicker.toggle()
                         showingRestPicker = false
                         showingDurationPicker = false
+                        showingDuration2Picker = false
                     }
                 }) {
                     HStack {
@@ -676,7 +682,8 @@ struct ExerciseView: View {
                     if exercise2 == nil ? newExercise2IsTimeBased : exercise2!.isTimeBased {
                         Button(action: {
                             withAnimation {
-                                showingDurationPicker.toggle()
+                                showingDuration2Picker.toggle()
+                                showingDurationPicker = false
                                 showingRestPicker = false
                                 showingTimeBeforeNextPicker = false
                             }
@@ -686,7 +693,7 @@ struct ExerciseView: View {
                                 Text(" \(Int((exercise2 == nil ? newExercise2Duration : exercise2!.duration) ?? 30.0))s")
                                     .font(.subheadline)
                                     .foregroundColor(Color(UIColor.secondaryLabel))
-                                Image(systemName: showingDurationPicker ? "chevron.up" : "chevron.down")
+                                Image(systemName: showingDuration2Picker ? "chevron.up" : "chevron.down")
                                     .font(.caption)
                                 Spacer()
                             }
@@ -695,7 +702,7 @@ struct ExerciseView: View {
                         }
                         .buttonStyle(.plain)
                         
-                        if showingDurationPicker {
+                        if showingDuration2Picker {
                             Picker("Exercise duration", selection: Binding(
                                 get: { (exercise2 == nil ? newExercise2Duration : exercise2!.duration) ?? 30.0 },
                                 set: { newValue in
