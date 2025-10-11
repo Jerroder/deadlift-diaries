@@ -103,27 +103,29 @@ struct WeekView: View {
     
     @ViewBuilder
     private func mesocyclePickerSheet() -> some View {
-        let fetchDescriptor: FetchDescriptor<Mesocycle> = FetchDescriptor<Mesocycle>(sortBy: [SortDescriptor(\.startDate)])
-        let targetMesocycles: [Mesocycle] = (try? modelContext.fetch(fetchDescriptor))?.filter { $0.id != mesocycle.id } ?? []
-        
-        List(targetMesocycles) { targetMesocycle in
-            Button(action: {
-                copyWeeks(to: targetMesocycle)
-                isShowingMesocyclePicker = false
-            }) {
-                VStack(alignment: .leading) {
-                    Text(targetMesocycle.name)
-                        .font(.headline)
-                    Text("start_xdate".localized(with: targetMesocycle.startDate.formatted(date: .abbreviated, time: .omitted), comment: "Start:"))
-                        .font(.subheadline)
-                        .foregroundColor(Color(UIColor.secondaryLabel))
+        NavigationStack {
+            let fetchDescriptor: FetchDescriptor<Mesocycle> = FetchDescriptor<Mesocycle>(sortBy: [SortDescriptor(\.startDate)])
+            let targetMesocycles: [Mesocycle] = (try? modelContext.fetch(fetchDescriptor))?.filter { $0.id != mesocycle.id } ?? []
+            
+            List(targetMesocycles) { targetMesocycle in
+                Button(action: {
+                    copyWeeks(to: targetMesocycle)
+                    isShowingMesocyclePicker = false
+                }) {
+                    VStack(alignment: .leading) {
+                        Text(targetMesocycle.name)
+                            .font(.headline)
+                        Text("start_xdate".localized(with: targetMesocycle.startDate.formatted(date: .abbreviated, time: .omitted), comment: "Start:"))
+                            .font(.subheadline)
+                            .foregroundColor(Color(UIColor.secondaryLabel))
+                    }
                 }
             }
-        }
-        .navigationTitle("copy_to_mesocycle".localized(comment: "Copy to mesocycle"))
-        .toolbar {
-            ToolbarItem(placement: .cancellationAction) {
-                Button("", systemImage: "xmark", action: { isShowingMesocyclePicker = false })
+            .navigationTitle("copy_to_mesocycle".localized(comment: "Copy to mesocycle"))
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("", systemImage: "xmark", action: { isShowingMesocyclePicker = false })
+                }
             }
         }
     }

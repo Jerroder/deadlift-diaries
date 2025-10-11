@@ -783,40 +783,42 @@ struct ExerciseView: View {
     
     @ViewBuilder
     private func workoutPickerSheet() -> some View {
-        let allWorkouts: [Workout] = workout.week?.mesocycle?.weeks!.flatMap { $0.workouts! } ?? []
-        let targetWorkouts: [Workout] = allWorkouts
-            .filter { $0.id != workout.id }
-            .sorted {
-                guard let weekNumber1 = $0.week?.number,
-                      let weekNumber2 = $1.week?.number else {
-                    return $0.date < $1.date
+        NavigationStack {
+            let allWorkouts: [Workout] = workout.week?.mesocycle?.weeks!.flatMap { $0.workouts! } ?? []
+            let targetWorkouts: [Workout] = allWorkouts
+                .filter { $0.id != workout.id }
+                .sorted {
+                    guard let weekNumber1 = $0.week?.number,
+                          let weekNumber2 = $1.week?.number else {
+                        return $0.date < $1.date
+                    }
+                    if weekNumber1 != weekNumber2 {
+                        return weekNumber1 < weekNumber2
+                    } else {
+                        return $0.date < $1.date
+                    }
                 }
-                if weekNumber1 != weekNumber2 {
-                    return weekNumber1 < weekNumber2
-                } else {
-                    return $0.date < $1.date
-                }
-            }
-        
-        List(targetWorkouts) { targetWorkout in
-            Button(action: {
-                copyExercises(to: targetWorkout)
-                isShowingWorkoutPicker = false
-            }) {
-                VStack(alignment: .leading) {
-                    Text(targetWorkout.name)
-                        .font(.headline)
-                    Text("week_x".localized(with: targetWorkout.week?.number ?? 0, comment: "Week x"))
-                        .font(.subheadline)
-                        .foregroundColor(Color(UIColor.secondaryLabel))
-                }
-            }
-        }
-        .navigationTitle("copy_to_workout".localized(comment: "Copy to Workout"))
-        .toolbar {
-            ToolbarItem(placement: .cancellationAction) {
-                Button("", systemImage: "xmark") {
+            
+            List(targetWorkouts) { targetWorkout in
+                Button(action: {
+                    copyExercises(to: targetWorkout)
                     isShowingWorkoutPicker = false
+                }) {
+                    VStack(alignment: .leading) {
+                        Text(targetWorkout.name)
+                            .font(.headline)
+                        Text("week_x".localized(with: targetWorkout.week?.number ?? 0, comment: "Week x"))
+                            .font(.subheadline)
+                            .foregroundColor(Color(UIColor.secondaryLabel))
+                    }
+                }
+            }
+            .navigationTitle("copy_to_workout".localized(comment: "Copy to Workout"))
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("", systemImage: "xmark") {
+                        isShowingWorkoutPicker = false
+                    }
                 }
             }
         }

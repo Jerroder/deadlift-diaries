@@ -224,25 +224,27 @@ struct WorkoutView: View {
     
     @ViewBuilder
     private func weekPickerSheet() -> some View {
-        List(availableWeeks) { targetWeek in
-            Button(action: {
-                copyWorkouts(to: targetWeek)
-                isShowingWeekPicker = false
-            }) {
-                VStack(alignment: .leading) {
-                    Text("week_x".localized(with: targetWeek.number, comment: "Week"))
-                        .font(.headline)
-                    Text("start_xdate".localized(with: targetWeek.startDate.formattedRelative(), comment: "Start:"))
-                        .font(.subheadline)
-                        .foregroundColor(Color(UIColor.secondaryLabel))
+        NavigationStack {
+            List(availableWeeks) { targetWeek in
+                Button(action: {
+                    copyWorkouts(to: targetWeek)
+                    isShowingWeekPicker = false
+                }) {
+                    VStack(alignment: .leading) {
+                        Text("week_x".localized(with: targetWeek.number, comment: "Week"))
+                            .font(.headline)
+                        Text("start_xdate".localized(with: targetWeek.startDate.formattedRelative(), comment: "Start:"))
+                            .font(.subheadline)
+                            .foregroundColor(Color(UIColor.secondaryLabel))
+                    }
                 }
             }
-        }
-        .navigationTitle("copy_to_week".localized(comment: "Copy to Week"))
-        .toolbar {
-            ToolbarItem(placement: .cancellationAction) {
-                Button("", systemImage: "xmark") {
-                    isShowingWeekPicker = false
+            .navigationTitle("copy_to_week".localized(comment: "Copy to Week"))
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("", systemImage: "xmark") {
+                        isShowingWeekPicker = false
+                    }
                 }
             }
         }
