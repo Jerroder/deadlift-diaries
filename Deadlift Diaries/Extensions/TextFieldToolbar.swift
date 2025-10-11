@@ -38,7 +38,7 @@ struct TextFieldToolbarDone: ViewModifier {
                 .toolbar {
                     ToolbarItemGroup(placement: .keyboard) {
                         Spacer()
-                        Button("Done") {
+                        Button("done".localized(comment: "Done")) {
                             isTextFieldFocused.wrappedValue = false
                         }
                     }
@@ -119,7 +119,7 @@ struct TextFieldToolbarDoneWithChevrons: ViewModifier {
                 .toolbar {
                     ToolbarItemGroup(placement: .keyboard) {
                         Spacer()
-                        Button("Done") {
+                        Button("done".localized(comment: "Done")) {
                             focusedField.wrappedValue = nil
                         }
                     }

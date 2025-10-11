@@ -274,7 +274,7 @@ struct ExerciseView: View {
             Button(role: .destructive) {
                 deleteExercise(exercise)
             } label: {
-                Label("Delete", systemImage: "trash")
+                Label("delete".localized(comment: "Delete"), systemImage: "trash")
             }
         }
     }
@@ -288,31 +288,31 @@ struct ExerciseView: View {
                     .font(.headline)
                 
                 if exercise.isTimeBased {
-                    Text("Duration: \(Int(exercise.duration ?? 0)) sec")
+                    Text("duration_x_sec".localized(with: Int(exercise.duration ?? 0), comment: "Duration: x sec"))
                         .font(.subheadline)
                         .foregroundColor(Color(UIColor.secondaryLabel))
                 } else {
                     if let weight = exercise.weight, weight != 0 {
-                        Text("Weight: \(String(format: "%.1f", weight)) \(unit.symbol)")
+                        Text("weight: \(String(format: "%.1f", weight)) \(unit.symbol)".localized(comment: "Weight:"))
                             .font(.subheadline)
                             .foregroundColor(Color(UIColor.secondaryLabel))
                     }
                 }
                 
                 if !isSuperset! {
-                    Text("Sets: \(exercise.sets)")
+                    Text("sets_x".localized(with: exercise.sets, comment: "Sets: x"))
                         .font(.subheadline)
                         .foregroundColor(Color(UIColor.secondaryLabel))
                 }
                 
                 if !exercise.isTimeBased {
-                    Text("Reps: \(exercise.reps ?? 0)")
+                    Text("reps_x".localized(with: exercise.reps ?? 0, comment: "Reps: x"))
                         .font(.subheadline)
                         .foregroundColor(Color(UIColor.secondaryLabel))
                 }
                 
                 if !isSuperset! {
-                    Text("Rest: \(Int(exercise.restTime)) sec")
+                    Text("rest_x_sec".localized(with: Int(exercise.restTime), comment: "Rest: x sec"))
                         .font(.subheadline)
                         .foregroundColor(Color(UIColor.secondaryLabel))
                 } else {
@@ -332,7 +332,7 @@ struct ExerciseView: View {
             if let exercise = exercise { // edit exercise
                 if let partner = partner(for: exercise) { // superset
                     exerciseEditForm(exercise1: exercise, exercise2: partner)
-                        .navigationTitle("Edit Superset")
+                        .navigationTitle("edit_superset".localized(comment: "Edit Superset"))
                         .toolbar {
                             ToolbarItem(placement: .confirmationAction) {
                                 Button("", systemImage: "checkmark") {
@@ -350,7 +350,7 @@ struct ExerciseView: View {
                         }
                 } else { // set
                     exerciseEditForm(exercise1: exercise)
-                        .navigationTitle("Edit Exercise")
+                        .navigationTitle("edit_exercise".localized(comment: "Edit Exercise"))
                         .toolbar {
                             ToolbarItem(placement: .confirmationAction) {
                                 Button("", systemImage: "checkmark") {
@@ -388,7 +388,7 @@ struct ExerciseView: View {
                 }
             } else { // new exercise
                 exerciseEditForm(exercise1: nil)
-                    .navigationTitle("New Exercise")
+                    .navigationTitle("new_exercise".localized(comment: "New Exercise"))
                     .toolbar {
                         ToolbarItem(placement: .confirmationAction) {
                             Button("", systemImage: "checkmark") {
@@ -461,7 +461,7 @@ struct ExerciseView: View {
     private func exerciseEditForm(exercise1: Exercise? = nil, exercise2: Exercise? = nil) -> some View {
         Form {
             Section {
-                Toggle("Superset", isOn: Binding(
+                Toggle("superset".localized(comment: "Superset"), isOn: Binding(
                     get: { exercise2 != nil || isSuperset },
                     set: { newValue in
                         isSuperset = newValue
@@ -474,14 +474,14 @@ struct ExerciseView: View {
                     }
                 ))
                 
-                TextField("Exercise name", text: exercise1 == nil ? $newExerciseName : Binding(
+                TextField("exercise_name".localized(comment: "Exercise name"), text: exercise1 == nil ? $newExerciseName : Binding(
                     get: { exercise1!.name },
                     set: { exercise1!.name = $0 }
                 ))
                 .focused($focusedField, equals: .exerciseName)
                 
                 Stepper(
-                    "Sets: \(exercise1 == nil ? newExerciseSets : exercise1!.sets)",
+                    "sets_x".localized(with: exercise1 == nil ? newExerciseSets : exercise1!.sets, comment: "Sets:"),
                     value: exercise1 == nil ? $newExerciseSets : Binding(
                         get: { exercise1!.sets },
                         set: { exercise1!.sets = $0 }
@@ -499,7 +499,7 @@ struct ExerciseView: View {
                 }) {
                     HStack {
                         HStack(spacing: 4) {
-                            Text("Rest duration")
+                            Text("rest_duration".localized(comment: "Rest duration"))
                             Text("  \(Int(exercise1 == nil ? newExerciseRestTime : exercise1!.restTime))s ")
                                 .font(.subheadline)
                                 .foregroundColor(Color(UIColor.secondaryLabel))
@@ -514,7 +514,7 @@ struct ExerciseView: View {
                 .buttonStyle(.plain)
                 
                 if showingRestPicker {
-                    Picker("Rest duration", selection: Binding(
+                    Picker("rest_duration".localized(comment: "Rest duration"), selection: Binding(
                         get: { exercise1 == nil ? newExerciseRestTime : exercise1!.restTime },
                         set: { newValue in
                             if exercise1 == nil {
@@ -525,13 +525,13 @@ struct ExerciseView: View {
                         }
                     )) {
                         ForEach(Array(stride(from: 5.0, through: 300.0, by: 5.0)), id: \.self) { duration in
-                            Text("\(Int(duration)) seconds").tag(duration)
+                            Text("\(Int(duration)) seconds".localized(comment: "(xxx) seconds")).tag(duration)
                         }
                     }
                     .pickerStyle(.wheel)
                 }
                 
-                Toggle("Time based", isOn: Binding(
+                Toggle("time_based".localized(comment: "Time-based"), isOn: Binding(
                     get: { exercise1 == nil ? newExerciseIsTimeBased : exercise1!.isTimeBased },
                     set: { newValue in
                         withAnimation {
@@ -554,7 +554,7 @@ struct ExerciseView: View {
                         }
                     }) {
                         HStack {
-                            Text("Exercise duration")
+                            Text("exercise_duration".localized(comment: "Exercise duration"))
                             Text(" \(Int((exercise1 == nil ? newExerciseDuration : exercise1!.duration) ?? 30.0))s")
                                 .font(.subheadline)
                                 .foregroundColor(Color(UIColor.secondaryLabel))
@@ -568,7 +568,7 @@ struct ExerciseView: View {
                     .buttonStyle(.plain)
                     
                     if showingDurationPicker {
-                        Picker("Exercise duration", selection: Binding(
+                        Picker("exercise_duration".localized(comment: "Exercise duration"), selection: Binding(
                             get: { (exercise1 == nil ? newExerciseDuration : exercise1!.duration) ?? 30.0 },
                             set: { newValue in
                                 if exercise1 == nil {
@@ -579,14 +579,14 @@ struct ExerciseView: View {
                             }
                         )) {
                             ForEach(Array(stride(from: 5.0, through: 600.0, by: 5.0)), id: \.self) { duration in
-                                Text("\(Int(duration)) seconds").tag(duration)
+                                Text("\(Int(duration)) seconds".localized(comment: "(xxx) seconds")).tag(duration)
                             }
                         }
                         .pickerStyle(.wheel)
                     }
                 } else {
                     Stepper(
-                        "Reps: \(exercise1 == nil ? newExerciseReps : exercise1!.reps ?? 10)",
+                        "reps_x".localized(with: exercise1 == nil ? newExerciseReps : exercise1!.reps ?? 10, comment: "Reps:"),
                         value: exercise1 == nil ? $newExerciseReps : Binding(
                             get: { exercise1!.reps ?? 10 },
                             set: { exercise1!.reps = $0 }
@@ -595,7 +595,7 @@ struct ExerciseView: View {
                     )
                     
                     HStack {
-                        Text("Weight:")
+                        Text("weight".localized(comment: "Weight:"))
                         TextFieldWithUnitDouble(
                             value: Binding(
                                 get: { exercise1?.weight ?? newExerciseWeight },
@@ -626,7 +626,7 @@ struct ExerciseView: View {
                     }
                 }) {
                     HStack {
-                        Text("Time before next exercise")
+                        Text("time_before_next".localized(comment: "Time before next exercise"))
                         Text(" \(Int(exercise1 == nil ? newExerciseTimeBeforeNext : exercise1!.timeBeforeNext))s")
                             .font(.subheadline)
                             .foregroundColor(Color(UIColor.secondaryLabel))
@@ -640,7 +640,7 @@ struct ExerciseView: View {
                 .buttonStyle(.plain)
                 
                 if showingTimeBeforeNextPicker {
-                    Picker("Time before next exercise", selection: Binding(
+                    Picker("time_before_next".localized(comment: "Time before next exercise"), selection: Binding(
                         get: { exercise1 == nil ? newExerciseTimeBeforeNext : exercise1!.timeBeforeNext },
                         set: { newValue in
                             if exercise1 == nil {
@@ -651,7 +651,7 @@ struct ExerciseView: View {
                         }
                     )) {
                         ForEach(Array(stride(from: 5.0, through: 300.0, by: 5.0)), id: \.self) { duration in
-                            Text("\(Int(duration)) seconds").tag(duration)
+                            Text("\(Int(duration)) seconds".localized(comment: "(xxx) seconds")).tag(duration)
                         }
                     }
                     .pickerStyle(.wheel)
@@ -660,13 +660,13 @@ struct ExerciseView: View {
             
             if isSuperset || exercise2 != nil {
                 Section {
-                    TextField("Exercise name", text: exercise2 == nil ? $newExercise2Name : Binding(
+                    TextField("exercise_name".localized(comment: "Exercise name"), text: exercise2 == nil ? $newExercise2Name : Binding(
                         get: { exercise2!.name },
                         set: { exercise2!.name = $0 }
                     ))
                     .focused($focusedField, equals: .supersetName)
                     
-                    Toggle("Time based", isOn: Binding(
+                    Toggle("time_based".localized(comment: "Time-based"), isOn: Binding(
                         get: { exercise2 == nil ? newExercise2IsTimeBased : exercise2!.isTimeBased },
                         set: { newValue in
                             withAnimation {
@@ -689,7 +689,7 @@ struct ExerciseView: View {
                             }
                         }) {
                             HStack {
-                                Text("Exercise duration")
+                                Text("exercise_duration".localized(comment: "Exercise duration"))
                                 Text(" \(Int((exercise2 == nil ? newExercise2Duration : exercise2!.duration) ?? 30.0))s")
                                     .font(.subheadline)
                                     .foregroundColor(Color(UIColor.secondaryLabel))
@@ -703,7 +703,7 @@ struct ExerciseView: View {
                         .buttonStyle(.plain)
                         
                         if showingDuration2Picker {
-                            Picker("Exercise duration", selection: Binding(
+                            Picker("exercise_duration".localized(comment: "Exercise duration"), selection: Binding(
                                 get: { (exercise2 == nil ? newExercise2Duration : exercise2!.duration) ?? 30.0 },
                                 set: { newValue in
                                     if exercise2 == nil {
@@ -714,14 +714,14 @@ struct ExerciseView: View {
                                 }
                             )) {
                                 ForEach(Array(stride(from: 5.0, through: 600.0, by: 5.0)), id: \.self) { duration in
-                                    Text("\(Int(duration)) seconds").tag(duration)
+                                    Text("\(Int(duration)) seconds".localized(comment: "(xxx) seconds)")).tag(duration)
                                 }
                             }
                             .pickerStyle(.wheel)
                         }
                     } else {
                         Stepper(
-                            "Reps: \(exercise2 == nil ? newExercise2Reps : exercise2!.reps ?? 10)",
+                            "reps_x".localized(with: exercise2 == nil ? newExercise2Reps : exercise2!.reps ?? 10, comment: "Reps:"),
                             value: exercise2 == nil ? $newExercise2Reps : Binding(
                                 get: { exercise2!.reps ?? 10 },
                                 set: { exercise2!.reps = $0 }
@@ -730,7 +730,7 @@ struct ExerciseView: View {
                         )
                         
                         HStack {
-                            Text("Weight:")
+                            Text("weight".localized(comment: "Weight:"))
                             TextFieldWithUnitDouble(
                                 value: Binding(
                                     get: { exercise2?.weight ?? newExercise2Weight },
@@ -765,13 +765,13 @@ struct ExerciseView: View {
                     Button(action: {
                         selectedExerciseIDs = Set(workout.exercises!.map { $0.id })
                     }) {
-                        Label("Select all", systemImage: "checkmark.circle.fill")
+                        Label("select_all".localized(comment: "Select all"), systemImage: "checkmark.circle.fill")
                     }
                 } else {
-                    Button("Copy", systemImage: "document.on.document") {
+                    Button("copy".localized(comment: "Copy"), systemImage: "document.on.document") {
                         isShowingWorkoutPicker = true
                     }
-                    Button("Delete", systemImage: "trash", role: .destructive) {
+                    Button("delete".localized(comment: "Delete"), systemImage: "trash", role: .destructive) {
                         deleteSelectedExercises()
                     }
                 }
@@ -806,16 +806,16 @@ struct ExerciseView: View {
                 VStack(alignment: .leading) {
                     Text(targetWorkout.name)
                         .font(.headline)
-                    Text("Week \(targetWorkout.week?.number ?? 0)")
+                    Text("week_x".localized(with: targetWorkout.week?.number ?? 0, comment: "Week x"))
                         .font(.subheadline)
                         .foregroundColor(Color(UIColor.secondaryLabel))
                 }
             }
         }
-        .navigationTitle("Copy to Workout")
+        .navigationTitle("copy_to_workout".localized(comment: "Copy to Workout"))
         .toolbar {
             ToolbarItem(placement: .cancellationAction) {
-                Button("Cancel") {
+                Button("", systemImage: "xmark") {
                     isShowingWorkoutPicker = false
                 }
             }

@@ -25,8 +25,8 @@ struct SettingsSheet: View {
         NavigationView {
             Form {
                 HStack {
-                    Text("Sound")
-                    Picker("Sound", selection: $selectedSoundID) {
+                    Text("sound".localized(comment: "Sound"))
+                    Picker("sound".localized(comment: "Sound"), selection: $selectedSoundID) {
                         ForEach(SoundOptions.all, id: \.id) { option in
                             Text(option.name).tag(Int(option.id))
                         }
@@ -40,20 +40,20 @@ struct SettingsSheet: View {
                 }
                 
                 Section {
-                    Toggle("Enable iCloud Sync", isOn: $isICouldEnabled)
+                    Toggle("enable_icloud_backup".localized(comment: "Enable iCloud backup"), isOn: $isICouldEnabled)
                         .padding([.leading, .trailing])
                 }
                 
                 Section {
-                    Toggle("Do not stop timer between sets and rest", isOn: $isContinuousModeEnabled)
+                    Toggle("do_not_stop_timer".localized(comment: "Do not stop timer between sets and rest"), isOn: $isContinuousModeEnabled)
                         .padding([.leading, .trailing])
-                    Toggle("Automatically reset timer at the end of an exercise", isOn: $autoResetTimer)
+                    Toggle("automatically_reset_timer".localized(comment: "Automatically reset timer at the end of an exercise"), isOn: $autoResetTimer)
                         .padding([.leading, .trailing])
                 }
                 
                 Section {
                     if let mesocycles = mesocycles, !mesocycles.isEmpty {
-                        Button("Export") {
+                        Button("export".localized(comment: "Export")) {
                             saveAndShareJSON(mesocycles)
                             showingShareSheet = true
                         }
@@ -61,7 +61,7 @@ struct SettingsSheet: View {
                     }
                     
                     if mesocycles != nil {
-                        Button("Import") {
+                        Button("import".localized(comment: "Import")) {
                             isShowingDocumentPicker = true
                         }
                         .frame(maxWidth: .infinity, alignment: .center)
@@ -71,7 +71,7 @@ struct SettingsSheet: View {
                     g[.leading]
                 }
             }
-            .navigationTitle("Settings")
+            .navigationTitle("settings".localized(comment: "Settings"))
             .navigationBarTitleDisplayMode(.inline)
             .sheet(isPresented: $showingShareSheet) {
                 ActivityViewController(activityItems: [FileManager.default.temporaryDirectory.appendingPathComponent("deadliftdiaries.json")], applicationActivities: nil)

@@ -64,19 +64,19 @@ struct ProgressBarView: View {
                 .frame(height: 20)
                 .padding(.horizontal)
             
-            Text("Remaining: \(Int(timeRemaining.rounded(.down))) sec")
+            Text("remaining_x_sec".localized(with: Int(timeRemaining.rounded(.down)), comment: "Remaining: x sec"))
                 .font(.title)
             
             if #available(iOS 26.0, *) {
                 HStack {
                     Spacer()
                     Button(action: toggleTimer) {
-                        Text(isTimerRunning ? "Pause" : "Start")
+                        Text(isTimerRunning ? "pause".localized(comment: "Pause") : "start".localized(comment: "Start"))
                     }
                     .disabled(currentSet > nbSet)
                     .buttonStyle(.glassProminent)
                     Spacer()
-                    Button("Reset") {
+                    Button("reset".localized(comment: "Reset")) {
                         timer?.cancel()
                         isTimerRunning = false
                         currentSet = 1
@@ -95,11 +95,11 @@ struct ProgressBarView: View {
                 HStack {
                     Spacer()
                     Button(action: toggleTimer) {
-                        Text(isTimerRunning ? "Pause" : "Start")
+                        Text(isTimerRunning ? "pause".localized(comment: "Pause") : "start".localized(comment: "Start"))
                     }
                     .disabled(currentSet > nbSet)
                     Spacer()
-                    Button("Reset") {
+                    Button("reset".localized(comment: "Reset")) {
                         timer?.cancel()
                         isTimerRunning = false
                         currentSet = 1

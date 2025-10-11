@@ -12,9 +12,9 @@ extension Date {
         let calendar = Calendar.current
         
         if calendar.isDateInToday(self) {
-            return "Today"
+            return "today".localized(comment: "Today")
         } else if calendar.isDateInTomorrow(self) {
-            return "Tomorrow"
+            return "tomorrow".localized(comment: "Tomorrow")
         } else {
             return self.formatted(.dateTime.day().month())
         }

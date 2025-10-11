@@ -29,7 +29,7 @@ struct MesocycleView: View {
     var body: some View {
         NavigationStack {
             mesocycleRows()
-                .navigationTitle("Mesocycles")
+                .navigationTitle("mesocycles".localized(comment: "Mesocycles"))
                 .onAppear {
                     selectedMesocycleIDs.removeAll()
                 }
@@ -100,14 +100,14 @@ struct MesocycleView: View {
                     Button(action: {
                         selectedMesocycleIDs = Set(mesocycles.map { $0.id })
                     }) {
-                        Label("Select all", systemImage: "checkmark.circle.fill")
+                        Label("select_all".localized(comment: "Select all"), systemImage: "checkmark.circle.fill")
                     }
                 } else {
                     Button(action: duplicateSelectedMesocycles) {
-                        Label("Duplicate", systemImage: "plus.square.on.square")
+                        Label("duplicate".localized(comment: "Duplicate"), systemImage: "plus.square.on.square")
                     }
                     Button(role: .destructive, action: deleteSelectedMesocycles) {
-                        Label("Delete", systemImage: "trash")
+                        Label("delete".localized(comment: "Delete"), systemImage: "trash")
                     }
                 }
             } label: {
@@ -161,7 +161,7 @@ struct MesocycleView: View {
                     modelContext.delete(mesocycles[index])
                 }
             } label: {
-                Label("Delete", systemImage: "trash")
+                Label("delete".localized(comment: "Delete"), systemImage: "trash")
             }
         }
         .tag(mesocycle.id)
@@ -176,11 +176,11 @@ struct MesocycleView: View {
             Text(mesocycle.name)
                 .font(.headline)
             HStack {
-                Text("Start: \(mesocycle.startDate.formattedRelative())")
+                Text("start_xdate".localized(with: mesocycle.startDate.formattedRelative(), comment: "Start: (date)"))
                     .font(.subheadline)
                     .foregroundColor(Color(UIColor.secondaryLabel))
                 Spacer()
-                Text("\(mesocycle.weeks!.count) \((mesocycle.weeks!.count == 1) ? "week" : "weeks")")
+                Text("x_week".localized(with: mesocycle.weeks!.count, comment: "x Week(s)"))
                     .font(.subheadline)
                     .foregroundColor(Color(UIColor.secondaryLabel))
             }
@@ -192,26 +192,23 @@ struct MesocycleView: View {
     private func mesocycleEditSheet(mesocycle: Mesocycle?) -> some View {
         NavigationStack {
             Form {
-                TextField("Name", text: mesocycle == nil ? $newMesocycleName : Binding(
+                TextField("name".localized(comment: "Name"), text: mesocycle == nil ? $newMesocycleName : Binding(
                     get: { mesocycle!.name },
                     set: { mesocycle!.name = $0 }
                 ))
                 .focused($isTextFieldFocused)
-                .onChange(of: isTextFieldFocused) { _, focused in
-                    print("cycle focus changed to: \(focused)")
-                }
-                DatePicker("Start Date", selection: mesocycle == nil ? $newMesocycleStartDate : Binding(
+                DatePicker("start_date".localized(comment: "Start Date"), selection: mesocycle == nil ? $newMesocycleStartDate : Binding(
                     get: { mesocycle!.startDate },
                     set: { mesocycle!.startDate = $0 }
                 ), displayedComponents: .date)
-                Stepper("Number of Weeks: \(mesocycle == nil ? newMesocycleNumberOfWeeks : mesocycle!.weeks!.count)",
+                Stepper("number_of_weeks".localized(with: (mesocycle == nil) ? newMesocycleNumberOfWeeks : mesocycle!.weeks!.count, comment: "Number of Weeks"),
                         value: mesocycle == nil ? $newMesocycleNumberOfWeeks : Binding(
                             get: { mesocycle!.weeks!.count },
                             set: { _ in }
                         ), in: 1...12)
             }
             .withTextFieldToolbarDone(isKeyboardShowing: $isKeyboardShowing, isTextFieldFocused: $isTextFieldFocused)
-            .navigationTitle(mesocycle == nil ? "New Mesocycle" : "Edit Mesocycle")
+            .navigationTitle(mesocycle == nil ? "new_mesocycle".localized(comment: "New Mesocycle") : "edit_mesocycle".localized(comment: "Edit Mesocycle"))
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("", systemImage: "checkmark") {
@@ -299,7 +296,7 @@ struct MesocycleView: View {
             let newStartDate: Date = Calendar.current.date(byAdding: .day, value: mesocycle.numberOfWeeks * 7, to: mesocycle.startDate) ?? Date()
             
             let newMesocycle: Mesocycle = Mesocycle(
-                name: "\(mesocycle.name) Copy",
+                name: "\(mesocycle.name) copy".localized(comment: "(xxx) copy"),
                 startDate: newStartDate,
                 numberOfWeeks: 0,
                 orderIndex: newOrderIndex

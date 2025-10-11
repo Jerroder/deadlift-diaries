@@ -43,7 +43,7 @@ struct WorkoutView: View {
     
     var body: some View {
         workoutRows()
-            .navigationTitle("Week \(week.number)")
+            .navigationTitle("week_x".localized(with: week.number, comment: "Week x"))
             .navigationBarBackButtonHidden(editMode?.wrappedValue.isEditing == true)
             .sheet(item: $selectedWorkout) { workout in
                 workoutEditSheet(workout: workout)
@@ -141,7 +141,7 @@ struct WorkoutView: View {
                     Button(role: .destructive) {
                         deleteWorkout(workout)
                     } label: {
-                        Label("Delete", systemImage: "trash")
+                        Label("delete".localized(comment: "Delete"), systemImage: "trash")
                     }
                 }
                 .tag(workout.id)
@@ -153,16 +153,13 @@ struct WorkoutView: View {
     private func workoutEditSheet(workout: Workout?) -> some View {
         NavigationStack {
             Form {
-                TextField("Workout Name", text: workout == nil ? $newWorkoutName : Binding(
+                TextField("workout_name".localized(comment: "Workout Name"), text: workout == nil ? $newWorkoutName : Binding(
                     get: { workout!.name },
                     set: { workout!.name = $0 }
                 ))
                 .focused($isTextFieldFocused)
-                .onChange(of: isKeyboardShowing) { _, focused in
-                    print("workout focus changed to: \(focused)")
-                }
                 DatePicker(
-                    "Date",
+                    "date".localized(comment: "Date"),
                     selection: workout == nil ? $newWorkoutDate : Binding(
                         get: { workout!.date },
                         set: { workout!.date = $0 }
@@ -172,7 +169,7 @@ struct WorkoutView: View {
                 )
             }
             .withTextFieldToolbarDone(isKeyboardShowing: $isKeyboardShowing, isTextFieldFocused: $isTextFieldFocused)
-            .navigationTitle(workout == nil ? "New Workout" : "Rename Workout")
+            .navigationTitle(workout == nil ? "new_workout".localized(comment: "New Workout") : "rename_workout".localized(comment: "Rename Workout"))
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("", systemImage: "checkmark") {
@@ -205,18 +202,18 @@ struct WorkoutView: View {
                     Button(action: {
                         selectedWorkoutIDs = Set(week.workouts!.map { $0.id })
                     }) {
-                        Label("Select all", systemImage: "checkmark.circle.fill")
+                        Label("select_all".localized(comment: "Select all"), systemImage: "checkmark.circle.fill")
                     }
                 } else {
                     Button(action: {
                         isShowingWeekPicker = true
                     }) {
-                        Label("Copy", systemImage: "document.on.document")
+                        Label("copy".localized(comment: "Copy"), systemImage: "document.on.document")
                     }
                     Button(role: .destructive, action: {
                         deleteSelectedWorkouts()
                     }) {
-                        Label("Delete", systemImage: "trash")
+                        Label("delete".localized(comment: "Delete"), systemImage: "trash")
                     }
                 }
             } label: {
@@ -233,18 +230,18 @@ struct WorkoutView: View {
                 isShowingWeekPicker = false
             }) {
                 VStack(alignment: .leading) {
-                    Text("Week \(targetWeek.number)")
+                    Text("week_x".localized(with: targetWeek.number, comment: "Week"))
                         .font(.headline)
-                    Text("Start: \(targetWeek.startDate.formattedRelative())")
+                    Text("start_xdate".localized(with: targetWeek.startDate.formattedRelative(), comment: "Start:"))
                         .font(.subheadline)
                         .foregroundColor(Color(UIColor.secondaryLabel))
                 }
             }
         }
-        .navigationTitle("Copy to Week")
+        .navigationTitle("copy_to_week".localized(comment: "Copy to Week"))
         .toolbar {
             ToolbarItem(placement: .cancellationAction) {
-                Button("Cancel") {
+                Button("", systemImage: "xmark") {
                     isShowingWeekPicker = false
                 }
             }

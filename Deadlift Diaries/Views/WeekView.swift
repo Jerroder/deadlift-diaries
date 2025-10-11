@@ -81,7 +81,7 @@ struct WeekView: View {
                     Button(role: .destructive) {
                         deleteWeek(week)
                     } label: {
-                        Label("Delete", systemImage: "trash")
+                        Label("delete".localized(comment: "Delete"), systemImage: "trash")
                     }
                 }
                 .tag(week.id)
@@ -92,9 +92,9 @@ struct WeekView: View {
     @ViewBuilder
     private func weekRow(week: Week, isPast: Bool) -> some View {
         VStack(alignment: .leading) {
-            Text("Week \(week.number)")
+            Text("week_x".localized(with: week.number, comment: "Week x"))
                 .font(.headline)
-            Text("Start: \(week.startDate.formattedRelative())")
+            Text("start_xdate".localized(with: week.startDate.formattedRelative(), comment: "Start:"))
                 .font(.subheadline)
                 .foregroundColor(Color(UIColor.secondaryLabel))
         }
@@ -114,16 +114,16 @@ struct WeekView: View {
                 VStack(alignment: .leading) {
                     Text(targetMesocycle.name)
                         .font(.headline)
-                    Text("Start: \(targetMesocycle.startDate.formatted(date: .abbreviated, time: .omitted))")
+                    Text("start_xdate".localized(with: targetMesocycle.startDate.formatted(date: .abbreviated, time: .omitted), comment: "Start:"))
                         .font(.subheadline)
                         .foregroundColor(Color(UIColor.secondaryLabel))
                 }
             }
         }
-        .navigationTitle("Copy to Mesocycle")
+        .navigationTitle("copy_to_mesocycle".localized(comment: "Copy to mesocycle"))
         .toolbar {
             ToolbarItem(placement: .cancellationAction) {
-                Button("Cancel", action: { isShowingMesocyclePicker = false })
+                Button("", systemImage: "xmark", action: { isShowingMesocyclePicker = false })
             }
         }
     }
@@ -136,14 +136,14 @@ struct WeekView: View {
                     Button(action: {
                         selectedWeekIDs = Set(mesocycle.weeks!.map { $0.id })
                     }) {
-                        Label("Select all", systemImage: "checkmark.circle.fill")
+                        Label("select_all".localized(comment: "Select all"), systemImage: "checkmark.circle.fill")
                     }
                 } else {
                     Button(action: { isShowingMesocyclePicker = true }) {
-                        Label("Copy", systemImage: "doc.on.doc")
+                        Label("copy".localized(comment: "Copy"), systemImage: "doc.on.doc")
                     }
                     Button(role: .destructive, action: deleteSelectedWeeks) {
-                        Label("Delete", systemImage: "trash")
+                        Label("delete".localized(comment: "Delete"), systemImage: "trash")
                     }
                 }
             } label: {

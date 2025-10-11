@@ -25,7 +25,7 @@ struct TimerView: View {
     var body: some View {
         NavigationStack {
             Form {
-                Stepper("Total Sets: \(totalSets)", value: $totalSets, in: 1...20)
+                Stepper("total_sets_x".localized(with: totalSets, comment: "Total Sets: x"), value: $totalSets, in: 1...20)
                     .onChange(of: totalSets) { oldValue, newValue in
                         if currentSet > newValue {
                             currentSet = newValue
@@ -42,7 +42,7 @@ struct TimerView: View {
                     }) {
                         HStack {
                             HStack(spacing: 4) {
-                                Text("Rest duration")
+                                Text("rest_duration".localized(comment: "Rest Duration:"))
                                 Text("  \(Int(restDuration))s ")
                                     .font(.subheadline)
                                     .foregroundColor(Color(UIColor.secondaryLabel))
@@ -93,9 +93,9 @@ struct TimerView: View {
                 }
                 
                 if showingRestPicker {
-                    Picker("Rest duration", selection: $restDuration) {
+                    Picker("rest_duration".localized(comment:"Rest duration"), selection: $restDuration) {
                         ForEach(Array(stride(from: 5.0, through: 300.0, by: 5.0)), id: \.self) { duration in
-                            Text("\(Int(duration)) seconds").tag(duration)
+                            Text("\(Int(duration)) seconds".localized(comment: "(xxx) seconds")).tag(duration)
                         }
                     }
                     .pickerStyle(.wheel)
@@ -111,7 +111,7 @@ struct TimerView: View {
                         }
                     }) {
                         HStack {
-                            Text("Exercise duration")
+                            Text("exercise_duration".localized(comment:"Exercise duration"))
                             Text(" \(Int(duration))s")
                                 .font(.subheadline)
                                 .foregroundColor(Color(UIColor.secondaryLabel))
@@ -126,9 +126,9 @@ struct TimerView: View {
                     .disabled(isTimerRunning)
                     
                     if showingDurationPicker {
-                        Picker("Exercise duration", selection: $duration) {
+                        Picker("exercise_duration".localized(comment:"Exercise duration"), selection: $duration) {
                             ForEach(Array(stride(from: 5.0, through: 300.0, by: 5.0)), id: \.self) { duration in
-                                Text("\(Int(duration)) seconds").tag(duration)
+                                Text("\(Int(duration)) seconds".localized(comment: "(xxx) seconds")).tag(duration)
                             }
                         }
                         .pickerStyle(.wheel)
@@ -144,7 +144,7 @@ struct TimerView: View {
                     }
                 }) {
                     HStack {
-                        Text("Time before next exercise")
+                        Text("time_before_next".localized(comment:"Time before next exercise"))
                         Text(" \(Int(timeBeforeNext))s")
                             .font(.subheadline)
                             .foregroundColor(Color(UIColor.secondaryLabel))
@@ -159,9 +159,9 @@ struct TimerView: View {
                 .disabled(isTimerRunning)
                 
                 if showingTimeBeforeNextPicker {
-                    Picker("Time before next exercise", selection: $timeBeforeNext) {
+                    Picker("time_before_next".localized(comment:"Time before next exercise"), selection: $timeBeforeNext) {
                         ForEach(Array(stride(from: 5.0, through: 300.0, by: 5.0)), id: \.self) { duration in
-                            Text("\(Int(duration)) seconds").tag(duration)
+                            Text("\(Int(duration)) seconds".localized(comment: "(xxx) seconds")).tag(duration)
                         }
                     }
                     .pickerStyle(.wheel)
@@ -179,7 +179,7 @@ struct TimerView: View {
                     duration: duration
                 )
             }
-            .navigationTitle("Timer")
+            .navigationTitle("timer".localized(comment: "Timer"))
             .sheet(isPresented: $showingSoundPickerSheet) {
                 SettingsSheet(
                     isPresented: $showingSoundPickerSheet,
@@ -206,7 +206,7 @@ struct TimerView: View {
                                     isTimeBased.toggle()
                                 }
                             }) {
-                                Label("Time based exercise", systemImage: "gauge.with.needle")
+                                Label("time_based_exercise".localized(comment: "Time-based exercise"), systemImage: "gauge.with.needle")
                             }
                             .buttonStyle(.glassProminent)
                         } else {
@@ -215,7 +215,7 @@ struct TimerView: View {
                                     isTimeBased.toggle()
                                 }
                             }) {
-                                Label("Time based exercise", systemImage: "gauge.with.needle")
+                                Label("time_based_exercise".localized(comment: "Time-based exercise"), systemImage: "gauge.with.needle")
                             }
                             .glassEffect()
                             .padding([.leading, .trailing], -4)
@@ -229,7 +229,7 @@ struct TimerView: View {
                                 }
                             }
                         )) {
-                            Label("Time based exercise", systemImage: "gauge.with.needle")
+                            Label("time_based_exercise".localized(comment: "Time-based exercise"), systemImage: "gauge.with.needle")
                         }
                     }
                 }
