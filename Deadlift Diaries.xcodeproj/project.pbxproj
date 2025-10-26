@@ -19,6 +19,25 @@
 		46AC66012E85E59900DAA16F /* Deadlift Diaries.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Deadlift Diaries.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		4677AE442EA622E3006844E1 /* Exceptions for "Images" folder in "Deadlift Diaries" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Screenshots/iPad/DeadliftDiaries.afphoto,
+				Screenshots/iPad/DeadliftDiaries.png,
+				Screenshots/iPad/Exercises.afphoto,
+				Screenshots/iPad/Exercises.png,
+				Screenshots/iPad/Settings.afphoto,
+				Screenshots/iPad/Settings.png,
+				Screenshots/iPad/Timer.afphoto,
+				Screenshots/iPad/Timer.png,
+				Screenshots/iPad/Week.afphoto,
+				Screenshots/iPad/Week.png,
+			);
+			target = 465E04C62DE1FCCC00CD70D8 /* Deadlift Diaries */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		465E04C92DE1FCCC00CD70D8 /* Deadlift Diaries */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
@@ -27,6 +46,9 @@
 		};
 		4677AB542E990093006844E1 /* Images */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				4677AE442EA622E3006844E1 /* Exceptions for "Images" folder in "Deadlift Diaries" target */,
+			);
 			path = Images;
 			sourceTree = "<group>";
 		};

@@ -293,7 +293,7 @@ struct ExerciseView: View {
                         .foregroundColor(Color(UIColor.secondaryLabel))
                 } else {
                     if let weight = exercise.weight, weight != 0 {
-                        Text("weight: \(String(format: "%.1f", weight)) \(unit.symbol)".localized(comment: "Weight:"))
+                        Text("weight_x".localized(with: weight, unit.symbol, comment: "Weight: x kg"))
                             .font(.subheadline)
                             .foregroundColor(Color(UIColor.secondaryLabel))
                     }

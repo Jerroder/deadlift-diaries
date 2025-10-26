@@ -1512,6 +1512,36 @@
         }
       }
     },
+    "weight_x" : {
+      "comment" : "Weight: x kg",
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gewicht: %.1f %@"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Weight: %.1f %@"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Peso: %.1f %@"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Poids : %.1f %@"
+          }
+        }
+      }
+    },
     "workout_name" : {
       "comment" : "Workout name",
       "extractionState" : "manual",
