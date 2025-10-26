@@ -8,12 +8,16 @@
 import SwiftData
 import SwiftUI
 
+enum FocusableField: Hashable {
+    case mesocycleName, workoutName, exerciseName, exerciseWeight, supersetName, supersetWeight
+}
+
 struct ContentView: View {
-    @FocusState private var isTextFieldFocused: Bool
+    @FocusState private var focusedField: FocusableField?
     
     var body: some View {
         TabView {
-            MesocycleView(isTextFieldFocused: $isTextFieldFocused).tabItem {
+            MesocycleView(focusedField: $focusedField).tabItem {
                 Image(systemName: "calendar")
                 Text("cycles".localized(comment: "Cycles"))
             }

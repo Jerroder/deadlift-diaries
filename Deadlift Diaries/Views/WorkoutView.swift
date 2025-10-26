@@ -20,7 +20,7 @@ struct WorkoutView: View {
     @State private var isShowingWeekPicker: Bool = false
     
     @State private var isKeyboardShowing: Bool = false
-    @FocusState.Binding var isTextFieldFocused: Bool
+    @FocusState.Binding var focusedField: FocusableField?
     
     private var weekDateRange: ClosedRange<Date> {
         let startDate = week.startDate
@@ -122,7 +122,7 @@ struct WorkoutView: View {
                         .buttonStyle(PlainButtonStyle())
                     } else {
                         NavigationLink {
-                            ExerciseView(workout: workout)
+                            ExerciseView(workout: workout, focusedField: $focusedField)
                         } label: {
                             HStack {
                                 Text(workout.name)
@@ -157,7 +157,7 @@ struct WorkoutView: View {
                     get: { workout!.name },
                     set: { workout!.name = $0 }
                 ))
-                .focused($isTextFieldFocused)
+                .focused($focusedField, equals: .workoutName)
                 DatePicker(
                     "date".localized(comment: "Date"),
                     selection: workout == nil ? $newWorkoutDate : Binding(
@@ -168,7 +168,7 @@ struct WorkoutView: View {
                     displayedComponents: .date
                 )
             }
-            .withTextFieldToolbarDone(isKeyboardShowing: $isKeyboardShowing, isTextFieldFocused: $isTextFieldFocused)
+            .withTextFieldToolbarDone(isKeyboardShowing: $isKeyboardShowing, focusedField: $focusedField)
             .navigationTitle(workout == nil ? "new_workout".localized(comment: "New Workout") : "rename_workout".localized(comment: "Rename Workout"))
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {

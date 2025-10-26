@@ -9,7 +9,7 @@ import SwiftUI
 
 struct TextFieldToolbarDone: ViewModifier {
     @Binding var isKeyboardShowing: Bool
-    var isTextFieldFocused: FocusState<Bool>.Binding
+    var focusedField: FocusState<FocusableField?>.Binding
     
     func body(content: Content) -> some View {
         if #available(iOS 26.0, *) {
@@ -19,7 +19,7 @@ struct TextFieldToolbarDone: ViewModifier {
                         HStack {
                             Spacer()
                             Button {
-                                isTextFieldFocused.wrappedValue = false
+                                focusedField.wrappedValue = nil
                             } label: {
                                 Image(systemName: "checkmark")
                                     .padding()
@@ -39,7 +39,7 @@ struct TextFieldToolbarDone: ViewModifier {
                     ToolbarItemGroup(placement: .keyboard) {
                         Spacer()
                         Button("done".localized(comment: "Done")) {
-                            isTextFieldFocused.wrappedValue = false
+                            focusedField.wrappedValue = nil
                         }
                     }
                 }
@@ -50,7 +50,7 @@ struct TextFieldToolbarDone: ViewModifier {
 struct TextFieldToolbarDoneWithChevrons: ViewModifier {
     @Binding var isKeyboardShowing: Bool
     @Binding var isSupersetToggleOn: Bool
-    var focusedField: FocusState<FocusableField?>
+    var focusedField: FocusState<FocusableField?>.Binding
     
     func body(content: Content) -> some View {
         if #available(iOS 26.0, *) {
@@ -129,13 +129,13 @@ struct TextFieldToolbarDoneWithChevrons: ViewModifier {
 }
 
 extension View {
-    func withTextFieldToolbarDone(isKeyboardShowing: Binding<Bool>, isTextFieldFocused: FocusState<Bool>.Binding) -> some View {
+    func withTextFieldToolbarDone(isKeyboardShowing: Binding<Bool>, focusedField: FocusState<FocusableField?>.Binding) -> some View {
         self.modifier(
-            TextFieldToolbarDone(isKeyboardShowing: isKeyboardShowing, isTextFieldFocused: isTextFieldFocused)
+            TextFieldToolbarDone(isKeyboardShowing: isKeyboardShowing, focusedField: focusedField)
         )
     }
     
-    func withTextFieldToolbarDoneWithChevrons(isKeyboardShowing: Binding<Bool>, isSupersetToggleOn: Binding<Bool>, focusedField: FocusState<FocusableField?>) -> some View {
+    func withTextFieldToolbarDoneWithChevrons(isKeyboardShowing: Binding<Bool>, isSupersetToggleOn: Binding<Bool>, focusedField: FocusState<FocusableField?>.Binding) -> some View {
         self.modifier(
             TextFieldToolbarDoneWithChevrons(isKeyboardShowing: isKeyboardShowing, isSupersetToggleOn: isSupersetToggleOn, focusedField: focusedField)
         )

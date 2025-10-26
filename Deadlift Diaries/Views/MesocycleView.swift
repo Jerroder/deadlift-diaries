@@ -22,7 +22,7 @@ struct MesocycleView: View {
     @State private var isKeyboardShowing: Bool = false
     @State private var showingSoundPicker: Bool = false
     
-    @FocusState.Binding var isTextFieldFocused: Bool
+    @FocusState.Binding var focusedField: FocusableField?
     
     // MARK: - Main view
     
@@ -148,7 +148,7 @@ struct MesocycleView: View {
                 .buttonStyle(PlainButtonStyle())
             } else {
                 NavigationLink {
-                    WeekView(mesocycle: mesocycle, isTextFieldFocused: $isTextFieldFocused)
+                    WeekView(mesocycle: mesocycle, focusedField: $focusedField)
                 } label: {
                     mesocycleRow(mesocycle: mesocycle)
                         .contentShape(Rectangle())
@@ -196,7 +196,7 @@ struct MesocycleView: View {
                     get: { mesocycle!.name },
                     set: { mesocycle!.name = $0 }
                 ))
-                .focused($isTextFieldFocused)
+                .focused($focusedField, equals: .mesocycleName)
                 DatePicker("start_date".localized(comment: "Start Date"), selection: mesocycle == nil ? $newMesocycleStartDate : Binding(
                     get: { mesocycle!.startDate },
                     set: { mesocycle!.startDate = $0 }
@@ -207,7 +207,7 @@ struct MesocycleView: View {
                             set: { _ in }
                         ), in: 1...12)
             }
-            .withTextFieldToolbarDone(isKeyboardShowing: $isKeyboardShowing, isTextFieldFocused: $isTextFieldFocused)
+            .withTextFieldToolbarDone(isKeyboardShowing: $isKeyboardShowing, focusedField: $focusedField)
             .navigationTitle(mesocycle == nil ? "new_mesocycle".localized(comment: "New Mesocycle") : "edit_mesocycle".localized(comment: "Edit Mesocycle"))
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {

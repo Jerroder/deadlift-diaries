@@ -8,10 +8,6 @@
 import SwiftUI
 import SwiftData
 
-enum FocusableField: Hashable {
-    case exerciseName, exerciseWeight, supersetName, supersetWeight
-}
-
 struct ExerciseView: View {
     let workout: Workout
     @Environment(\.modelContext) private var modelContext
@@ -43,7 +39,7 @@ struct ExerciseView: View {
     @State private var newExercise2Weight: Double = 50.0
     
     @State private var isKeyboardShowing: Bool = false
-    @FocusState private var focusedField: FocusableField?
+    @FocusState.Binding var focusedField: FocusableField?
     
     @State private var isTimerRunning: [UUID: Bool] = [:]
     
@@ -754,7 +750,7 @@ struct ExerciseView: View {
                 } /* Section */
             } /* if isSuperset */
         } /* Form */
-        .withTextFieldToolbarDoneWithChevrons(isKeyboardShowing: $isKeyboardShowing, isSupersetToggleOn: $isSuperset, focusedField: _focusedField)
+        .withTextFieldToolbarDoneWithChevrons(isKeyboardShowing: $isKeyboardShowing, isSupersetToggleOn: $isSuperset, focusedField: $focusedField)
     }
     
     @ViewBuilder

@@ -16,7 +16,7 @@ struct WeekView: View {
     @State private var selectedWeekIDs: Set<UUID> = Set<Week.ID>()
     @State private var isShowingMesocyclePicker: Bool = false
     
-    @FocusState.Binding var isTextFieldFocused: Bool
+    @FocusState.Binding var focusedField: FocusableField?
     
     private var sortedWeeks: [Week] {
         mesocycle.weeks!.sorted { $0.startDate < $1.startDate }
@@ -73,7 +73,7 @@ struct WeekView: View {
             ForEach(sortedWeeks, id: \.id) { week in
                 let isPast: Bool = isWeekPast(week)
                 NavigationLink {
-                    WorkoutView(week: week, isTextFieldFocused: $isTextFieldFocused)
+                    WorkoutView(week: week, focusedField: $focusedField)
                 } label: {
                     weekRow(week: week, isPast: isPast)
                 }
