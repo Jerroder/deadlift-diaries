@@ -124,10 +124,14 @@ struct ProgressBarView: View {
             }
         }
         .onChange(of: restDuration) {
-            timeRemaining = restDuration
+            if !isExerciseDone {
+                timeRemaining = restDuration
+            }
         }
         .onChange(of: duration) {
-            timeRemaining = duration
+            if !isExerciseDone {
+                timeRemaining = duration
+            }
         }
         .onChange(of: totalSets) { oldValue, newValue in
             if newValue == 1 && !isTimeBased {
@@ -138,7 +142,8 @@ struct ProgressBarView: View {
             timeRemaining = realDuration
         }
         .onChange(of: isTimeBased) {
-            isExerciseDone = (totalSets == 1 && !isTimeBased) ? true : false
+            currentSet = (isTimeBased) ? currentSet * 2 : currentSet / 2
+            isExerciseDone = (totalSets == 1 && !isTimeBased) || (currentSet == nbSet) ? true : false
             isExerciseInterval = true
             timeRemaining = realDuration
         }
@@ -176,11 +181,7 @@ struct ProgressBarView: View {
                                             timer?.cancel()
                                             isTimerRunning = false
                                             currentSet = Int(index)
-                                            if currentSet == nbSet {
-                                                isExerciseDone = true
-                                            } else {
-                                                isExerciseDone = false
-                                            }
+                                            isExerciseDone = (currentSet == nbSet) ? true : false
                                             isExerciseInterval = false
                                             timeRemaining = realDuration
                                             restProgress = 0
@@ -198,11 +199,7 @@ struct ProgressBarView: View {
                                             timer?.cancel()
                                             isTimerRunning = false
                                             currentSet = Int(index)
-                                            if currentSet == nbSet {
-                                                isExerciseDone = true
-                                            } else {
-                                                isExerciseDone = false
-                                            }
+                                            isExerciseDone = (currentSet == nbSet) ? true : false
                                             isExerciseInterval = false
                                             timeRemaining = realDuration
                                             restProgress = 0
@@ -234,11 +231,7 @@ struct ProgressBarView: View {
                                             timer?.cancel()
                                             isTimerRunning = false
                                             currentSet = Int(index)
-                                            if currentSet == nbSet {
-                                                isExerciseDone = true
-                                            } else {
-                                                isExerciseDone = false
-                                            }
+                                            isExerciseDone = (currentSet == nbSet) ? true : false
                                             isExerciseInterval = true
                                             timeRemaining = realDuration
                                             restProgress = 0
@@ -256,11 +249,7 @@ struct ProgressBarView: View {
                                             timer?.cancel()
                                             isTimerRunning = false
                                             currentSet = Int(index)
-                                            if currentSet == nbSet {
-                                                isExerciseDone = true
-                                            } else {
-                                                isExerciseDone = false
-                                            }
+                                            isExerciseDone = (currentSet == nbSet) ? true : false
                                             isExerciseInterval = true
                                             timeRemaining = realDuration
                                             restProgress = 0
@@ -306,11 +295,7 @@ struct ProgressBarView: View {
                                             timer?.cancel()
                                             isTimerRunning = false
                                             currentSet = Int((index + 1) / 2)
-                                            if currentSet == nbSet {
-                                                isExerciseDone = true
-                                            } else {
-                                                isExerciseDone = false
-                                            }
+                                            isExerciseDone = (currentSet == nbSet) ? true : false
                                             timeRemaining = realDuration
                                             restProgress = 0
                                             timeStarted = nil
@@ -327,11 +312,7 @@ struct ProgressBarView: View {
                                             timer?.cancel()
                                             isTimerRunning = false
                                             currentSet = Int((index + 1) / 2)
-                                            if currentSet == nbSet {
-                                                isExerciseDone = true
-                                            } else {
-                                                isExerciseDone = false
-                                            }
+                                            isExerciseDone = (currentSet == nbSet) ? true : false
                                             timeRemaining = realDuration
                                             restProgress = 0
                                             timeStarted = nil
