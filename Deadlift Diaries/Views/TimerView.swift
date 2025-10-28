@@ -31,6 +31,7 @@ struct TimerView: View {
                             currentSet = newValue
                         }
                     }
+                    .disabled(isTimerRunning)
                 
                 HStack {
                     Button(action: {
@@ -209,6 +210,7 @@ struct TimerView: View {
                                 Label("time_based_exercise".localized(comment: "Time-based exercise"), systemImage: "gauge.with.needle")
                             }
                             .buttonStyle(.glassProminent)
+                            .disabled(isTimerRunning)
                         } else {
                             Button(action: {
                                 withAnimation {
@@ -219,6 +221,7 @@ struct TimerView: View {
                             }
                             .glassEffect()
                             .padding([.leading, .trailing], -4)
+                            .disabled(isTimerRunning)
                         }
                     } else {
                         Toggle(isOn: Binding(
@@ -231,6 +234,7 @@ struct TimerView: View {
                         )) {
                             Label("time_based_exercise".localized(comment: "Time-based exercise"), systemImage: "gauge.with.needle")
                         }
+                        .disabled(isTimerRunning)
                     }
                 }
             }

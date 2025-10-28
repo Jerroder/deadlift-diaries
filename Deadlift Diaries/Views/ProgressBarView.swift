@@ -43,12 +43,20 @@ struct ProgressBarView: View {
             return timeBeforeNextExercise
         } else if isTimeBased {
             if isExerciseInterval {
-                return duration
+                if currentSet > nbSet {
+                    return 0
+                } else {
+                    return duration
+                }
             } else {
                 return restDuration
             }
         } else {
-            return restDuration
+            if currentSet > nbSet {
+                return 0
+            } else {
+                return restDuration
+            }
         }
     }
     
@@ -77,16 +85,7 @@ struct ProgressBarView: View {
                     .buttonStyle(.glassProminent)
                     Spacer()
                     Button("reset".localized(comment: "Reset")) {
-                        timer?.cancel()
-                        isTimerRunning = false
-                        currentSet = 1
-                        isExerciseDone = (totalSets == 1 && !isTimeBased) ? true : false
-                        isExerciseInterval = true
-                        timeRemaining = realDuration
-                        restProgress = 0
-                        timeStarted = nil
-                        elapsed = 0.0
-                        endBackgroundTask()
+                        resetValues(index: 1, isExerciseInterval: true)
                     }
                     .buttonStyle(.glass)
                     Spacer()
@@ -100,16 +99,7 @@ struct ProgressBarView: View {
                     .disabled(currentSet > nbSet)
                     Spacer()
                     Button("reset".localized(comment: "Reset")) {
-                        timer?.cancel()
-                        isTimerRunning = false
-                        currentSet = 1
-                        isExerciseDone = (totalSets == 1 && !isTimeBased) ? true : false
-                        isExerciseInterval = true
-                        timeRemaining = realDuration
-                        restProgress = 0
-                        timeStarted = nil
-                        elapsed = 0.0
-                        endBackgroundTask()
+                        resetValues(index: 1, isExerciseInterval: true)
                     }
                     Spacer()
                 }
@@ -124,16 +114,15 @@ struct ProgressBarView: View {
             }
         }
         .onChange(of: restDuration) {
-            if !isExerciseDone {
-                timeRemaining = restDuration
-            }
+            timeRemaining = realDuration
         }
         .onChange(of: duration) {
-            if !isExerciseDone {
-                timeRemaining = duration
-            }
+            timeRemaining = realDuration
         }
-        .onChange(of: totalSets) { oldValue, newValue in
+        .onChange(of: timeBeforeNextExercise) {
+            timeRemaining = realDuration
+        }
+        .onChange(of: totalSets) { _, newValue in
             if newValue == 1 && !isTimeBased {
                 isExerciseDone = true
             } else {
@@ -141,10 +130,10 @@ struct ProgressBarView: View {
             }
             timeRemaining = realDuration
         }
-        .onChange(of: isTimeBased) {
-            currentSet = (isTimeBased) ? currentSet * 2 : currentSet / 2
+        .onChange(of: isTimeBased) { _, newValue in
+            currentSet = (isTimeBased) ? (currentSet * 2) - 1 : (currentSet / 2) + 1
             isExerciseDone = (totalSets == 1 && !isTimeBased) || (currentSet == nbSet) ? true : false
-            isExerciseInterval = true
+            isExerciseInterval = newValue
             timeRemaining = realDuration
         }
     }
@@ -178,15 +167,7 @@ struct ProgressBarView: View {
                                     .cornerRadius(4)
                                     .onTapGesture {
                                         if !isTimerRunning {
-                                            timer?.cancel()
-                                            isTimerRunning = false
-                                            currentSet = Int(index)
-                                            isExerciseDone = (currentSet == nbSet) ? true : false
-                                            isExerciseInterval = false
-                                            timeRemaining = realDuration
-                                            restProgress = 0
-                                            timeStarted = nil
-                                            elapsed = 0.0
+                                            resetValues(index: Int(index), isExerciseInterval: false)
                                         }
                                     }
                             } else {
@@ -196,15 +177,7 @@ struct ProgressBarView: View {
                                     .cornerRadius(4)
                                     .onTapGesture {
                                         if !isTimerRunning {
-                                            timer?.cancel()
-                                            isTimerRunning = false
-                                            currentSet = Int(index)
-                                            isExerciseDone = (currentSet == nbSet) ? true : false
-                                            isExerciseInterval = false
-                                            timeRemaining = realDuration
-                                            restProgress = 0
-                                            timeStarted = nil
-                                            elapsed = 0.0
+                                            resetValues(index: Int(index), isExerciseInterval: false)
                                         }
                                     }
                             }
@@ -228,15 +201,7 @@ struct ProgressBarView: View {
                                     .cornerRadius(4)
                                     .onTapGesture {
                                         if !isTimerRunning {
-                                            timer?.cancel()
-                                            isTimerRunning = false
-                                            currentSet = Int(index)
-                                            isExerciseDone = (currentSet == nbSet) ? true : false
-                                            isExerciseInterval = true
-                                            timeRemaining = realDuration
-                                            restProgress = 0
-                                            timeStarted = nil
-                                            elapsed = 0.0
+                                            resetValues(index: Int(index), isExerciseInterval: true)
                                         }
                                     }
                             } else {
@@ -246,15 +211,7 @@ struct ProgressBarView: View {
                                     .cornerRadius(4)
                                     .onTapGesture {
                                         if !isTimerRunning {
-                                            timer?.cancel()
-                                            isTimerRunning = false
-                                            currentSet = Int(index)
-                                            isExerciseDone = (currentSet == nbSet) ? true : false
-                                            isExerciseInterval = true
-                                            timeRemaining = realDuration
-                                            restProgress = 0
-                                            timeStarted = nil
-                                            elapsed = 0.0
+                                            resetValues(index: Int(index), isExerciseInterval: true)
                                         }
                                     }
                             }
@@ -292,14 +249,7 @@ struct ProgressBarView: View {
                                     .cornerRadius(4)
                                     .onTapGesture {
                                         if !isTimerRunning {
-                                            timer?.cancel()
-                                            isTimerRunning = false
-                                            currentSet = Int((index + 1) / 2)
-                                            isExerciseDone = (currentSet == nbSet) ? true : false
-                                            timeRemaining = realDuration
-                                            restProgress = 0
-                                            timeStarted = nil
-                                            elapsed = 0.0
+                                            resetValues(index: Int((index + 1) / 2), isExerciseInterval: false)
                                         }
                                     }
                             } else {
@@ -309,14 +259,7 @@ struct ProgressBarView: View {
                                     .cornerRadius(4)
                                     .onTapGesture {
                                         if !isTimerRunning {
-                                            timer?.cancel()
-                                            isTimerRunning = false
-                                            currentSet = Int((index + 1) / 2)
-                                            isExerciseDone = (currentSet == nbSet) ? true : false
-                                            timeRemaining = realDuration
-                                            restProgress = 0
-                                            timeStarted = nil
-                                            elapsed = 0.0
+                                            resetValues(index: Int((index + 1) / 2), isExerciseInterval: false)
                                         }
                                     }
                             }
@@ -329,6 +272,20 @@ struct ProgressBarView: View {
     }
     
     // MARK: - Helper Functions
+    
+    private func resetValues(index: Int, isExerciseInterval: Bool) {
+        timer?.cancel()
+        timer = nil
+        isTimerRunning = false
+        currentSet = index
+        isExerciseDone = (currentSet == nbSet) ? true : false
+        self.isExerciseInterval = isExerciseInterval
+        timeRemaining = realDuration
+        restProgress = 0
+        timeStarted = nil
+        elapsed = 0.0
+        endBackgroundTask()
+    }
     
     private func toggleTimer() {
         if isTimerRunning {
@@ -346,7 +303,7 @@ struct ProgressBarView: View {
         
         timeStarted = Date.now.timeIntervalSince1970 * 1000
         
-        let queue: DispatchQueue = DispatchQueue(label: "com.jerroder.deadliftdiaries", qos: .background)
+        let queue: DispatchQueue = DispatchQueue(label: "com.jerroder.deadliftdiaries", qos: .userInitiated)
         timer = DispatchSource.makeTimerSource(queue: queue)
         timer?.schedule(deadline: .now(), repeating: .seconds(1))
         timer?.setEventHandler { [self] in
@@ -358,15 +315,15 @@ struct ProgressBarView: View {
                 restProgress = 1 - (CGFloat(timeRemaining.rounded(.down)) / CGFloat(realDuration.rounded(.up)))
                 
                 if timeRemaining <= 0 {
+                    toggleTimer()
+                    
                     if isTimeBased {
                         isExerciseInterval.toggle()
+                        if isContinuousModeEnabled && !isExerciseDone {
+                            toggleTimer()
+                        }
                     }
-                    if isTimeBased && isContinuousModeEnabled && !isExerciseDone {
-                        stopTimer()
-                        startTimer()
-                    } else {
-                        toggleTimer()
-                    }
+                    
                     if currentSet < nbSet {
                         currentSet += 1
                         timeRemaining = realDuration
@@ -376,22 +333,11 @@ struct ProgressBarView: View {
                     
                     if currentSet == nbSet && isExerciseDone {
                         currentSet += 1
-                    }
-                    if currentSet > nbSet && isExerciseDone {
-                        stopTimer()
                         if autoResetTimer {
-                            timer?.cancel()
-                            isTimerRunning = false
-                            currentSet = 1
-                            isExerciseDone = (totalSets == 1 && !isTimeBased) ? true : false
-                            isExerciseInterval = true
-                            timeRemaining = realDuration
-                            restProgress = 0
-                            timeStarted = nil
-                            self.elapsed = 0.0
-                            endBackgroundTask()
+                            resetValues(index: 1, isExerciseInterval: isTimeBased)
                         }
                     }
+                    
                     if currentSet == nbSet {
                         isExerciseDone = true
                         timeRemaining = timeBeforeNextExercise
