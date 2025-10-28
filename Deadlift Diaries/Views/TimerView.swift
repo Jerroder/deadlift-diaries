@@ -207,7 +207,7 @@ struct TimerView: View {
                                     isTimeBased.toggle()
                                 }
                             }) {
-                                Label("time_based_exercise".localized(comment: "Time-based exercise"), systemImage: "gauge.with.needle")
+                                Label("time_based_exercise".localized(comment: "Time-based exercise"), systemImage: "clock.arrow.trianglehead.clockwise.rotate.90.path.dotted")
                             }
                             .buttonStyle(.glassProminent)
                             .disabled(isTimerRunning)
@@ -217,7 +217,7 @@ struct TimerView: View {
                                     isTimeBased.toggle()
                                 }
                             }) {
-                                Label("time_based_exercise".localized(comment: "Time-based exercise"), systemImage: "gauge.with.needle")
+                                Label("time_based_exercise".localized(comment: "Time-based exercise"), systemImage: "clock.arrow.trianglehead.clockwise.rotate.90.path.dotted")
                             }
                             .glassEffect()
                             .padding([.leading, .trailing], -4)
@@ -232,7 +232,7 @@ struct TimerView: View {
                                 }
                             }
                         )) {
-                            Label("time_based_exercise".localized(comment: "Time-based exercise"), systemImage: "gauge.with.needle")
+                            Label("time_based_exercise".localized(comment: "Time-based exercise"), systemImage: "clock.arrow.trianglehead.clockwise.rotate.90.path.dotted")
                         }
                         .disabled(isTimerRunning)
                     }
