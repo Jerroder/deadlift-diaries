@@ -164,18 +164,20 @@ struct WeekView: View {
     private func addNewWeek() {
         let newWeekNumber: Int = (sortedWeeks.map { $0.number }.max() ?? 0) + 1
         let lastWeekStartDate: Date = sortedWeeks.last?.startDate ?? mesocycle.startDate
-        let newWeekStartDate: Date = Calendar.current.date(byAdding: .day, value: 7, to: lastWeekStartDate)!
+        let newWeekStartDate: Date = Calendar.current.date(byAdding: .day, value: (sortedWeeks.isEmpty) ? 0 : 7, to: lastWeekStartDate)!
         
         let newWeek: Week = Week(number: newWeekNumber, startDate: newWeekStartDate)
-        mesocycle.weeks!.append(newWeek)
-        newWeek.mesocycle = mesocycle
         modelContext.insert(newWeek)
+        newWeek.mesocycle = mesocycle
+        mesocycle.weeks!.append(newWeek)
         mesocycle.numberOfWeeks = sortedWeeks.count + 1
+        try? modelContext.save()
     }
     
     private func deleteWeek(_ week: Week) {
         if let index: Int = sortedWeeks.firstIndex(where: { $0.id == week.id }) {
             modelContext.delete(sortedWeeks[index])
+            try? modelContext.save()
             renumberWeeks()
         }
     }
@@ -286,15 +288,22 @@ struct WeekView: View {
         for week in weeksToDelete {
             modelContext.delete(week)
         }
+        try? modelContext.save()
         renumberWeeks()
         selectedWeekIDs.removeAll()
-        try? modelContext.save()
     }
     
     private func renumberWeeks() {
         for (index, week) in sortedWeeks.enumerated() {
             week.number = index + 1
+            if index == 0 {
+                week.startDate = mesocycle.startDate
+            } else {
+                let previousWeek = sortedWeeks[index - 1]
+                week.startDate = Calendar.current.date(byAdding: .day, value: 7, to: previousWeek.startDate)!
+            }
         }
         mesocycle.numberOfWeeks = sortedWeeks.count
+        try? modelContext.save()
     }
 }
