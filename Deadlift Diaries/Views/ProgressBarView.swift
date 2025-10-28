@@ -342,7 +342,7 @@ struct ProgressBarView: View {
                         isExerciseDone = true
                         timeRemaining = timeBeforeNextExercise
                     }
-                } else if timeRemaining <= 1 {
+                } else if round(timeRemaining) == 1 {
                     playSystemSound()
                 }
             }
