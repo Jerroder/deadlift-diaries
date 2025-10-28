@@ -303,7 +303,7 @@ struct ProgressBarView: View {
         
         timeStarted = Date.now.timeIntervalSince1970 * 1000
         
-        let queue: DispatchQueue = DispatchQueue(label: "com.jerroder.deadliftdiaries", qos: .userInitiated)
+        let queue: DispatchQueue = DispatchQueue(label: "com.jerroder.deadliftdiaries.timer", qos: .userInitiated)
         timer = DispatchSource.makeTimerSource(queue: queue)
         timer?.schedule(deadline: .now(), repeating: .seconds(1))
         timer?.setEventHandler { [self] in
