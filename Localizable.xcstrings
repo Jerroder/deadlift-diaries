@@ -522,6 +522,36 @@
         }
       }
     },
+    "exercise_is_over" : {
+      "comment" : "Exercise is over",
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Die Übung ist beendet"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Exercise is over"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "El ejercicio ha terminado"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "L’exercice est terminé"
+          }
+        }
+      }
+    },
     "exercise_name" : {
       "comment" : "Exercise name",
       "extractionState" : "manual",
@@ -972,6 +1002,36 @@
         }
       }
     },
+    "rest_is_over" : {
+      "comment" : "Rest is over",
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Die Erholungsphase ist vorbei"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rest is over"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "El descanso ha terminado"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Le repos est terminé"
+          }
+        }
+      }
+    },
     "rest_x_sec" : {
       "comment" : "Rest: x sec",
       "extractionState" : "manual",
@@ -1028,6 +1088,36 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Tout sélectionner"
+          }
+        }
+      }
+    },
+    "send_notification" : {
+      "comment" : "When the app is in the background, send a notification when the timer ends",
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wenn die App im Hintergrund läuft, sende eine Benachrichtigung, wenn der Timer abläuft"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "When the app is in the background, send a notification when the timer ends"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cuando la app esté en segundo plano, envía una notificación cuando el temporizador termine"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Quand l’application est en arrière-plan, envoie une notification lorsque le minuteur se termine"
           }
         }
       }
@@ -1358,6 +1448,36 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Minuteur"
+          }
+        }
+      }
+    },
+    "timer_is_up" : {
+      "comment" : "Timer is up",
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Die Zeit ist abgelaufen"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Timer is up"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "El tiempo ha terminado"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Le temps est écoulé"
           }
         }
       }

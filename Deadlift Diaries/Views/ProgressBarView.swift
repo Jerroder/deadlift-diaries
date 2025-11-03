@@ -8,6 +8,7 @@
 import AudioToolbox
 import AVFoundation
 import SwiftUI
+import UserNotifications
 
 struct ProgressBarView: View {
     let totalSets: Int
@@ -19,7 +20,11 @@ struct ProgressBarView: View {
     let isTimeBased: Bool
     let duration: Double
     
+    @Environment(\.scenePhase) var scenePhase
+    @State private var isActive: Bool = true
+    
     @AppStorage("selectedSoundID") private var selectedSoundID: Int = 1075
+    @AppStorage("sendNotification") private var sendNotification: Bool = false
     @AppStorage("isExerciseDone") private var isExerciseDone: Bool = false
     @AppStorage("isContinuousModeEnabled") private var isContinuousModeEnabled: Bool = false
     @AppStorage("autoResetTimer") private var autoResetTimer: Bool = false
@@ -135,6 +140,20 @@ struct ProgressBarView: View {
             isExerciseDone = (totalSets == 1 && !isTimeBased) || (currentSet == nbSet) ? true : false
             isExerciseInterval = newValue
             timeRemaining = realDuration
+        }
+        .onChange(of: scenePhase) { _, newPhase in
+            switch newPhase {
+            case .active:
+                isActive = true
+                print("App became active")
+            case .inactive:
+                print("App became inactive")
+            case .background:
+                isActive = false
+                print("App entered background")
+            @unknown default:
+                print("Unknown scene phase")
+            }
         }
     }
     
@@ -276,6 +295,7 @@ struct ProgressBarView: View {
     private func resetValues(index: Int, isExerciseInterval: Bool) {
         timer?.cancel()
         timer = nil
+        cancelPendingNotifications()
         isTimerRunning = false
         currentSet = index
         isExerciseDone = (currentSet == nbSet) ? true : false
@@ -302,6 +322,11 @@ struct ProgressBarView: View {
         }
         
         timeStarted = Date.now.timeIntervalSince1970 * 1000
+        timeRemaining = max(0, realDuration - self.elapsed) // prevent notification from crashing the app because timeRemaining < 0
+        cancelPendingNotifications()
+        if sendNotification {
+            scheduleNotification()
+        }
         
         let queue: DispatchQueue = DispatchQueue(label: "com.jerroder.deadliftdiaries.timer", qos: .userInitiated)
         timer = DispatchSource.makeTimerSource(queue: queue)
@@ -343,7 +368,9 @@ struct ProgressBarView: View {
                         timeRemaining = timeBeforeNextExercise
                     }
                 } else if round(timeRemaining) == 1 {
-                    playSystemSound()
+                    if isActive {
+                        playSystemSound()
+                    }
                 }
             }
         }
@@ -358,6 +385,7 @@ struct ProgressBarView: View {
         }
         timer?.cancel()
         timer = nil
+        cancelPendingNotifications()
         endBackgroundTask()
     }
     
@@ -397,5 +425,31 @@ struct ProgressBarView: View {
                 print("Failed to deactivate audio session: \(error)")
             }
         }
+    }
+    
+    private func scheduleNotification() {
+        let content = UNMutableNotificationContent()
+        content.title = "timer_is_up".localized(comment: "The timer is up")
+        content.body = isExerciseInterval ? "exercise_is_over".localized(comment: "Exercise is over") : "rest_is_over".localized(comment: "Rest is over")
+        content.sound = UNNotificationSound.default
+        
+        let trigger = UNTimeIntervalNotificationTrigger(timeInterval: timeRemaining, repeats: false)
+        let request = UNNotificationRequest(
+            identifier: UUID().uuidString,
+            content: content,
+            trigger: trigger
+        )
+        
+        UNUserNotificationCenter.current().add(request) { error in
+            if let error = error {
+                print("Error scheduling notification: \(error.localizedDescription)")
+            } else {
+                print("Notification scheduled for \(timeRemaining) seconds from now.")
+            }
+        }
+    }
+    
+    private func cancelPendingNotifications() {
+        UNUserNotificationCenter.current().removeAllPendingNotificationRequests()
     }
 }

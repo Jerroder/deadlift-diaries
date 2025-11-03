@@ -7,6 +7,7 @@
 
 import SwiftData
 import SwiftUI
+import UserNotifications
 
 enum FocusableField: Hashable {
     case mesocycleName, workoutName, exerciseName, exerciseWeight, supersetName, supersetWeight
@@ -21,7 +22,7 @@ struct ContentView: View {
                 Image(systemName: "calendar")
                 Text("cycles".localized(comment: "Cycles"))
             }
-
+            
             TimerView().tabItem {
                 Image(systemName: "timer")
                 Text("timer".localized(comment: "Timer"))
