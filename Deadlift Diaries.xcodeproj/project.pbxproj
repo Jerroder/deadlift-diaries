@@ -8,7 +8,6 @@
 
 /* Begin PBXBuildFile section */
 		463AEADC2DF632CB00F1189B /* Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = 463AEADB2DF632CB00F1189B /* Localizable.xcstrings */; };
-		463EC1AF2DF37D5900ED7B0F /* README.md in Resources */ = {isa = PBXBuildFile; fileRef = 463EC1AD2DF37D5000ED7B0F /* README.md */; };
 		463EC1B52DF4BCC200ED7B0F /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 463EC1B42DF4BCC200ED7B0F /* PrivacyInfo.xcprivacy */; };
 /* End PBXBuildFile section */
 
@@ -23,6 +22,19 @@
 		4677AE442EA622E3006844E1 /* Exceptions for "Images" folder in "Deadlift Diaries" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
+				Download_on_the_App_Store.svg,
+				Icons/flat/dark.png,
+				Icons/flat/dark.svg,
+				Icons/flat/standard.png,
+				Icons/flat/standard.svg,
+				Icons/flat/tinted.png,
+				Icons/flat/tinted.svg,
+				"Icons/liquid glass/1.svg",
+				"Icons/liquid glass/2.svg",
+				"Icons/liquid glass/3.svg",
+				"Icons/liquid glass/4.1.svg",
+				"Icons/liquid glass/4.2.svg",
+				Screenshots.png,
 				Screenshots/iPad/DeadliftDiaries.afphoto,
 				Screenshots/iPad/DeadliftDiaries.png,
 				Screenshots/iPad/Exercises.afphoto,
@@ -33,6 +45,16 @@
 				Screenshots/iPad/Timer.png,
 				Screenshots/iPad/Week.afphoto,
 				Screenshots/iPad/Week.png,
+				Screenshots/iPhone/DeadliftDiaries.afphoto,
+				Screenshots/iPhone/DeadliftDiaries.png,
+				Screenshots/iPhone/Exercises.afphoto,
+				Screenshots/iPhone/Exercises.png,
+				Screenshots/iPhone/Settings.afphoto,
+				Screenshots/iPhone/Settings.png,
+				Screenshots/iPhone/Timer.afphoto,
+				Screenshots/iPhone/Timer.png,
+				Screenshots/iPhone/Week.afphoto,
+				Screenshots/iPhone/Week.png,
 			);
 			target = 465E04C62DE1FCCC00CD70D8 /* Deadlift Diaries */;
 		};
@@ -145,7 +167,6 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				463EC1AF2DF37D5900ED7B0F /* README.md in Resources */,
 				463AEADC2DF632CB00F1189B /* Localizable.xcstrings in Resources */,
 				463EC1B52DF4BCC200ED7B0F /* PrivacyInfo.xcprivacy in Resources */,
 			);
@@ -297,7 +318,7 @@
 				CODE_SIGN_ENTITLEMENTS = "Deadlift Diaries/Deadlift Diaries.entitlements";
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
 				CODE_SIGN_STYLE = Manual;
-				CURRENT_PROJECT_VERSION = 3;
+				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = "";
 				"DEVELOPMENT_TEAM[sdk=iphoneos*]" = JUA2K3U263;
 				ENABLE_PREVIEWS = YES;
@@ -315,7 +336,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 1.0.1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.jerroder.deadliftdiaries;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
@@ -338,7 +359,7 @@
 				CODE_SIGN_ENTITLEMENTS = "Deadlift Diaries/Deadlift Diaries.entitlements";
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Distribution";
 				CODE_SIGN_STYLE = Manual;
-				CURRENT_PROJECT_VERSION = 3;
+				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = "";
 				"DEVELOPMENT_TEAM[sdk=iphoneos*]" = JUA2K3U263;
 				ENABLE_PREVIEWS = YES;
@@ -356,7 +377,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 1.0.1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.jerroder.deadliftdiaries;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
