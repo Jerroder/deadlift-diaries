@@ -201,22 +201,24 @@ struct MesocycleView: View {
                     get: { mesocycle!.startDate },
                     set: { mesocycle!.startDate = $0 }
                 ), displayedComponents: .date)
-                if mesocycle == nil {
-                    Stepper("number_of_weeks".localized(with: newMesocycleNumberOfWeeks, comment: "Number of Weeks"),
-                            value: $newMesocycleNumberOfWeeks, in: 1...12)
-                }
+                Stepper("number_of_weeks".localized(with: mesocycle?.numberOfWeeks ?? newMesocycleNumberOfWeeks, comment: "Number of Weeks"),
+                        value: mesocycle == nil ? $newMesocycleNumberOfWeeks : Binding(
+                            get: { mesocycle!.numberOfWeeks },
+                            set: { mesocycle!.numberOfWeeks = $0 }
+                        ),
+                        in: 1...12)
             }
             .withTextFieldToolbarDone(isKeyboardShowing: $isKeyboardShowing, focusedField: $focusedField)
             .navigationTitle(mesocycle == nil ? "new_mesocycle".localized(comment: "New Mesocycle") : "edit_mesocycle".localized(comment: "Edit Mesocycle"))
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("", systemImage: "checkmark") {
-                        if let mesocycle: Mesocycle = mesocycle {
-                            updateWeeks(for: mesocycle, newStartDate: mesocycle.startDate, newWeekCount: mesocycle.weeks!.count)
+                        if let mesocycle = mesocycle {
+                            updateWeeks(for: mesocycle, newStartDate: mesocycle.startDate, newWeekCount: mesocycle.numberOfWeeks)
                             updateWorkoutDates(for: mesocycle)
                         } else {
                             let orderIndex: Int = (mesocycles.map { $0.orderIndex }.max() ?? 0) + 1
-                            let mesocycle: Mesocycle = Mesocycle(
+                            let mesocycle = Mesocycle(
                                 name: newMesocycleName,
                                 startDate: newMesocycleStartDate,
                                 numberOfWeeks: newMesocycleNumberOfWeeks,
@@ -250,25 +252,31 @@ struct MesocycleView: View {
     }
     
     private func updateWeeks(for mesocycle: Mesocycle, newStartDate: Date, newWeekCount: Int) {
-        let currentWeekCount: Int = mesocycle.weeks!.count
-        
-        for (index, week) in mesocycle.weeks!.sorted(by: { $0.number < $1.number }).enumerated() {
-            week.startDate = Calendar.current.date(byAdding: .day, value: index * 7, to: newStartDate)!
-        }
+        let currentWeekCount = mesocycle.weeks?.count ?? 0
         
         if newWeekCount > currentWeekCount {
-            for weekNumber in currentWeekCount + 1...newWeekCount {
-                let weekStartDate: Date = Calendar.current.date(byAdding: .day, value: (weekNumber - 1) * 7, to: newStartDate)!
-                let newWeek: Week = Week(number: weekNumber, startDate: weekStartDate)
-                mesocycle.weeks!.append(newWeek)
+            for weekNumber in (currentWeekCount + 1)...newWeekCount {
+                let weekStartDate = Calendar.current.date(byAdding: .day, value: (weekNumber - 1) * 7, to: newStartDate)!
+                let newWeek = Week(number: weekNumber, startDate: weekStartDate)
+                mesocycle.weeks?.append(newWeek)
                 newWeek.mesocycle = mesocycle
                 modelContext.insert(newWeek)
             }
         } else if newWeekCount < currentWeekCount {
-            let weeksToRemove: ArraySlice<Week> = mesocycle.weeks!.sorted { $0.number > $1.number }.prefix(currentWeekCount - newWeekCount)
+            let weeksToRemove = mesocycle.weeks?.sorted { $0.number > $1.number }.prefix(currentWeekCount - newWeekCount) ?? []
             for week in weeksToRemove {
+                for workout in week.workouts ?? [] {
+                    for exercise in workout.exercises ?? [] {
+                        modelContext.delete(exercise)
+                    }
+                    modelContext.delete(workout)
+                }
                 modelContext.delete(week)
             }
+        }
+        
+        for (index, week) in (mesocycle.weeks?.sorted { $0.number < $1.number } ?? []).enumerated() {
+            week.startDate = Calendar.current.date(byAdding: .day, value: index * 7, to: newStartDate)!
         }
         
         mesocycle.numberOfWeeks = newWeekCount
@@ -312,6 +320,11 @@ struct MesocycleView: View {
                 modelContext.insert(newWeek)
                 
                 for workout in week.workouts!.sorted(by: { $0.date < $1.date }) {
+                    func partner(for exercise: Exercise) -> Exercise? {
+                        guard let partnerID = exercise.supersetPartnerID else { return nil }
+                        return workout.exercises?.first { $0.id == partnerID }
+                    }
+                    
                     let daysFromWeekStart: Int = Calendar.current.dateComponents([.day], from: week.startDate, to: workout.date).day ?? 0
                     let newWorkoutDate: Date = Calendar.current.date(byAdding: .day, value: daysFromWeekStart, to: newWeekStartDate)!
                     let newWorkout: Workout = Workout(
@@ -324,33 +337,68 @@ struct MesocycleView: View {
                     modelContext.insert(newWorkout)
                     
                     let exercises = workout.exercises!.sorted { $0.orderIndex < $1.orderIndex }
-                    var exerciseMapping: [UUID: UUID] = [:]
+                    var processedPartnerIDs = Set<UUID>()
                     
                     for exercise in exercises {
-                        let newExercise: Exercise = Exercise(
-                            name: exercise.name,
-                            weight: exercise.weight,
-                            sets: exercise.sets,
-                            reps: exercise.reps,
-                            duration: exercise.duration,
-                            restTime: exercise.restTime,
-                            isTimeBased: exercise.isTimeBased,
-                            orderIndex: exercise.orderIndex,
-                            timeBeforeNext: exercise.timeBeforeNext
-                        )
-                        newWorkout.exercises!.append(newExercise)
-                        newExercise.workout = newWorkout
-                        modelContext.insert(newExercise)
+                        if processedPartnerIDs.contains(exercise.id) {
+                            continue
+                        }
                         
-                        exerciseMapping[exercise.id] = newExercise.id
-                    }
-                    
-                    for exercise in exercises {
-                        if let partnerID = exercise.supersetPartnerID,
-                           let newPartnerID = exerciseMapping[partnerID] {
-                            if let newExercise = newWorkout.exercises!.first(where: { $0.id == exerciseMapping[exercise.id] }) {
-                                newExercise.supersetPartnerID = newPartnerID
-                            }
+                        if let partner = partner(for: exercise) {
+                            let mainExercise = exercise.isTheSuperset ?? false ? partner : exercise
+                            let supersetExercise = exercise.isTheSuperset ?? false ? exercise : partner
+                            
+                            processedPartnerIDs.insert(mainExercise.id)
+                            processedPartnerIDs.insert(supersetExercise.id)
+                            
+                            let newMainExercise = Exercise(
+                                name: mainExercise.name,
+                                weight: mainExercise.weight,
+                                sets: mainExercise.sets,
+                                reps: mainExercise.reps,
+                                duration: mainExercise.duration,
+                                restTime: mainExercise.restTime,
+                                isTimeBased: mainExercise.isTimeBased,
+                                orderIndex: mainExercise.orderIndex,
+                                timeBeforeNext: mainExercise.timeBeforeNext
+                            )
+                            let newSupersetExercise = Exercise(
+                                name: supersetExercise.name,
+                                weight: supersetExercise.weight,
+                                sets: supersetExercise.sets,
+                                reps: supersetExercise.reps,
+                                duration: supersetExercise.duration,
+                                restTime: supersetExercise.restTime,
+                                isTimeBased: supersetExercise.isTimeBased,
+                                orderIndex: supersetExercise.orderIndex,
+                                timeBeforeNext: supersetExercise.timeBeforeNext,
+                                isTheSuperset: true
+                            )
+                            newMainExercise.supersetPartnerID = newSupersetExercise.id
+                            newSupersetExercise.supersetPartnerID = newMainExercise.id
+                            
+                            newWorkout.exercises!.append(newMainExercise)
+                            newWorkout.exercises!.append(newSupersetExercise)
+                            newMainExercise.workout = newWorkout
+                            newSupersetExercise.workout = newWorkout
+                            
+                            modelContext.insert(newMainExercise)
+                            modelContext.insert(newSupersetExercise)
+                        } else {
+                            let newExercise: Exercise = Exercise(
+                                name: exercise.name,
+                                weight: exercise.weight,
+                                sets: exercise.sets,
+                                reps: exercise.reps,
+                                duration: exercise.duration,
+                                restTime: exercise.restTime,
+                                isTimeBased: exercise.isTimeBased,
+                                orderIndex: exercise.orderIndex,
+                                timeBeforeNext: exercise.timeBeforeNext
+                            )
+                            newWorkout.exercises!.append(newExercise)
+                            newExercise.workout = newWorkout
+                            modelContext.insert(newExercise)
                         }
                     }
                 }

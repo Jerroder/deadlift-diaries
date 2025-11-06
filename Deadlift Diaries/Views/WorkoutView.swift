@@ -262,6 +262,11 @@ struct WorkoutView: View {
         let dayOffset: Int = Calendar.current.dateComponents([.day], from: sourceWeekStart, to: targetWeekStart).day!
         
         for (index, workout) in selectedWorkouts.enumerated() {
+            func partner(for exercise: Exercise) -> Exercise? {
+                guard let partnerID = exercise.supersetPartnerID else { return nil }
+                return workout.exercises?.first { $0.id == partnerID }
+            }
+            
             let originalWorkoutDate: Date = Calendar.current.startOfDay(for: workout.date)
             let newWorkoutDate: Date = Calendar.current.date(byAdding: .day, value: dayOffset, to: originalWorkoutDate)!
             
@@ -276,32 +281,73 @@ struct WorkoutView: View {
             
             let exercises = workout.exercises!.sorted { $0.orderIndex < $1.orderIndex }
             var exerciseMapping: [UUID: UUID] = [:]
-            
-            for exercise in workout.exercises! {
-                let newExercise: Exercise = Exercise(
-                    name: exercise.name,
-                    weight: exercise.weight,
-                    sets: exercise.sets,
-                    reps: exercise.reps,
-                    duration: exercise.duration,
-                    restTime: exercise.restTime,
-                    isTimeBased: exercise.isTimeBased,
-                    orderIndex: exercise.orderIndex,
-                    timeBeforeNext: exercise.timeBeforeNext
-                )
-                newWorkout.exercises!.append(newExercise)
-                newExercise.workout = newWorkout
-                modelContext.insert(newExercise)
-                
-                exerciseMapping[exercise.id] = newExercise.id
-            }
+            var processedPartnerIDs = Set<UUID>()
             
             for exercise in exercises {
-                if let partnerID = exercise.supersetPartnerID,
-                   let newPartnerID = exerciseMapping[partnerID] {
-                    if let newExercise = newWorkout.exercises!.first(where: { $0.id == exerciseMapping[exercise.id] }) {
-                        newExercise.supersetPartnerID = newPartnerID
-                    }
+                if processedPartnerIDs.contains(exercise.id) {
+                    continue
+                }
+                
+                if let partner = partner(for: exercise) {
+                    let mainExercise = exercise.isTheSuperset ?? false ? partner : exercise
+                    let supersetExercise = exercise.isTheSuperset ?? false ? exercise : partner
+                    
+                    processedPartnerIDs.insert(mainExercise.id)
+                    processedPartnerIDs.insert(supersetExercise.id)
+                    
+                    let newMainExercise = Exercise(
+                        name: mainExercise.name,
+                        weight: mainExercise.weight,
+                        sets: mainExercise.sets,
+                        reps: mainExercise.reps,
+                        duration: mainExercise.duration,
+                        restTime: mainExercise.restTime,
+                        isTimeBased: mainExercise.isTimeBased,
+                        orderIndex: mainExercise.orderIndex,
+                        timeBeforeNext: mainExercise.timeBeforeNext
+                    )
+                    let newSupersetExercise = Exercise(
+                        name: supersetExercise.name,
+                        weight: supersetExercise.weight,
+                        sets: supersetExercise.sets,
+                        reps: supersetExercise.reps,
+                        duration: supersetExercise.duration,
+                        restTime: supersetExercise.restTime,
+                        isTimeBased: supersetExercise.isTimeBased,
+                        orderIndex: supersetExercise.orderIndex,
+                        timeBeforeNext: supersetExercise.timeBeforeNext,
+                        isTheSuperset: true
+                    )
+                    newMainExercise.supersetPartnerID = newSupersetExercise.id
+                    newSupersetExercise.supersetPartnerID = newMainExercise.id
+                    
+                    newWorkout.exercises!.append(newMainExercise)
+                    newWorkout.exercises!.append(newSupersetExercise)
+                    newMainExercise.workout = newWorkout
+                    newSupersetExercise.workout = newWorkout
+                    
+                    modelContext.insert(newMainExercise)
+                    modelContext.insert(newSupersetExercise)
+                    
+                    exerciseMapping[mainExercise.id] = newMainExercise.id
+                    exerciseMapping[supersetExercise.id] = newSupersetExercise.id
+                } else {
+                    let newExercise: Exercise = Exercise(
+                        name: exercise.name,
+                        weight: exercise.weight,
+                        sets: exercise.sets,
+                        reps: exercise.reps,
+                        duration: exercise.duration,
+                        restTime: exercise.restTime,
+                        isTimeBased: exercise.isTimeBased,
+                        orderIndex: exercise.orderIndex,
+                        timeBeforeNext: exercise.timeBeforeNext
+                    )
+                    newWorkout.exercises!.append(newExercise)
+                    newExercise.workout = newWorkout
+                    modelContext.insert(newExercise)
+                    
+                    exerciseMapping[exercise.id] = newExercise.id
                 }
             }
         }
