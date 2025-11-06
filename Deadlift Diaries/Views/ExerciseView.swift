@@ -157,7 +157,7 @@ struct ExerciseView: View {
     private func exerciseRow() -> some View {
         List(selection: $selectedExerciseIDs) {
             ForEach(sortedExercises, id: \.id) { exercise in
-                if let partner = partner(for: exercise), partner.orderIndex > exercise.orderIndex {
+                if let partner = partner(for: exercise), partner.isTheSuperset ?? false {
                     displayExercise(for: exercise)
                         .tag(exercise.id)
                         .opacity(((exercise.isTimeBased ? exercise.sets * 2 : exercise.sets) == exercise.currentSet - 1) ? 0.5 : 1)
@@ -173,13 +173,14 @@ struct ExerciseView: View {
                         .listRowSeparator(.hidden)
                 }
             }
+            .onMove(perform: moveExercise)
         }
     }
     
     @ViewBuilder
     private func displayExercise(for exercise: Exercise, isSuperset: Bool? = false) -> some View {
         Group {
-            if let partner = partner(for: exercise), partner.orderIndex > exercise.orderIndex {
+            if let partner = partner(for: exercise), partner.isTheSuperset ?? false {
                 if editMode?.wrappedValue.isEditing == true {
                     Button(action: {
                         selectedExercise = exercise
@@ -219,7 +220,8 @@ struct ExerciseView: View {
                                 set: { exercise.elapsed = $0 }
                             ),
                             isTimeBased: exercise.isTimeBased,
-                            duration: exercise.duration ?? 30.0
+                            duration: exercise.duration ?? 30.0,
+                            isCalledFromTimer: false
                         )
                         .transition(.opacity)
                     }
@@ -259,7 +261,8 @@ struct ExerciseView: View {
                                 set: { exercise.elapsed = $0 }
                             ),
                             isTimeBased: exercise.isTimeBased,
-                            duration: exercise.duration ?? 30.0
+                            duration: exercise.duration ?? 30.0,
+                            isCalledFromTimer: false
                         )
                         .transition(.opacity)
                     }
@@ -359,8 +362,9 @@ struct ExerciseView: View {
                                             duration: newExercise2IsTimeBased ? newExercise2Duration : nil,
                                             restTime: 0.0,
                                             isTimeBased: newExercise2IsTimeBased,
-                                            orderIndex: exercise.orderIndex + 1,
-                                            timeBeforeNext: 0.0
+                                            orderIndex: exercise.orderIndex,
+                                            timeBeforeNext: 0.0,
+                                            isTheSuperset: true
                                         )
                                         partner.supersetPartnerID = exercise.id
                                         exercise.supersetPartnerID = partner.id
@@ -409,8 +413,9 @@ struct ExerciseView: View {
                                         duration: newExercise2IsTimeBased ? newExercise2Duration : nil,
                                         restTime: 0.0,
                                         isTimeBased: newExercise2IsTimeBased,
-                                        orderIndex: orderIndex + 1,
-                                        timeBeforeNext: 0.0
+                                        orderIndex: orderIndex,
+                                        timeBeforeNext: 0.0,
+                                        isTheSuperset: true
                                     )
                                     exercise1.supersetPartnerID = exercise2.id
                                     exercise2.supersetPartnerID = exercise1.id
@@ -829,30 +834,42 @@ struct ExerciseView: View {
         
         let maxOrderIndex: Int = targetWorkout.exercises!.map { $0.orderIndex }.max() ?? 0
         var newOrderIndex = maxOrderIndex + 1
+        var processedPartnerIDs = Set<UUID>()
         
         for exercise in selectedExercises {
+            if processedPartnerIDs.contains(exercise.id) {
+                continue
+            }
+            
             if let partner = partner(for: exercise) {
+                let mainExercise = exercise.isTheSuperset ?? false ? partner : exercise
+                let supersetExercise = exercise.isTheSuperset ?? false ? exercise : partner
+                
+                processedPartnerIDs.insert(mainExercise.id)
+                processedPartnerIDs.insert(supersetExercise.id)
+                
                 let newExercise1 = Exercise(
-                    name: exercise.name,
-                    weight: exercise.weight,
-                    sets: exercise.sets,
-                    reps: exercise.reps,
-                    duration: exercise.duration,
-                    restTime: exercise.restTime,
-                    isTimeBased: exercise.isTimeBased,
+                    name: mainExercise.name,
+                    weight: mainExercise.weight,
+                    sets: mainExercise.sets,
+                    reps: mainExercise.reps,
+                    duration: mainExercise.duration,
+                    restTime: mainExercise.restTime,
+                    isTimeBased: mainExercise.isTimeBased,
                     orderIndex: newOrderIndex,
-                    timeBeforeNext: exercise.timeBeforeNext
+                    timeBeforeNext: mainExercise.timeBeforeNext
                 )
                 let newExercise2 = Exercise(
-                    name: partner.name,
-                    weight: partner.weight,
-                    sets: partner.sets,
-                    reps: partner.reps,
-                    duration: partner.duration,
-                    restTime: partner.restTime,
-                    isTimeBased: partner.isTimeBased,
-                    orderIndex: newOrderIndex + 1,
-                    timeBeforeNext: partner.timeBeforeNext
+                    name: supersetExercise.name,
+                    weight: supersetExercise.weight,
+                    sets: supersetExercise.sets,
+                    reps: supersetExercise.reps,
+                    duration: supersetExercise.duration,
+                    restTime: supersetExercise.restTime,
+                    isTimeBased: supersetExercise.isTimeBased,
+                    orderIndex: newOrderIndex,
+                    timeBeforeNext: supersetExercise.timeBeforeNext,
+                    isTheSuperset: true
                 )
                 newExercise1.supersetPartnerID = newExercise2.id
                 newExercise2.supersetPartnerID = newExercise1.id
@@ -864,8 +881,6 @@ struct ExerciseView: View {
                 
                 modelContext.insert(newExercise1)
                 modelContext.insert(newExercise2)
-                
-                newOrderIndex += 2
             } else {
                 let newExercise: Exercise = Exercise(
                     name: exercise.name,
@@ -881,10 +896,12 @@ struct ExerciseView: View {
                 targetWorkout.exercises!.append(newExercise)
                 newExercise.workout = targetWorkout
                 modelContext.insert(newExercise)
-                
-                newOrderIndex += 1
             }
+            
+            newOrderIndex += 1
         }
+        
+        try? modelContext.save()
         selectedExerciseIDs.removeAll()
     }
     
@@ -906,6 +923,20 @@ struct ExerciseView: View {
         try? modelContext.save()
     }
     
+    private func moveExercise(from source: IndexSet, to destination: Int) {
+        var exercises = sortedExercises
+        exercises.move(fromOffsets: source, toOffset: destination)
+        
+        for (index, exercise) in exercises.enumerated() {
+            exercise.orderIndex = index
+            if let partner = partner(for: exercise) {
+                partner.orderIndex = index
+            }
+        }
+        
+        try? modelContext.save()
+    }
+    
     private func partner(for exercise: Exercise) -> Exercise? {
         guard let partnerID = exercise.supersetPartnerID else { return nil }
         return workout.exercises?.first { $0.id == partnerID }
@@ -921,7 +952,9 @@ struct ExerciseView: View {
             return
         }
         partner.supersetPartnerID = nil
+        partner.isTheSuperset = false
         exercise.supersetPartnerID = nil
+        exercise.isTheSuperset = false
         workout.exercises?.removeAll { $0.id == partnerID }
         modelContext.delete(partner)
     }

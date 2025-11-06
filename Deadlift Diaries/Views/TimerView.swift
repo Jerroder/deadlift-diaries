@@ -177,7 +177,8 @@ struct TimerView: View {
                     isTimerRunning: $isTimerRunning,
                     elapsed: $elapsed,
                     isTimeBased: isTimeBased,
-                    duration: duration
+                    duration: duration,
+                    isCalledFromTimer: true
                 )
             }
             .navigationTitle("timer".localized(comment: "Timer"))

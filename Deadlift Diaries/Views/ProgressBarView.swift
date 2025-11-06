@@ -19,6 +19,7 @@ struct ProgressBarView: View {
     @Binding var elapsed: Double
     let isTimeBased: Bool
     let duration: Double
+    let isCalledFromTimer: Bool
     
     @Environment(\.scenePhase) var scenePhase
     @State private var isActive: Bool = true
@@ -358,7 +359,7 @@ struct ProgressBarView: View {
                     
                     if currentSet == nbSet && isExerciseDone {
                         currentSet += 1
-                        if autoResetTimer {
+                        if autoResetTimer && isCalledFromTimer {
                             resetValues(index: 1, isExerciseInterval: isTimeBased)
                         }
                     }

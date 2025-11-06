@@ -201,11 +201,10 @@ struct MesocycleView: View {
                     get: { mesocycle!.startDate },
                     set: { mesocycle!.startDate = $0 }
                 ), displayedComponents: .date)
-                Stepper("number_of_weeks".localized(with: (mesocycle == nil) ? newMesocycleNumberOfWeeks : mesocycle!.weeks!.count, comment: "Number of Weeks"),
-                        value: mesocycle == nil ? $newMesocycleNumberOfWeeks : Binding(
-                            get: { mesocycle!.weeks!.count },
-                            set: { _ in }
-                        ), in: 1...12)
+                if mesocycle == nil {
+                    Stepper("number_of_weeks".localized(with: newMesocycleNumberOfWeeks, comment: "Number of Weeks"),
+                            value: $newMesocycleNumberOfWeeks, in: 1...12)
+                }
             }
             .withTextFieldToolbarDone(isKeyboardShowing: $isKeyboardShowing, focusedField: $focusedField)
             .navigationTitle(mesocycle == nil ? "new_mesocycle".localized(comment: "New Mesocycle") : "edit_mesocycle".localized(comment: "Edit Mesocycle"))
