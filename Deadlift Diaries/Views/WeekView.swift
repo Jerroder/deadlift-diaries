@@ -218,6 +218,8 @@ struct WeekView: View {
         for workout in week.workouts!.sorted(by: { $0.date < $1.date }) {
             copyWorkout(workout, to: newWeek, originalWeekStartDate: week.startDate, newWeekStartDate: newStartDate)
         }
+        
+        try? modelContext.save()
     }
     
     private func copyWorkout(_ workout: Workout, to newWeek: Week, originalWeekStartDate: Date, newWeekStartDate: Date) {
@@ -263,6 +265,8 @@ struct WeekView: View {
                 }
             }
         }
+        
+        try? modelContext.save()
     }
 
     
@@ -281,6 +285,7 @@ struct WeekView: View {
         newWorkout.exercises!.append(newExercise)
         newExercise.workout = newWorkout
         modelContext.insert(newExercise)
+        try? modelContext.save()
     }
     
     private func deleteSelectedWeeks() {

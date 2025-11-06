@@ -224,6 +224,7 @@ struct MesocycleView: View {
                             )
                             modelContext.insert(mesocycle)
                         }
+                        try? modelContext.save()
                         selectedMesocycle = nil
                         isAddingNewMesocycle = false
                     }
@@ -271,6 +272,7 @@ struct MesocycleView: View {
         }
         
         mesocycle.numberOfWeeks = newWeekCount
+        try? modelContext.save()
     }
     
     private func updateWorkoutDates(for mesocycle: Mesocycle) {
@@ -358,6 +360,7 @@ struct MesocycleView: View {
         }
         
         selectedMesocycleIDs.removeAll()
+        try? modelContext.save()
     }
     
     private func deleteSelectedMesocycles() {

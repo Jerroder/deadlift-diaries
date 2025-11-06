@@ -180,6 +180,7 @@ struct WorkoutView: View {
                             workout.week = week
                             modelContext.insert(workout)
                         }
+                        try? modelContext.save()
                         selectedWorkout = nil
                         isAddingNewWorkout = false
                     }
@@ -304,7 +305,9 @@ struct WorkoutView: View {
                 }
             }
         }
+        
         selectedWorkoutIDs.removeAll()
+        try? modelContext.save()
     }
     
     private func deleteWorkout(_ workout: Workout) {

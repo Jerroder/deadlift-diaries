@@ -441,6 +441,7 @@ struct ExerciseView: View {
                                     exercise.workout = workout
                                     modelContext.insert(exercise)
                                 }
+                                try? modelContext.save()
                                 selectedExercise = nil
                                 isAddingNewExercise = false
                                 focusedField = nil
