@@ -26,10 +26,10 @@ struct ProgressBarView: View {
     
     @AppStorage("selectedSoundID") private var selectedSoundID: Int = 1075
     @AppStorage("sendNotification") private var sendNotification: Bool = false
-    @AppStorage("isExerciseDone") private var isExerciseDone: Bool = false
     @AppStorage("isContinuousModeEnabled") private var isContinuousModeEnabled: Bool = false
     @AppStorage("autoResetTimer") private var autoResetTimer: Bool = false
     
+    @State private var isExerciseDone: Bool = false
     @State private var restProgress: CGFloat = 0
     @State private var timer: DispatchSourceTimer?
     @State private var backgroundTask: UIBackgroundTaskIdentifier = .invalid
@@ -140,6 +140,10 @@ struct ProgressBarView: View {
             currentSet = (isTimeBased) ? (currentSet * 2) - 1 : (currentSet / 2) + 1
             isExerciseDone = (totalSets == 1 && !isTimeBased) || (currentSet == nbSet) ? true : false
             isExerciseInterval = newValue
+            timeRemaining = realDuration
+        }
+        .onAppear {
+            isExerciseDone = (totalSets == 1 && !isTimeBased) || (currentSet == nbSet) ? true : false
             timeRemaining = realDuration
         }
         .onChange(of: scenePhase) { _, newPhase in
