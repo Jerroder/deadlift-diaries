@@ -26,8 +26,10 @@ final class Exercise: Codable  {
     var timeBeforeNext: Double = 120.0
     var supersetPartnerID: UUID?
     var isTheSuperset: Bool?
+    var isDistanceBased: Bool?
+    var distance: Int?
     
-    init(name: String, weight: Double? = nil, sets: Int, reps: Int? = nil, duration: Double? = 30.0, restTime: Double, isTimeBased: Bool, orderIndex: Int, timeBeforeNext: Double, supersetPartnerID: UUID? = nil, isTheSuperset: Bool? = false) {
+    init(name: String, weight: Double? = nil, sets: Int, reps: Int? = nil, duration: Double? = 30.0, restTime: Double, isTimeBased: Bool, orderIndex: Int, timeBeforeNext: Double, supersetPartnerID: UUID? = nil, isTheSuperset: Bool? = false, isDistanceBased: Bool? = false, distance: Int? = 200) {
         self.id = UUID()
         self.name = name
         self.weight = weight
@@ -42,6 +44,8 @@ final class Exercise: Codable  {
         self.timeBeforeNext = timeBeforeNext
         self.supersetPartnerID = supersetPartnerID
         self.isTheSuperset = isTheSuperset
+        self.isDistanceBased = isDistanceBased
+        self.distance = distance
     }
     
     enum CodingKeys: CodingKey {

@@ -264,7 +264,8 @@ struct WeekView: View {
                     restTime: mainExercise.restTime,
                     isTimeBased: mainExercise.isTimeBased,
                     orderIndex: mainExercise.orderIndex,
-                    timeBeforeNext: mainExercise.timeBeforeNext
+                    timeBeforeNext: mainExercise.timeBeforeNext,
+                    isDistanceBased: mainExercise.isDistanceBased
                 )
                 let newSupersetExercise = Exercise(
                     name: supersetExercise.name,
@@ -276,7 +277,8 @@ struct WeekView: View {
                     isTimeBased: supersetExercise.isTimeBased,
                     orderIndex: supersetExercise.orderIndex,
                     timeBeforeNext: supersetExercise.timeBeforeNext,
-                    isTheSuperset: true
+                    isTheSuperset: true,
+                    isDistanceBased: supersetExercise.isDistanceBased
                 )
                 newMainExercise.supersetPartnerID = newSupersetExercise.id
                 newSupersetExercise.supersetPartnerID = newMainExercise.id
@@ -298,7 +300,9 @@ struct WeekView: View {
                     restTime: exercise.restTime,
                     isTimeBased: exercise.isTimeBased,
                     orderIndex: exercise.orderIndex,
-                    timeBeforeNext: exercise.timeBeforeNext
+                    timeBeforeNext: exercise.timeBeforeNext,
+                    isDistanceBased: exercise.isDistanceBased,
+                    distance: exercise.distance
                 )
                 newWorkout.exercises!.append(newExercise)
                 newExercise.workout = newWorkout
@@ -319,7 +323,8 @@ struct WeekView: View {
             restTime: exercise.restTime,
             isTimeBased: exercise.isTimeBased,
             orderIndex: exercise.orderIndex,
-            timeBeforeNext: exercise.timeBeforeNext
+            timeBeforeNext: exercise.timeBeforeNext,
+            isDistanceBased: exercise.isDistanceBased
         )
         newWorkout.exercises!.append(newExercise)
         newExercise.workout = newWorkout

@@ -282,6 +282,96 @@
         }
       }
     },
+    "distance" : {
+      "comment" : "Distance:",
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Distanz:"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Distance:"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Distancia"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Distance:"
+          }
+        }
+      }
+    },
+    "distance_based" : {
+      "comment" : "Distance-based",
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Distanzbasiert"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Distance-based"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Basado en distancia"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Basé sur la distance"
+          }
+        }
+      }
+    },
+    "distance_x" : {
+      "comment" : "Distance: x m",
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Distanz: %lld %@"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Distance: %lld %@"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Distancia: %lld %@"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Distance: %lld %@"
+          }
+        }
+      }
+    },
     "do_not_stop_timer" : {
       "comment" : "Do not stop timer between sets and rest",
       "extractionState" : "manual",
@@ -1639,25 +1729,25 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Gewicht: %.1f %@"
+            "value" : "Gewicht: %.2f %@"
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Weight: %.1f %@"
+            "value" : "Weight: %.2f %@"
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Peso: %.1f %@"
+            "value" : "Peso: %.2f %@"
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Poids : %.1f %@"
+            "value" : "Poids : %.2f %@"
           }
         }
       }

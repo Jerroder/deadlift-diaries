@@ -32,6 +32,8 @@ struct ExerciseView: View {
     @State private var newExerciseDuration: Double = 30.0
     @State private var newExerciseWeight: Double = 50.0
     @State private var newExerciseTimeBeforeNext: Double = 120.0
+    @State private var newExerciseIsDistanceBased: Bool = false
+    @State private var newExerciseDistance: Int = 200
     @State private var newExercise2Name: String = ""
     @State private var newExercise2IsTimeBased: Bool = false
     @State private var newExercise2Reps: Int = 8
@@ -43,7 +45,8 @@ struct ExerciseView: View {
     
     @State private var isTimerRunning: [UUID: Bool] = [:]
     
-    private let unit: Unit = isMetricSystem() ? Unit(symbol: "kg") : Unit(symbol: "lbs")
+    private let weightUnit: Unit = isMetricSystem() ? Unit(symbol: "kg") : Unit(symbol: "lbs")
+    private let distanceUnit: Unit = Unit(symbol: "m")
     
     private var availableWorkouts: [Workout] {
         guard let mesocycle = workout.week?.mesocycle else { return [] }
@@ -95,6 +98,8 @@ struct ExerciseView: View {
                         newExerciseDuration = 30
                         newExerciseWeight = 50.0
                         newExerciseTimeBeforeNext = 120.0
+                        newExerciseIsDistanceBased = false
+                        newExerciseDistance = 200
                         
                         isSuperset = false
                         newExercise2Name = ""
@@ -121,6 +126,8 @@ struct ExerciseView: View {
                         newExerciseDuration = 30
                         newExerciseWeight = 50.0
                         newExerciseTimeBeforeNext = 120.0
+                        newExerciseIsDistanceBased = false
+                        newExerciseDistance = 200
                         
                         isSuperset = false
                         newExercise2Name = ""
@@ -186,15 +193,15 @@ struct ExerciseView: View {
                         selectedExercise = exercise
                     }) {
                         HStack {
-                            displayExercises(exercise: exercise, unit: unit)
-                            displayExercises(exercise: partner, unit: unit, isSuperset: true)
+                            displayExercises(exercise: exercise)
+                            displayExercises(exercise: partner, isSuperset: true)
                         }
                     }
                     .buttonStyle(PlainButtonStyle())
                 } else {
                     HStack {
-                        displayExercises(exercise: exercise, unit: unit)
-                        displayExercises(exercise: partner, unit: unit, isSuperset: true)
+                        displayExercises(exercise: exercise)
+                        displayExercises(exercise: partner, isSuperset: true)
                     }
                     .onTapGesture {
                         withAnimation {
@@ -231,12 +238,12 @@ struct ExerciseView: View {
                     Button(action: {
                         selectedExercise = exercise
                     }) {
-                        displayExercises(exercise: exercise, unit: unit)
+                        displayExercises(exercise: exercise)
                             .contentShape(Rectangle())
                     }
                     .buttonStyle(PlainButtonStyle())
                 } else {
-                    displayExercises(exercise: exercise, unit: unit, isSuperset: isSuperset)
+                    displayExercises(exercise: exercise, isSuperset: isSuperset)
                         .onTapGesture {
                             withAnimation {
                                 expandedExerciseID = (expandedExerciseID == exercise.id) ? nil : exercise.id
@@ -279,7 +286,7 @@ struct ExerciseView: View {
     }
     
     @ViewBuilder
-    private func displayExercises(exercise: Exercise, unit: Unit, isSuperset: Bool? = false) -> some View {
+    private func displayExercises(exercise: Exercise, isSuperset: Bool? = false) -> some View {
         let alignment: HorizontalAlignment = isSuperset == true ? .trailing : .leading
         HStack {
             VStack(alignment: alignment) {
@@ -291,11 +298,19 @@ struct ExerciseView: View {
                         .font(.subheadline)
                         .foregroundColor(Color(UIColor.secondaryLabel))
                 } else {
-                    if let weight = exercise.weight, weight != 0 {
-                        Text("weight_x".localized(with: weight, unit.symbol, comment: "Weight: x kg"))
-                            .font(.subheadline)
-                            .foregroundColor(Color(UIColor.secondaryLabel))
+                    if exercise.isDistanceBased ?? false {
+                        if let distance = exercise.distance, distance != 0 {
+                            Text("distance_x".localized(with: distance, distanceUnit.symbol, comment: "Distance: x m"))
+                                .font(.subheadline)
+                                .foregroundColor(Color(UIColor.secondaryLabel))
+                        }
                     }
+                }
+                
+                if let weight = exercise.weight, weight != 0, !exercise.isDistanceBased! {
+                    Text("weight_x".localized(with: weight, weightUnit.symbol, comment: "Weight: x kg"))
+                        .font(.subheadline)
+                        .foregroundColor(Color(UIColor.secondaryLabel))
                 }
                 
                 if !isSuperset! {
@@ -304,13 +319,13 @@ struct ExerciseView: View {
                         .foregroundColor(Color(UIColor.secondaryLabel))
                 }
                 
-                if !exercise.isTimeBased {
+                if !exercise.isTimeBased && !exercise.isDistanceBased! {
                     Text("reps_x".localized(with: exercise.reps ?? 0, comment: "Reps: x"))
                         .font(.subheadline)
                         .foregroundColor(Color(UIColor.secondaryLabel))
                 }
                 
-                if !isSuperset! {
+                if !isSuperset! && exercise.sets > 1 {
                     Text("rest_x_sec".localized(with: Int(exercise.restTime), comment: "Rest: x sec"))
                         .font(.subheadline)
                         .foregroundColor(Color(UIColor.secondaryLabel))
@@ -435,7 +450,9 @@ struct ExerciseView: View {
                                         restTime: newExerciseRestTime,
                                         isTimeBased: newExerciseIsTimeBased,
                                         orderIndex: orderIndex,
-                                        timeBeforeNext: newExerciseTimeBeforeNext
+                                        timeBeforeNext: newExerciseTimeBeforeNext,
+                                        isDistanceBased: newExerciseIsDistanceBased,
+                                        distance: newExerciseDistance
                                     )
                                     workout.exercises!.append(exercise)
                                     exercise.workout = workout
@@ -467,6 +484,14 @@ struct ExerciseView: View {
                     get: { exercise2 != nil || isSuperset },
                     set: { newValue in
                         isSuperset = newValue
+                        if newValue {
+                            if exercise1 != nil {
+                                exercise1!.isDistanceBased = false
+                            } else {
+                                newExerciseIsDistanceBased = false
+                            }
+                        }
+                        
                         if !newValue, let exercise = exercise1, exercise.supersetPartnerID != nil {
                             removeFromSuperset(exercise: exercise)
                         }
@@ -539,8 +564,18 @@ struct ExerciseView: View {
                         withAnimation {
                             if exercise1 == nil {
                                 newExerciseIsTimeBased = newValue
+                                if newValue {
+                                    newExerciseDuration = 30.0
+                                } else {
+                                    newExerciseReps = 8
+                                }
                             } else {
                                 exercise1!.isTimeBased = newValue
+                                if newValue {
+                                    exercise1!.duration = 30.0
+                                } else {
+                                    exercise1!.reps = 8
+                                }
                             }
                         }
                     }
@@ -586,15 +621,6 @@ struct ExerciseView: View {
                         }
                         .pickerStyle(.wheel)
                     }
-                } else {
-                    Stepper(
-                        "reps_x".localized(with: exercise1 == nil ? newExerciseReps : exercise1!.reps ?? 10, comment: "Reps:"),
-                        value: exercise1 == nil ? $newExerciseReps : Binding(
-                            get: { exercise1!.reps ?? 10 },
-                            set: { exercise1!.reps = $0 }
-                        ),
-                        in: 1...50
-                    )
                     
                     HStack {
                         Text("weight".localized(comment: "Weight:"))
@@ -610,12 +636,82 @@ struct ExerciseView: View {
                                 }
                             ),
                             unit: Binding(
-                                get: { unit },
+                                get: { weightUnit },
                                 set: { _ in }
                             )
                         )
                         .keyboardType(.decimalPad)
                         .focused($focusedField, equals: .exerciseWeight)
+                    }
+                } else {
+                    if !isSuperset {
+                        Toggle("distance_based".localized(comment: "Distance-based"), isOn: Binding(
+                            get: { (exercise1 == nil ? newExerciseIsDistanceBased : exercise1!.isDistanceBased) ?? false },
+                            set: { newValue in
+                                withAnimation {
+                                    if exercise1 == nil {
+                                        newExerciseIsDistanceBased = newValue
+                                    } else {
+                                        exercise1!.isDistanceBased = newValue
+                                    }
+                                }
+                            }
+                        ))
+                    }
+                    
+                    if exercise1 == nil ? newExerciseIsDistanceBased : exercise1!.isDistanceBased! {
+                        HStack {
+                            Text("distance".localized(comment: "Distance:"))
+                            TextFieldWithUnitInt(
+                                value: Binding(
+                                    get: { exercise1?.distance ?? newExerciseDistance },
+                                    set: { newValue in
+                                        if exercise1 != nil {
+                                            exercise1!.distance = newValue
+                                        } else {
+                                            newExerciseDistance = newValue
+                                        }
+                                    }
+                                ),
+                                unit: Binding(
+                                    get: { distanceUnit },
+                                    set: { _ in }
+                                )
+                            )
+                            .keyboardType(.decimalPad)
+                            .focused($focusedField, equals: .exerciseWeight)
+                        }
+                    } else {
+                        Stepper(
+                            "reps_x".localized(with: exercise1 == nil ? newExerciseReps : exercise1!.reps ?? 8, comment: "Reps:"),
+                            value: exercise1 == nil ? $newExerciseReps : Binding(
+                                get: { exercise1!.reps ?? 10 },
+                                set: { exercise1!.reps = $0 }
+                            ),
+                            in: 1...50
+                        )
+                        
+                        HStack {
+                            Text("weight".localized(comment: "Weight:"))
+                            TextFieldWithUnitDouble(
+                                value: Binding(
+                                    get: { exercise1?.weight ?? newExerciseWeight },
+                                    set: { newValue in
+                                        if exercise1 != nil {
+                                            exercise1!.weight = newValue
+                                        } else {
+                                            newExerciseWeight = newValue
+                                        }
+                                    }
+                                ),
+                                unit: Binding(
+                                    get: { weightUnit },
+                                    set: { _ in }
+                                )
+                            )
+                            .keyboardType(.decimalPad)
+                            .focused($focusedField, equals: .exerciseWeight)
+                        }
                     }
                 }
                 
@@ -745,7 +841,7 @@ struct ExerciseView: View {
                                     }
                                 ),
                                 unit: Binding(
-                                    get: { unit },
+                                    get: { weightUnit },
                                     set: { _ in }
                                 )
                             )
@@ -858,7 +954,9 @@ struct ExerciseView: View {
                     restTime: mainExercise.restTime,
                     isTimeBased: mainExercise.isTimeBased,
                     orderIndex: newOrderIndex,
-                    timeBeforeNext: mainExercise.timeBeforeNext
+                    timeBeforeNext: mainExercise.timeBeforeNext,
+                    isDistanceBased: mainExercise.isDistanceBased,
+                    distance: mainExercise.distance
                 )
                 let newExercise2 = Exercise(
                     name: supersetExercise.name,
@@ -870,7 +968,9 @@ struct ExerciseView: View {
                     isTimeBased: supersetExercise.isTimeBased,
                     orderIndex: newOrderIndex,
                     timeBeforeNext: supersetExercise.timeBeforeNext,
-                    isTheSuperset: true
+                    isTheSuperset: true,
+                    isDistanceBased: supersetExercise.isDistanceBased,
+                    distance: supersetExercise.distance
                 )
                 newExercise1.supersetPartnerID = newExercise2.id
                 newExercise2.supersetPartnerID = newExercise1.id
@@ -892,7 +992,9 @@ struct ExerciseView: View {
                     restTime: exercise.restTime,
                     isTimeBased: exercise.isTimeBased,
                     orderIndex: newOrderIndex,
-                    timeBeforeNext: exercise.timeBeforeNext
+                    timeBeforeNext: exercise.timeBeforeNext,
+                    isDistanceBased: exercise.isDistanceBased,
+                    distance: exercise.distance
                 )
                 targetWorkout.exercises!.append(newExercise)
                 newExercise.workout = targetWorkout
