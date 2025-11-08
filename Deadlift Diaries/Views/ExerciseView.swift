@@ -298,7 +298,7 @@ struct ExerciseView: View {
                         .font(.subheadline)
                         .foregroundColor(Color(UIColor.secondaryLabel))
                 } else {
-                    if exercise.isDistanceBased ?? false {
+                    if let isDistanceBased = exercise.isDistanceBased, isDistanceBased {
                         if let distance = exercise.distance, distance != 0 {
                             Text("distance_x".localized(with: distance, distanceUnit.symbol, comment: "Distance: x m"))
                                 .font(.subheadline)
@@ -307,7 +307,7 @@ struct ExerciseView: View {
                     }
                 }
                 
-                if let weight = exercise.weight, weight != 0, !(exercise.isDistanceBased ?? false) {
+                if let weight = exercise.weight, weight != 0, let isDistanceBased = exercise.isDistanceBased, !isDistanceBased {
                     Text("weight_x".localized(with: weight, weightUnit.symbol, comment: "Weight: x kg"))
                         .font(.subheadline)
                         .foregroundColor(Color(UIColor.secondaryLabel))
@@ -319,7 +319,7 @@ struct ExerciseView: View {
                         .foregroundColor(Color(UIColor.secondaryLabel))
                 }
                 
-                if !exercise.isTimeBased && !(exercise.isDistanceBased ?? false) {
+                if !exercise.isTimeBased, let isDistanceBased = exercise.isDistanceBased, !isDistanceBased {
                     Text("reps_x".localized(with: exercise.reps ?? 0, comment: "Reps: x"))
                         .font(.subheadline)
                         .foregroundColor(Color(UIColor.secondaryLabel))
@@ -566,6 +566,7 @@ struct ExerciseView: View {
                                 newExerciseIsTimeBased = newValue
                                 if newValue {
                                     newExerciseDuration = 30.0
+                                    newExerciseIsDistanceBased = false
                                 } else {
                                     newExerciseReps = 8
                                 }
@@ -573,6 +574,7 @@ struct ExerciseView: View {
                                 exercise1!.isTimeBased = newValue
                                 if newValue {
                                     exercise1!.duration = 30.0
+                                    exercise1!.isDistanceBased = false
                                 } else {
                                     exercise1!.reps = 8
                                 }
