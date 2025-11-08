@@ -307,7 +307,7 @@ struct ExerciseView: View {
                     }
                 }
                 
-                if let weight = exercise.weight, weight != 0, !exercise.isDistanceBased! {
+                if let weight = exercise.weight, weight != 0, !(exercise.isDistanceBased ?? false) {
                     Text("weight_x".localized(with: weight, weightUnit.symbol, comment: "Weight: x kg"))
                         .font(.subheadline)
                         .foregroundColor(Color(UIColor.secondaryLabel))
@@ -319,7 +319,7 @@ struct ExerciseView: View {
                         .foregroundColor(Color(UIColor.secondaryLabel))
                 }
                 
-                if !exercise.isTimeBased && !exercise.isDistanceBased! {
+                if !exercise.isTimeBased && !(exercise.isDistanceBased ?? false) {
                     Text("reps_x".localized(with: exercise.reps ?? 0, comment: "Reps: x"))
                         .font(.subheadline)
                         .foregroundColor(Color(UIColor.secondaryLabel))
@@ -659,7 +659,7 @@ struct ExerciseView: View {
                         ))
                     }
                     
-                    if exercise1 == nil ? newExerciseIsDistanceBased : exercise1!.isDistanceBased! {
+                    if (exercise1 == nil ? newExerciseIsDistanceBased : exercise1!.isDistanceBased) ?? false {
                         HStack {
                             Text("distance".localized(comment: "Distance:"))
                             TextFieldWithUnitInt(
