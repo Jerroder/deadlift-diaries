@@ -206,6 +206,9 @@ struct WorkoutView: View {
                         Label("select_all".localized(comment: "Select all"), systemImage: "checkmark.circle.fill")
                     }
                 } else {
+                    Button(action: duplicateSelectedWorkouts) {
+                        Label("duplicate".localized(comment: "Duplicate"), systemImage: "plus.square.on.square")
+                    }
                     Button(action: {
                         isShowingWeekPicker = true
                     }) {
@@ -371,6 +374,105 @@ struct WorkoutView: View {
         for workout in workoutsToDelete {
             modelContext.delete(workout)
         }
+        selectedWorkoutIDs.removeAll()
+        try? modelContext.save()
+    }
+    
+    private func duplicateSelectedWorkouts() {
+        let selectedWorkouts: [Workout] = sortedWorkouts.filter { selectedWorkoutIDs.contains($0.id) }
+        guard !selectedWorkouts.isEmpty else { return }
+        
+        let maxOrderIndex: Int = week.workouts!.map { $0.orderIndex }.max() ?? 0
+        let lastWorkoutDate: Date = sortedWorkouts.last?.date ?? week.startDate
+        
+        for (index, workout) in selectedWorkouts.enumerated() {
+            func partner(for exercise: Exercise) -> Exercise? {
+                guard let partnerID = exercise.supersetPartnerID else { return nil }
+                return workout.exercises?.first { $0.id == partnerID }
+            }
+            
+            let newWorkoutDate: Date = Calendar.current.date(byAdding: .day, value: index + 1, to: lastWorkoutDate) ?? week.startDate
+            
+            let newWorkout: Workout = Workout(
+                name: workout.name,
+                orderIndex: maxOrderIndex + index + 1,
+                date: newWorkoutDate
+            )
+            week.workouts!.append(newWorkout)
+            newWorkout.week = week
+            modelContext.insert(newWorkout)
+            
+            let exercises = workout.exercises!.sorted { $0.orderIndex < $1.orderIndex }
+            var processedPartnerIDs = Set<UUID>()
+            
+            for exercise in exercises {
+                if processedPartnerIDs.contains(exercise.id) {
+                    continue
+                }
+                
+                if let partner = partner(for: exercise) {
+                    let mainExercise = exercise.isTheSuperset ?? false ? partner : exercise
+                    let supersetExercise = exercise.isTheSuperset ?? false ? exercise : partner
+                    
+                    processedPartnerIDs.insert(mainExercise.id)
+                    processedPartnerIDs.insert(supersetExercise.id)
+                    
+                    let newMainExercise = Exercise(
+                        name: mainExercise.name,
+                        weight: mainExercise.weight,
+                        sets: mainExercise.sets,
+                        reps: mainExercise.reps,
+                        duration: mainExercise.duration,
+                        restTime: mainExercise.restTime,
+                        isTimeBased: mainExercise.isTimeBased,
+                        orderIndex: mainExercise.orderIndex,
+                        timeBeforeNext: mainExercise.timeBeforeNext,
+                        isDistanceBased: mainExercise.isDistanceBased
+                    )
+                    let newSupersetExercise = Exercise(
+                        name: supersetExercise.name,
+                        weight: supersetExercise.weight,
+                        sets: supersetExercise.sets,
+                        reps: supersetExercise.reps,
+                        duration: supersetExercise.duration,
+                        restTime: supersetExercise.restTime,
+                        isTimeBased: supersetExercise.isTimeBased,
+                        orderIndex: supersetExercise.orderIndex,
+                        timeBeforeNext: supersetExercise.timeBeforeNext,
+                        isTheSuperset: true,
+                        isDistanceBased: supersetExercise.isDistanceBased
+                    )
+                    newMainExercise.supersetPartnerID = newSupersetExercise.id
+                    newSupersetExercise.supersetPartnerID = newMainExercise.id
+                    
+                    newWorkout.exercises!.append(newMainExercise)
+                    newWorkout.exercises!.append(newSupersetExercise)
+                    newMainExercise.workout = newWorkout
+                    newSupersetExercise.workout = newWorkout
+                    
+                    modelContext.insert(newMainExercise)
+                    modelContext.insert(newSupersetExercise)
+                } else {
+                    let newExercise: Exercise = Exercise(
+                        name: exercise.name,
+                        weight: exercise.weight,
+                        sets: exercise.sets,
+                        reps: exercise.reps,
+                        duration: exercise.duration,
+                        restTime: exercise.restTime,
+                        isTimeBased: exercise.isTimeBased,
+                        orderIndex: exercise.orderIndex,
+                        timeBeforeNext: exercise.timeBeforeNext,
+                        isDistanceBased: exercise.isDistanceBased,
+                        distance: exercise.distance
+                    )
+                    newWorkout.exercises!.append(newExercise)
+                    newExercise.workout = newWorkout
+                    modelContext.insert(newExercise)
+                }
+            }
+        }
+        
         selectedWorkoutIDs.removeAll()
         try? modelContext.save()
     }

@@ -141,6 +141,9 @@ struct WeekView: View {
                         Label("select_all".localized(comment: "Select all"), systemImage: "checkmark.circle.fill")
                     }
                 } else {
+                    Button(action: duplicateSelectedWeeks) {
+                        Label("duplicate".localized(comment: "Duplicate"), systemImage: "plus.square.on.square")
+                    }
                     Button(action: { isShowingMesocyclePicker = true }) {
                         Label("copy".localized(comment: "Copy"), systemImage: "doc.on.doc")
                     }
@@ -340,6 +343,33 @@ struct WeekView: View {
         try? modelContext.save()
         renumberWeeks()
         selectedWeekIDs.removeAll()
+    }
+    
+    private func duplicateSelectedWeeks() {
+        let selectedWeeks: [Week] = sortedWeeks.filter { selectedWeekIDs.contains($0.id) }
+        guard !selectedWeeks.isEmpty else { return }
+        
+        let lastWeek: Week? = sortedWeeks.last
+        let baseStartDate: Date = lastWeek != nil ?
+            Calendar.current.date(byAdding: .day, value: 7, to: lastWeek!.startDate)! :
+            mesocycle.startDate
+        
+        var lastCopiedWeekStartDate: Date = baseStartDate
+        let maxWeekNumber: Int = sortedWeeks.map { $0.number }.max() ?? 0
+        
+        for (index, week) in selectedWeeks.enumerated() {
+            let newWeekNumber: Int = maxWeekNumber + 1 + index
+            let newWeekStartDate: Date = index == 0 ?
+                lastCopiedWeekStartDate :
+                Calendar.current.date(byAdding: .day, value: 7, to: lastCopiedWeekStartDate)!
+            
+            copyWeek(week, to: mesocycle, newNumber: newWeekNumber, newStartDate: newWeekStartDate)
+            lastCopiedWeekStartDate = newWeekStartDate
+        }
+        
+        mesocycle.numberOfWeeks = sortedWeeks.count + selectedWeeks.count
+        selectedWeekIDs.removeAll()
+        try? modelContext.save()
     }
     
     private func renumberWeeks() {
