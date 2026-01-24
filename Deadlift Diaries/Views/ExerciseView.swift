@@ -83,6 +83,8 @@ struct ExerciseView: View {
             }
             .onChange(of: selectedExercise) { oldValue, newValue in
                 if let exercise = newValue {
+                    isSuperset = exercise.supersetPartnerID != nil
+                    
                     if let template = exercise.template {
                         newExerciseName = template.name
                         newExerciseSets = template.defaultSets
@@ -359,12 +361,23 @@ struct ExerciseView: View {
                         .toolbar {
                             ToolbarItem(placement: .confirmationAction) {
                                 Button("", systemImage: "checkmark") {
-                                    if let template = exercise.template, let workout = exercise.workout {
-                                        updateTemplateFromExercise(template: template, exercise: exercise, workout: workout)
-                                    }
-                                    
-                                    if let partnerTemplate = partner.template, let workout = partner.workout {
-                                        updateTemplateFromExercise(template: partnerTemplate, exercise: partner, workout: workout)
+                                    if !isSuperset {
+                                        removeFromSuperset(exercise: exercise)
+                                        
+                                        if let template = exercise.template, let workout = exercise.workout {
+                                            updateTemplateFromExercise(template: template, exercise: exercise, workout: workout)
+                                            addToHistory(template: template, exercise: exercise, workout: workout)
+                                        }
+                                    } else {
+                                        if let template = exercise.template, let workout = exercise.workout {
+                                            updateTemplateFromExercise(template: template, exercise: exercise, workout: workout)
+                                            addToHistory(template: template, exercise: exercise, workout: workout)
+                                        }
+                                        
+                                        if let partnerTemplate = partner.template, let workout = partner.workout {
+                                            updateTemplateFromExercise(template: partnerTemplate, exercise: partner, workout: workout)
+                                            addToHistory(template: partnerTemplate, exercise: partner, workout: workout)
+                                        }
                                     }
                                     
                                     try? modelContext.save()
@@ -427,6 +440,8 @@ struct ExerciseView: View {
                                         workout.exercises!.sort { $0.orderIndex < $1.orderIndex }
                                         
                                         updateTemplateFromExercise(template: template2, exercise: partner, workout: workout)
+                                    } else if !isSuperset && exercise.supersetPartnerID != nil {
+                                        removeFromSuperset(exercise: exercise)
                                     }
                                     
                                     if let template = exercise.template {
@@ -595,10 +610,8 @@ struct ExerciseView: View {
     private func exerciseEditForm(exercise1: Exercise? = nil, exercise2: Exercise? = nil) -> some View {
         Form {
             Section {
-                Toggle("superset".localized(comment: "Superset"), isOn: Binding(
-                    get: { exercise2 != nil || isSuperset },
-                    set: { newValue in
-                        isSuperset = newValue
+                Toggle("superset".localized(comment: "Superset"), isOn: $isSuperset)
+                    .onChange(of: isSuperset) { oldValue, newValue in
                         if newValue {
                             if exercise1 != nil {
                                 exercise1!.isDistanceBased = false
@@ -607,14 +620,10 @@ struct ExerciseView: View {
                             }
                         }
                         
-                        if !newValue, let exercise = exercise1, exercise.supersetPartnerID != nil {
-                            removeFromSuperset(exercise: exercise)
-                        }
                         if !newValue && (focusedField == .supersetName || focusedField == .supersetWeight) {
                             focusedField = .exerciseWeight
                         }
                     }
-                ))
                 
                 TextField("exercise_name".localized(comment: "Exercise name"), text: exercise1 == nil ? $newExerciseName : Binding(
                     get: { exercise1!.name },
@@ -873,7 +882,7 @@ struct ExerciseView: View {
                 }
             } /* Section */
             
-            if isSuperset || exercise2 != nil {
+            if isSuperset {
                 Section {
                     TextField("exercise_name".localized(comment: "Exercise name"), text: exercise2 == nil ? $newExercise2Name : Binding(
                         get: { exercise2!.name },
@@ -1304,12 +1313,16 @@ struct TemplateEditViewContent: View {
     @State private var showingDurationPicker: Bool = false
     @State private var showingTimeBeforeNextPicker: Bool = false
     
+    @State private var isKeyboardShowing: Bool = false
+    @FocusState private var focusedField: FocusableField?
+    
     var body: some View {
         Form {
             Section {
                 Toggle("superset".localized(comment: "Superset"), isOn: $isSuperset)
                 
                 TextField("exercise_name".localized(comment: "Exercise name"), text: $editedName)
+                    .focused($focusedField, equals: .exerciseName)
                 
                 Stepper("sets_x".localized(with: editedSets, comment: "Sets:"), value: $editedSets, in: 1...20)
                 
@@ -1395,6 +1408,7 @@ struct TemplateEditViewContent: View {
                             )
                         )
                         .keyboardType(.decimalPad)
+                        .focused($focusedField, equals: .exerciseWeight)
                     }
                 } else {
                     Toggle("distance_based".localized(comment: "Distance-based"), isOn: Binding(
@@ -1417,6 +1431,7 @@ struct TemplateEditViewContent: View {
                                 )
                             )
                             .keyboardType(.decimalPad)
+                            .focused($focusedField, equals: .exerciseWeight)
                         }
                     } else {
                         Stepper("reps_x".localized(with: editedReps, comment: "Reps:"), value: $editedReps, in: 1...50)
@@ -1432,6 +1447,7 @@ struct TemplateEditViewContent: View {
                             )
                         )
                         .keyboardType(.decimalPad)
+                        .focused($focusedField, equals: .exerciseWeight)
                     }
                 }
                 
@@ -1469,6 +1485,7 @@ struct TemplateEditViewContent: View {
             if isSuperset {
                 Section("Superset Partner") {
                     TextField("exercise_name".localized(comment: "Exercise name"), text: $editedPartnerName)
+                        .focused($focusedField, equals: .supersetName)
                     
                     Toggle("time_based".localized(comment: "Time-based"), isOn: $editedPartnerIsTimeBased)
                     
@@ -1485,6 +1502,7 @@ struct TemplateEditViewContent: View {
                                 )
                             )
                             .keyboardType(.decimalPad)
+                            .focused($focusedField, equals: .supersetWeight)
                         }
                     } else {
                         Stepper("reps_x".localized(with: editedPartnerReps, comment: "Reps:"), value: $editedPartnerReps, in: 1...50)
@@ -1499,11 +1517,13 @@ struct TemplateEditViewContent: View {
                                 )
                             )
                             .keyboardType(.decimalPad)
+                            .focused($focusedField, equals: .supersetWeight)
                         }
                     }
                 }
             }
         }
+        .withTextFieldToolbarDoneWithChevrons(isKeyboardShowing: $isKeyboardShowing, isSupersetToggleOn: $isSuperset, focusedField: $focusedField)
         .navigationTitle("edit_template".localized(comment: "Edit Template"))
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
@@ -1914,8 +1934,6 @@ extension ExerciseView {
                 }
             }
         }
-        
-        try? modelContext.save()
     }
     
     private func deleteTemplates(at offsets: IndexSet) {
@@ -2031,13 +2049,12 @@ struct TemplateHistoryViewContent: View {
         let sortedOldestFirst = historyEntries.sorted(by: { $0.date < $1.date })
         guard !sortedOldestFirst.isEmpty else { return [] }
         
-        var filtered: [ExerciseHistory] = [sortedOldestFirst[0]] // Always include the oldest entry
+        var filtered: [ExerciseHistory] = [sortedOldestFirst[0]]
         
         for i in 1..<sortedOldestFirst.count {
             let current = sortedOldestFirst[i]
             let previous = sortedOldestFirst[i - 1]
             
-            // Check if any value changed compared to the previous (older) entry
             let hasChanges = current.weight != previous.weight ||
                             current.reps != previous.reps ||
                             current.sets != previous.sets ||
@@ -2049,7 +2066,6 @@ struct TemplateHistoryViewContent: View {
             }
         }
         
-        // Reverse to show newest first in the UI
         return filtered.reversed()
     }
     

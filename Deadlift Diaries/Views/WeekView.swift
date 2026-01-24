@@ -286,6 +286,9 @@ struct WeekView: View {
                 newMainExercise.supersetPartnerID = newSupersetExercise.id
                 newSupersetExercise.supersetPartnerID = newMainExercise.id
                 
+                newMainExercise.template = mainExercise.template
+                newSupersetExercise.template = supersetExercise.template
+                
                 newWorkout.exercises!.append(newMainExercise)
                 newWorkout.exercises!.append(newSupersetExercise)
                 newMainExercise.workout = newWorkout
@@ -307,6 +310,7 @@ struct WeekView: View {
                     isDistanceBased: exercise.isDistanceBased,
                     distance: exercise.distance
                 )
+                newExercise.template = exercise.template
                 newWorkout.exercises!.append(newExercise)
                 newExercise.workout = newWorkout
                 modelContext.insert(newExercise)
@@ -329,6 +333,7 @@ struct WeekView: View {
             timeBeforeNext: exercise.timeBeforeNext,
             isDistanceBased: exercise.isDistanceBased
         )
+        newExercise.template = exercise.template
         newWorkout.exercises!.append(newExercise)
         newExercise.workout = newWorkout
         modelContext.insert(newExercise)
