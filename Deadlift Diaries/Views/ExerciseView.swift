@@ -15,6 +15,7 @@ struct ExerciseView: View {
     
     @State private var selectedExercise: Exercise?
     @State private var isAddingNewExercise: Bool = false
+    @State private var isShowingTemplatePicker: Bool = false
     @State private var selectedExerciseIDs: Set<UUID> = Set<Exercise.ID>()
     @State private var isShowingWorkoutPicker: Bool = false
     @State private var expandedExerciseID: UUID?
@@ -23,6 +24,16 @@ struct ExerciseView: View {
     @State private var showingDuration2Picker: Bool = false
     @State private var showingTimeBeforeNextPicker: Bool = false
     @State private var isSuperset: Bool = false
+    @State private var selectedTemplate: ExerciseTemplate?
+    @State private var templateIDForDetailView: UUID?
+    @State private var templateDetailType: TemplateDetailType?
+    @State private var showingTemplateRestPicker: Bool = false
+    @State private var showingTemplateDurationPicker: Bool = false
+    @State private var showingTemplateTimeBeforeNextPicker: Bool = false
+    
+    enum TemplateDetailType {
+        case history, edit
+    }
     
     @State private var newExerciseName: String = ""
     @State private var newExerciseSets: Int = 5
@@ -57,6 +68,8 @@ struct ExerciseView: View {
         workout.exercises!.sorted { $0.orderIndex < $1.orderIndex }
     }
     
+    @Query private var allTemplates: [ExerciseTemplate]
+    
     var body: some View {
         exerciseRow()
             .listStyle(.plain)
@@ -67,6 +80,36 @@ struct ExerciseView: View {
             }
             .sheet(item: $selectedExercise) { exercise in
                 exerciseEditSheet(exercise: exercise)
+            }
+            .onChange(of: selectedExercise) { oldValue, newValue in
+                if let exercise = newValue {
+                    if let template = exercise.template {
+                        newExerciseName = template.name
+                        newExerciseSets = template.defaultSets
+                        newExerciseRestTime = template.defaultRestTime
+                        newExerciseIsTimeBased = template.isTimeBased
+                        newExerciseReps = template.defaultReps ?? 8
+                        newExerciseDuration = template.defaultDuration ?? 30
+                        newExerciseWeight = template.defaultWeight ?? 50.0
+                        newExerciseTimeBeforeNext = template.timeBeforeNext
+                        newExerciseIsDistanceBased = template.isDistanceBased
+                        newExerciseDistance = template.defaultDistance ?? 200
+                    } else {
+                        newExerciseName = exercise.name
+                        newExerciseSets = exercise.sets
+                        newExerciseRestTime = exercise.restTime
+                        newExerciseIsTimeBased = exercise.isTimeBased
+                        newExerciseReps = exercise.reps ?? 8
+                        newExerciseDuration = exercise.duration ?? 30
+                        newExerciseWeight = exercise.weight ?? 50.0
+                        newExerciseTimeBeforeNext = exercise.timeBeforeNext
+                        newExerciseIsDistanceBased = exercise.isDistanceBased ?? false
+                        newExerciseDistance = exercise.distance ?? 200
+                    }
+                }
+            }
+            .sheet(isPresented: $isShowingTemplatePicker) {
+                exerciseTemplatePickerSheet()
             }
             .sheet(isPresented: $isAddingNewExercise) {
                 exerciseEditSheet(exercise: nil)
@@ -89,24 +132,7 @@ struct ExerciseView: View {
             .safeAreaInset(edge: .bottom, alignment: .trailing) {
                 if #available(iOS 26.0, *) {
                     Button(action: {
-                        isAddingNewExercise = true
-                        newExerciseName = ""
-                        newExerciseSets = 5
-                        newExerciseRestTime = 60
-                        newExerciseIsTimeBased = false
-                        newExerciseReps = 8
-                        newExerciseDuration = 30
-                        newExerciseWeight = 50.0
-                        newExerciseTimeBeforeNext = 120.0
-                        newExerciseIsDistanceBased = false
-                        newExerciseDistance = 200
-                        
-                        isSuperset = false
-                        newExercise2Name = ""
-                        newExercise2IsTimeBased = false
-                        newExercise2Reps = 8
-                        newExercise2Duration = 30
-                        newExercise2Weight = 50.0
+                        isShowingTemplatePicker = true
                     }) {
                         Image(systemName: "plus")
                             .font(.system(size: 22))
@@ -117,24 +143,7 @@ struct ExerciseView: View {
                     .buttonStyle(.glassProminent)
                 } else {
                     Button(action: {
-                        isAddingNewExercise = true
-                        newExerciseName = ""
-                        newExerciseSets = 5
-                        newExerciseRestTime = 60
-                        newExerciseIsTimeBased = false
-                        newExerciseReps = 8
-                        newExerciseDuration = 30
-                        newExerciseWeight = 50.0
-                        newExerciseTimeBeforeNext = 120.0
-                        newExerciseIsDistanceBased = false
-                        newExerciseDistance = 200
-                        
-                        isSuperset = false
-                        newExercise2Name = ""
-                        newExercise2IsTimeBased = false
-                        newExercise2Reps = 8
-                        newExercise2Duration = 30
-                        newExercise2Weight = 50.0
+                        isShowingTemplatePicker = true
                     }) {
                         Image(systemName: "plus")
                             .font(.system(size: 22))
@@ -167,16 +176,16 @@ struct ExerciseView: View {
                 if let partner = partner(for: exercise), partner.isTheSuperset ?? false {
                     displayExercise(for: exercise)
                         .tag(exercise.id)
-                        .opacity(((exercise.isTimeBased ? exercise.sets * 2 : exercise.sets) == exercise.currentSet - 1) ? 0.5 : 1)
+                        .opacity(((exercise.effectiveIsTimeBased ? exercise.effectiveSets * 2 : exercise.effectiveSets) == exercise.currentSet - 1) ? 0.5 : 1)
                         .listRowSeparator(.hidden)
                     displayExercise(for: partner, isSuperset: true)
                         .tag(partner.id)
-                        .opacity(((exercise.isTimeBased ? exercise.sets * 2 : exercise.sets) == exercise.currentSet - 1) ? 0.5 : 1)
+                        .opacity(((exercise.effectiveIsTimeBased ? exercise.effectiveSets * 2 : exercise.effectiveSets) == exercise.currentSet - 1) ? 0.5 : 1)
                         .listRowSeparator(.hidden)
                 } else if exercise.supersetPartnerID == nil {
                     displayExercise(for: exercise)
                         .tag(exercise.id)
-                        .opacity(((exercise.isTimeBased ? exercise.sets * 2 : exercise.sets) == exercise.currentSet - 1) ? 0.5 : 1)
+                        .opacity(((exercise.effectiveIsTimeBased ? exercise.effectiveSets * 2 : exercise.effectiveSets) == exercise.currentSet - 1) ? 0.5 : 1)
                         .listRowSeparator(.hidden)
                 }
             }
@@ -211,13 +220,13 @@ struct ExerciseView: View {
                     
                     if expandedExerciseID == exercise.id {
                         ProgressBarView(
-                            totalSets: exercise.sets,
+                            totalSets: exercise.effectiveSets,
                             currentSet: Binding(
                                 get: { exercise.currentSet },
                                 set: { exercise.currentSet = $0 }
                             ),
-                            restDuration: exercise.restTime,
-                            timeBeforeNextExercise: exercise.timeBeforeNext,
+                            restDuration: exercise.effectiveRestTime,
+                            timeBeforeNextExercise: exercise.effectiveTimeBeforeNext,
                             isTimerRunning: Binding(
                                 get: { isTimerRunning[exercise.id] ?? false },
                                 set: { isTimerRunning[exercise.id] = $0 }
@@ -226,8 +235,8 @@ struct ExerciseView: View {
                                 get: { exercise.elapsed },
                                 set: { exercise.elapsed = $0 }
                             ),
-                            isTimeBased: exercise.isTimeBased,
-                            duration: exercise.duration ?? 30.0,
+                            isTimeBased: exercise.effectiveIsTimeBased,
+                            duration: exercise.effectiveDuration ?? 30.0,
                             isCalledFromTimer: false
                         )
                         .transition(.opacity)
@@ -252,13 +261,13 @@ struct ExerciseView: View {
                     
                     if expandedExerciseID == exercise.id {
                         ProgressBarView(
-                            totalSets: exercise.sets,
+                            totalSets: exercise.effectiveSets,
                             currentSet: Binding(
                                 get: { exercise.currentSet },
                                 set: { exercise.currentSet = $0 }
                             ),
-                            restDuration: exercise.restTime,
-                            timeBeforeNextExercise: exercise.timeBeforeNext,
+                            restDuration: exercise.effectiveRestTime,
+                            timeBeforeNextExercise: exercise.effectiveTimeBeforeNext,
                             isTimerRunning: Binding(
                                 get: { isTimerRunning[exercise.id] ?? false },
                                 set: { isTimerRunning[exercise.id] = $0 }
@@ -267,8 +276,8 @@ struct ExerciseView: View {
                                 get: { exercise.elapsed },
                                 set: { exercise.elapsed = $0 }
                             ),
-                            isTimeBased: exercise.isTimeBased,
-                            duration: exercise.duration ?? 30.0,
+                            isTimeBased: exercise.effectiveIsTimeBased,
+                            duration: exercise.effectiveDuration ?? 30.0,
                             isCalledFromTimer: false
                         )
                         .transition(.opacity)
@@ -290,16 +299,16 @@ struct ExerciseView: View {
         let alignment: HorizontalAlignment = isSuperset == true ? .trailing : .leading
         HStack {
             VStack(alignment: alignment) {
-                Text(exercise.name)
+                Text(exercise.effectiveName)
                     .font(.headline)
                 
-                if exercise.isTimeBased {
-                    Text("duration_x_sec".localized(with: Int(exercise.duration ?? 0), comment: "Duration: x sec"))
+                if exercise.effectiveIsTimeBased {
+                    Text("duration_x_sec".localized(with: Int(exercise.effectiveDuration ?? 0), comment: "Duration: x sec"))
                         .font(.subheadline)
                         .foregroundColor(Color(UIColor.secondaryLabel))
                 } else {
-                    if let isDistanceBased = exercise.isDistanceBased, isDistanceBased {
-                        if let distance = exercise.distance, distance != 0 {
+                    if exercise.effectiveIsDistanceBased {
+                        if let distance = exercise.effectiveDistance, distance != 0 {
                             Text("distance_x".localized(with: distance, distanceUnit.symbol, comment: "Distance: x m"))
                                 .font(.subheadline)
                                 .foregroundColor(Color(UIColor.secondaryLabel))
@@ -307,26 +316,26 @@ struct ExerciseView: View {
                     }
                 }
                 
-                if let weight = exercise.weight, weight != 0, let isDistanceBased = exercise.isDistanceBased, !isDistanceBased {
+                if let weight = exercise.effectiveWeight, weight != 0, !exercise.effectiveIsDistanceBased {
                     Text("weight_x".localized(with: weight, weightUnit.symbol, comment: "Weight: x kg"))
                         .font(.subheadline)
                         .foregroundColor(Color(UIColor.secondaryLabel))
                 }
                 
                 if !isSuperset! {
-                    Text("sets_x".localized(with: exercise.sets, comment: "Sets: x"))
+                    Text("sets_x".localized(with: exercise.effectiveSets, comment: "Sets: x"))
                         .font(.subheadline)
                         .foregroundColor(Color(UIColor.secondaryLabel))
                 }
                 
-                if !exercise.isTimeBased, let isDistanceBased = exercise.isDistanceBased, !isDistanceBased {
-                    Text("reps_x".localized(with: exercise.reps ?? 0, comment: "Reps: x"))
+                if !exercise.effectiveIsTimeBased, !exercise.effectiveIsDistanceBased {
+                    Text("reps_x".localized(with: exercise.effectiveReps ?? 0, comment: "Reps: x"))
                         .font(.subheadline)
                         .foregroundColor(Color(UIColor.secondaryLabel))
                 }
                 
-                if !isSuperset! && exercise.sets > 1 {
-                    Text("rest_x_sec".localized(with: Int(exercise.restTime), comment: "Rest: x sec"))
+                if !isSuperset! && exercise.effectiveSets > 1 {
+                    Text("rest_x_sec".localized(with: Int(exercise.effectiveRestTime), comment: "Rest: x sec"))
                         .font(.subheadline)
                         .foregroundColor(Color(UIColor.secondaryLabel))
                 } else {
@@ -350,6 +359,14 @@ struct ExerciseView: View {
                         .toolbar {
                             ToolbarItem(placement: .confirmationAction) {
                                 Button("", systemImage: "checkmark") {
+                                    if let template = exercise.template, let workout = exercise.workout {
+                                        updateTemplateFromExercise(template: template, exercise: exercise, workout: workout)
+                                    }
+                                    
+                                    if let partnerTemplate = partner.template, let workout = partner.workout {
+                                        updateTemplateFromExercise(template: partnerTemplate, exercise: partner, workout: workout)
+                                    }
+                                    
                                     try? modelContext.save()
                                     selectedExercise = nil
                                     focusedField = nil
@@ -369,6 +386,26 @@ struct ExerciseView: View {
                             ToolbarItem(placement: .confirmationAction) {
                                 Button("", systemImage: "checkmark") {
                                     if isSuperset {
+                                        let template2 = findOrCreateTemplate(
+                                            name: newExercise2Name,
+                                            weight: newExercise2IsTimeBased ? nil : newExercise2Weight,
+                                            sets: 0,
+                                            reps: newExercise2IsTimeBased ? nil : newExercise2Reps,
+                                            duration: newExercise2IsTimeBased ? newExercise2Duration : nil,
+                                            restTime: 0.0,
+                                            isTimeBased: newExercise2IsTimeBased,
+                                            isDistanceBased: false,
+                                            distance: nil,
+                                            timeBeforeNext: 0.0,
+                                            isSupersetTemplate: true
+                                        )
+                                        
+                                        if let template1 = exercise.template {
+                                            template1.supersetPartnerTemplateID = template2.id
+                                            template2.supersetPartnerTemplateID = template1.id
+                                            template2.isTheSupersetTemplate = true
+                                        }
+                                        
                                         let partner = Exercise(
                                             name: newExercise2Name,
                                             weight: newExercise2IsTimeBased ? nil : newExercise2Weight,
@@ -382,12 +419,21 @@ struct ExerciseView: View {
                                             isTheSuperset: true
                                         )
                                         partner.supersetPartnerID = exercise.id
+                                        partner.template = template2
                                         exercise.supersetPartnerID = partner.id
                                         workout.exercises!.append(partner)
                                         partner.workout = workout
                                         modelContext.insert(partner)
                                         workout.exercises!.sort { $0.orderIndex < $1.orderIndex }
+                                        
+                                        updateTemplateFromExercise(template: template2, exercise: partner, workout: workout)
                                     }
+                                    
+                                    if let template = exercise.template {
+                                        updateTemplateFromExercise(template: template, exercise: exercise, workout: workout)
+                                        addToHistory(template: template, exercise: exercise, workout: workout)
+                                    }
+                                    
                                     try? modelContext.save()
                                     selectedExercise = nil
                                     focusedField = nil
@@ -409,6 +455,46 @@ struct ExerciseView: View {
                             Button("", systemImage: "checkmark") {
                                 let orderIndex: Int = (workout.exercises!.map { $0.orderIndex }.max() ?? 0) + 1
                                 if isSuperset {
+                                    let template1: ExerciseTemplate
+                                    let template2: ExerciseTemplate
+                                    
+                                    if let selectedTemplate = selectedTemplate,
+                                       let partnerTemplateID = selectedTemplate.supersetPartnerTemplateID,
+                                       let partnerTemplate = allTemplates.first(where: { $0.id == partnerTemplateID }) {
+                                        template1 = selectedTemplate
+                                        template2 = partnerTemplate
+                                    } else {
+                                        template1 = findOrCreateTemplate(
+                                            name: newExerciseName,
+                                            weight: newExerciseIsTimeBased ? nil : newExerciseWeight,
+                                            sets: newExerciseSets,
+                                            reps: newExerciseIsTimeBased ? nil : newExerciseReps,
+                                            duration: newExerciseIsTimeBased ? newExerciseDuration : nil,
+                                            restTime: newExerciseRestTime,
+                                            isTimeBased: newExerciseIsTimeBased,
+                                            isDistanceBased: false,
+                                            distance: nil,
+                                            timeBeforeNext: newExerciseTimeBeforeNext
+                                        )
+                                        template2 = findOrCreateTemplate(
+                                            name: newExercise2Name,
+                                            weight: newExercise2IsTimeBased ? nil : newExercise2Weight,
+                                            sets: 0,
+                                            reps: newExercise2IsTimeBased ? nil : newExercise2Reps,
+                                            duration: newExercise2IsTimeBased ? newExercise2Duration : nil,
+                                            restTime: 0.0,
+                                            isTimeBased: newExercise2IsTimeBased,
+                                            isDistanceBased: false,
+                                            distance: nil,
+                                            timeBeforeNext: 0.0,
+                                            isSupersetTemplate: true
+                                        )
+                                        
+                                        template1.supersetPartnerTemplateID = template2.id
+                                        template2.supersetPartnerTemplateID = template1.id
+                                        template2.isTheSupersetTemplate = true
+                                    }
+                                    
                                     let exercise1 = Exercise(
                                         name: newExerciseName,
                                         weight: newExerciseIsTimeBased ? nil : newExerciseWeight,
@@ -434,13 +520,36 @@ struct ExerciseView: View {
                                     )
                                     exercise1.supersetPartnerID = exercise2.id
                                     exercise2.supersetPartnerID = exercise1.id
+                                    exercise1.template = template1
+                                    exercise2.template = template2
                                     workout.exercises!.append(exercise1)
                                     workout.exercises!.append(exercise2)
                                     exercise1.workout = workout
                                     exercise2.workout = workout
                                     modelContext.insert(exercise1)
                                     modelContext.insert(exercise2)
+                                    
+                                    updateTemplateFromExercise(template: template1, exercise: exercise1, workout: workout)
+                                    updateTemplateFromExercise(template: template2, exercise: exercise2, workout: workout)
                                 } else {
+                                    let template: ExerciseTemplate
+                                    if let selectedTemplate = selectedTemplate {
+                                        template = selectedTemplate
+                                    } else {
+                                        template = findOrCreateTemplate(
+                                            name: newExerciseName,
+                                            weight: newExerciseIsTimeBased ? nil : newExerciseWeight,
+                                            sets: newExerciseSets,
+                                            reps: newExerciseIsTimeBased ? nil : newExerciseReps,
+                                            duration: newExerciseIsTimeBased ? newExerciseDuration : nil,
+                                            restTime: newExerciseRestTime,
+                                            isTimeBased: newExerciseIsTimeBased,
+                                            isDistanceBased: newExerciseIsDistanceBased,
+                                            distance: newExerciseDistance,
+                                            timeBeforeNext: newExerciseTimeBeforeNext
+                                        )
+                                    }
+                                    
                                     let exercise = Exercise(
                                         name: newExerciseName,
                                         weight: newExerciseIsTimeBased ? nil : newExerciseWeight,
@@ -454,9 +563,15 @@ struct ExerciseView: View {
                                         isDistanceBased: newExerciseIsDistanceBased,
                                         distance: newExerciseDistance
                                     )
+                                    exercise.template = template
                                     workout.exercises!.append(exercise)
                                     exercise.workout = workout
                                     modelContext.insert(exercise)
+                                    
+                                    updateTemplateFromExercise(template: template, exercise: exercise, workout: workout)
+                                    addToHistory(template: template, exercise: exercise, workout: workout)
+                                    
+                                    selectedTemplate = nil
                                 }
                                 try? modelContext.save()
                                 selectedExercise = nil
@@ -882,6 +997,204 @@ struct ExerciseView: View {
     }
     
     @ViewBuilder
+    private func exerciseTemplatePickerSheet() -> some View {
+        NavigationStack {
+            List {
+                Section {
+                    Button(action: {
+                        selectedTemplate = nil
+                        isShowingTemplatePicker = false
+                        isAddingNewExercise = true
+                        newExerciseName = ""
+                        newExerciseSets = 5
+                        newExerciseRestTime = 60
+                        newExerciseIsTimeBased = false
+                        newExerciseReps = 8
+                        newExerciseDuration = 30
+                        newExerciseWeight = 50.0
+                        newExerciseTimeBeforeNext = 120.0
+                        newExerciseIsDistanceBased = false
+                        newExerciseDistance = 200
+                        isSuperset = false
+                        newExercise2Name = ""
+                        newExercise2IsTimeBased = false
+                        newExercise2Reps = 8
+                        newExercise2Duration = 30
+                        newExercise2Weight = 50.0
+                    }) {
+                        HStack {
+                            Image(systemName: "plus.circle.fill")
+                                .foregroundColor(.blue)
+                            Text("new_exercise".localized(comment: "New Exercise"))
+                                .font(.headline)
+                        }
+                    }
+                }
+                
+                if !allTemplates.isEmpty {
+                    Section("existing_exercises".localized(comment: "Existing Exercises")) {
+                        ForEach(allTemplates.filter { !$0.isTheSupersetTemplate }.sorted(by: { $0.name < $1.name })) { template in
+                            let partnerTemplate = template.supersetPartnerTemplateID != nil ? allTemplates.first(where: { $0.id == template.supersetPartnerTemplateID }) : nil
+                            
+                            VStack(spacing: 0) {
+                                HStack(spacing: 12) {
+                                    Button(action: {
+                                        selectedTemplate = template
+                                        isShowingTemplatePicker = false
+                                        isAddingNewExercise = true
+                                        newExerciseName = template.name
+                                        newExerciseSets = template.defaultSets
+                                        newExerciseRestTime = template.defaultRestTime
+                                        newExerciseIsTimeBased = template.isTimeBased
+                                        newExerciseReps = template.defaultReps ?? 8
+                                        newExerciseDuration = template.defaultDuration ?? 30
+                                        newExerciseWeight = template.defaultWeight ?? 50.0
+                                        newExerciseTimeBeforeNext = template.timeBeforeNext
+                                        newExerciseIsDistanceBased = template.isDistanceBased
+                                        newExerciseDistance = template.defaultDistance ?? 200
+                                        
+                                        if let partner = partnerTemplate {
+                                            isSuperset = true
+                                            newExercise2Name = partner.name
+                                            newExercise2IsTimeBased = partner.isTimeBased
+                                            newExercise2Reps = partner.defaultReps ?? 8
+                                            newExercise2Duration = partner.defaultDuration ?? 30
+                                            newExercise2Weight = partner.defaultWeight ?? 50.0
+                                        } else {
+                                            isSuperset = false
+                                            newExercise2Name = ""
+                                            newExercise2IsTimeBased = false
+                                            newExercise2Reps = 8
+                                            newExercise2Duration = 30
+                                            newExercise2Weight = 50.0
+                                        }
+                                    }) {
+                                        VStack(alignment: .leading, spacing: 4) {
+                                            HStack {
+                                                Text(template.name)
+                                                    .font(.headline)
+                                                    .foregroundColor(.primary)
+                                                if partnerTemplate != nil {
+                                                    Text("(Superset)")
+                                                        .font(.caption)
+                                                        .foregroundColor(.orange)
+                                                }
+                                            }
+                                            HStack {
+                                                if template.isTimeBased {
+                                                    Text("duration_x_sec".localized(with: Int(template.defaultDuration ?? 0), comment: "Duration: x sec"))
+                                                        .font(.caption)
+                                                        .foregroundColor(.secondary)
+                                                } else {
+                                                    if let reps = template.defaultReps {
+                                                        Text("reps_x".localized(with: reps, comment: "Reps: x"))
+                                                            .font(.caption)
+                                                            .foregroundColor(.secondary)
+                                                    }
+                                                }
+                                                if let weight = template.defaultWeight {
+                                                    Text("weight_x".localized(with: weight, weightUnit.symbol, comment: "Weight: x kg"))
+                                                        .font(.caption)
+                                                        .foregroundColor(.secondary)
+                                                }
+                                                Text("sets_x".localized(with: template.defaultSets, comment: "Sets: x"))
+                                                    .font(.caption)
+                                                    .foregroundColor(.secondary)
+                                            }
+                                            
+                                            if let partner = partnerTemplate {
+                                                Divider().padding(.vertical, 4)
+                                                Text(partner.name)
+                                                    .font(.subheadline)
+                                                    .foregroundColor(.primary)
+                                                HStack {
+                                                    if partner.isTimeBased {
+                                                        Text("duration_x_sec".localized(with: Int(partner.defaultDuration ?? 0), comment: "Duration: x sec"))
+                                                            .font(.caption)
+                                                            .foregroundColor(.secondary)
+                                                    } else {
+                                                        if let reps = partner.defaultReps {
+                                                            Text("reps_x".localized(with: reps, comment: "Reps: x"))
+                                                                .font(.caption)
+                                                                .foregroundColor(.secondary)
+                                                        }
+                                                    }
+                                                    if let weight = partner.defaultWeight {
+                                                        Text("weight_x".localized(with: weight, weightUnit.symbol, comment: "Weight: x kg"))
+                                                            .font(.caption)
+                                                            .foregroundColor(.secondary)
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                    .buttonStyle(.plain)
+                                    
+                                    Spacer()
+                                    
+                                    HStack(spacing: 16) {
+                                        Button(action: {
+                                            templateIDForDetailView = template.id
+                                            templateDetailType = .history
+                                        }) {
+                                            Image(systemName: "chart.line.uptrend.xyaxis")
+                                                .foregroundColor(.blue)
+                                                .frame(width: 30, height: 30)
+                                        }
+                                        .buttonStyle(.borderless)
+                                        
+                                        Button(action: {
+                                            templateIDForDetailView = template.id
+                                            templateDetailType = .edit
+                                        }) {
+                                            Image(systemName: "pencil")
+                                                .foregroundColor(.orange)
+                                                .frame(width: 30, height: 30)
+                                        }
+                                        .buttonStyle(.borderless)
+                                    }
+                                }
+                            }
+                        }
+                        .onDelete(perform: deleteTemplates)
+                    }
+                }
+            }
+            .navigationTitle("add_exercise".localized(comment: "Add Exercise"))
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("", systemImage: "xmark") {
+                        isShowingTemplatePicker = false
+                    }
+                }
+            }
+            .sheet(isPresented: Binding(
+                get: { templateIDForDetailView != nil },
+                set: { if !$0 { templateIDForDetailView = nil; templateDetailType = nil } }
+            )) {
+                if let templateID = templateIDForDetailView,
+                   let template = allTemplates.first(where: { $0.id == templateID }) {
+                    NavigationStack {
+                        if templateDetailType == .history {
+                            templateHistoryView(template: template)
+                                .toolbar {
+                                    ToolbarItem(placement: .cancellationAction) {
+                                        Button("", systemImage: "xmark") {
+                                            templateIDForDetailView = nil
+                                            templateDetailType = nil
+                                        }
+                                    }
+                                }
+                        } else if templateDetailType == .edit {
+                            templateEditView(template: template)
+                        }
+                    }
+                }
+            }
+        }
+    }
+    
+    @ViewBuilder
     private func workoutPickerSheet() -> some View {
         NavigationStack {
             let allWorkouts: [Workout] = workout.week?.mesocycle?.weeks!.flatMap { $0.workouts! } ?? []
@@ -924,9 +1237,378 @@ struct ExerciseView: View {
         }
     }
     
-    // MARK: - Helper Functions
+    @ViewBuilder
+    private func templateHistoryView(template: ExerciseTemplate) -> some View {
+        TemplateHistoryViewContent(template: template, weightUnit: weightUnit, distanceUnit: distanceUnit)
+    }
     
-    private func copyExercises(to targetWorkout: Workout) {
+    @ViewBuilder
+    private func templateEditView(template: ExerciseTemplate) -> some View {
+        TemplateEditViewContent(
+            template: template,
+            allTemplates: allTemplates,
+            weightUnit: weightUnit,
+            distanceUnit: distanceUnit,
+            modelContext: modelContext,
+            onSave: { updatedTemplate in
+                updateAllExercisesFromTemplate(template: updatedTemplate)
+                
+                if let partnerID = updatedTemplate.supersetPartnerTemplateID,
+                   let partnerTemplate = allTemplates.first(where: { $0.id == partnerID }) {
+                    updateAllExercisesFromTemplate(template: partnerTemplate)
+                }
+                
+                try? modelContext.save()
+                templateIDForDetailView = nil
+                templateDetailType = nil
+            },
+            onCancel: {
+                templateIDForDetailView = nil
+                templateDetailType = nil
+            }
+        )
+    }
+    
+    // MARK: - Helper Functions (placeholder - actual functions are below)
+}
+
+struct TemplateEditViewContent: View {
+    let template: ExerciseTemplate
+    let allTemplates: [ExerciseTemplate]
+    let weightUnit: Unit
+    let distanceUnit: Unit
+    let modelContext: ModelContext
+    let onSave: (ExerciseTemplate) -> Void
+    let onCancel: () -> Void
+    
+    @State private var editedName: String = ""
+    @State private var editedSets: Int = 5
+    @State private var editedRestTime: Double = 60.0
+    @State private var editedIsTimeBased: Bool = false
+    @State private var editedReps: Int = 8
+    @State private var editedDuration: Double = 30.0
+    @State private var editedWeight: Double = 50.0
+    @State private var editedTimeBeforeNext: Double = 120.0
+    @State private var editedIsDistanceBased: Bool = false
+    @State private var editedDistance: Int = 200
+    
+    @State private var isSuperset: Bool = false
+    @State private var partnerTemplate: ExerciseTemplate?
+    @State private var editedPartnerName: String = ""
+    @State private var editedPartnerIsTimeBased: Bool = false
+    @State private var editedPartnerReps: Int = 8
+    @State private var editedPartnerDuration: Double = 30.0
+    @State private var editedPartnerWeight: Double = 50.0
+    
+    @State private var showingRestPicker: Bool = false
+    @State private var showingDurationPicker: Bool = false
+    @State private var showingTimeBeforeNextPicker: Bool = false
+    
+    var body: some View {
+        Form {
+            Section {
+                Toggle("superset".localized(comment: "Superset"), isOn: $isSuperset)
+                
+                TextField("exercise_name".localized(comment: "Exercise name"), text: $editedName)
+                
+                Stepper("sets_x".localized(with: editedSets, comment: "Sets:"), value: $editedSets, in: 1...20)
+                
+                Button(action: {
+                    withAnimation {
+                        showingRestPicker.toggle()
+                        showingDurationPicker = false
+                        showingTimeBeforeNextPicker = false
+                    }
+                }) {
+                    HStack {
+                        HStack(spacing: 4) {
+                            Text("rest_duration".localized(comment: "Rest duration"))
+                            Text("  \(Int(editedRestTime))s ")
+                                .font(.subheadline)
+                                .foregroundColor(Color(UIColor.secondaryLabel))
+                            Image(systemName: showingRestPicker ? "chevron.up" : "chevron.down")
+                                .font(.caption)
+                        }
+                        .fixedSize()
+                        Spacer()
+                    }
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                
+                if showingRestPicker {
+                    Picker("rest_duration".localized(comment: "Rest duration"), selection: $editedRestTime) {
+                        ForEach(Array(stride(from: 5.0, through: 300.0, by: 5.0)), id: \.self) { duration in
+                            Text("\(Int(duration)) seconds".localized(comment: "(xxx) seconds")).tag(duration)
+                        }
+                    }
+                    .pickerStyle(.wheel)
+                }
+                
+                Toggle("time_based".localized(comment: "Time-based"), isOn: Binding(
+                    get: { editedIsTimeBased },
+                    set: { newValue in
+                        withAnimation {
+                            editedIsTimeBased = newValue
+                        }
+                    }
+                ))
+                
+                if editedIsTimeBased {
+                    Button(action: {
+                        withAnimation {
+                            showingDurationPicker.toggle()
+                            showingRestPicker = false
+                            showingTimeBeforeNextPicker = false
+                        }
+                    }) {
+                        HStack {
+                            Text("exercise_duration".localized(comment: "Exercise duration"))
+                            Text(" \(Int(editedDuration))s")
+                                .font(.subheadline)
+                                .foregroundColor(Color(UIColor.secondaryLabel))
+                            Image(systemName: showingDurationPicker ? "chevron.up" : "chevron.down")
+                                .font(.caption)
+                            Spacer()
+                        }
+                        .fixedSize()
+                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    
+                    if showingDurationPicker {
+                        Picker("exercise_duration".localized(comment: "Exercise duration"), selection: $editedDuration) {
+                            ForEach(Array(stride(from: 5.0, through: 600.0, by: 5.0)), id: \.self) { duration in
+                                Text("\(Int(duration)) seconds".localized(comment: "(xxx) seconds")).tag(duration)
+                            }
+                        }
+                        .pickerStyle(.wheel)
+                    }
+                    
+                    HStack {
+                        Text("weight".localized(comment: "Weight:"))
+                        TextFieldWithUnitDouble(
+                            value: $editedWeight,
+                            unit: Binding(
+                                get: { weightUnit },
+                                set: { _ in }
+                            )
+                        )
+                        .keyboardType(.decimalPad)
+                    }
+                } else {
+                    Toggle("distance_based".localized(comment: "Distance-based"), isOn: Binding(
+                        get: { editedIsDistanceBased },
+                        set: { newValue in
+                            withAnimation {
+                                editedIsDistanceBased = newValue
+                            }
+                        }
+                    ))
+                    
+                    if editedIsDistanceBased {
+                        HStack {
+                            Text("distance".localized(comment: "Distance:"))
+                            TextFieldWithUnitInt(
+                                value: $editedDistance,
+                                unit: Binding(
+                                    get: { distanceUnit },
+                                    set: { _ in }
+                                )
+                            )
+                            .keyboardType(.decimalPad)
+                        }
+                    } else {
+                        Stepper("reps_x".localized(with: editedReps, comment: "Reps:"), value: $editedReps, in: 1...50)
+                    }
+                    
+                    HStack {
+                        Text("weight".localized(comment: "Weight:"))
+                        TextFieldWithUnitDouble(
+                            value: $editedWeight,
+                            unit: Binding(
+                                get: { weightUnit },
+                                set: { _ in }
+                            )
+                        )
+                        .keyboardType(.decimalPad)
+                    }
+                }
+                
+                Button(action: {
+                    withAnimation {
+                        showingTimeBeforeNextPicker.toggle()
+                        showingRestPicker = false
+                        showingDurationPicker = false
+                    }
+                }) {
+                    HStack {
+                        Text("time_before_next".localized(comment: "Time before next exercise"))
+                        Text(" \(Int(editedTimeBeforeNext))s")
+                            .font(.subheadline)
+                            .foregroundColor(Color(UIColor.secondaryLabel))
+                        Image(systemName: showingTimeBeforeNextPicker ? "chevron.up" : "chevron.down")
+                            .font(.caption)
+                        Spacer()
+                    }
+                    .fixedSize()
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                
+                if showingTimeBeforeNextPicker {
+                    Picker("time_before_next".localized(comment: "Time before next exercise"), selection: $editedTimeBeforeNext) {
+                        ForEach(Array(stride(from: 5.0, through: 300.0, by: 5.0)), id: \.self) { duration in
+                            Text("\(Int(duration)) seconds".localized(comment: "(xxx) seconds")).tag(duration)
+                        }
+                    }
+                    .pickerStyle(.wheel)
+                }
+            }
+            
+            if isSuperset {
+                Section("Superset Partner") {
+                    TextField("exercise_name".localized(comment: "Exercise name"), text: $editedPartnerName)
+                    
+                    Toggle("time_based".localized(comment: "Time-based"), isOn: $editedPartnerIsTimeBased)
+                    
+                    if editedPartnerIsTimeBased {
+                        Stepper("duration_x_sec".localized(with: Int(editedPartnerDuration), comment: "Duration: x sec"), value: $editedPartnerDuration, in: 5...600, step: 5)
+                        
+                        HStack {
+                            Text("weight".localized(comment: "Weight:"))
+                            TextFieldWithUnitDouble(
+                                value: $editedPartnerWeight,
+                                unit: Binding(
+                                    get: { weightUnit },
+                                    set: { _ in }
+                                )
+                            )
+                            .keyboardType(.decimalPad)
+                        }
+                    } else {
+                        Stepper("reps_x".localized(with: editedPartnerReps, comment: "Reps:"), value: $editedPartnerReps, in: 1...50)
+                        
+                        HStack {
+                            Text("weight".localized(comment: "Weight:"))
+                            TextFieldWithUnitDouble(
+                                value: $editedPartnerWeight,
+                                unit: Binding(
+                                    get: { weightUnit },
+                                    set: { _ in }
+                                )
+                            )
+                            .keyboardType(.decimalPad)
+                        }
+                    }
+                }
+            }
+        }
+        .navigationTitle("edit_template".localized(comment: "Edit Template"))
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .confirmationAction) {
+                Button("", systemImage: "checkmark") {
+                    saveChanges()
+                }
+            }
+            ToolbarItem(placement: .cancellationAction) {
+                Button("", systemImage: "xmark") {
+                    onCancel()
+                }
+            }
+        }
+        .onAppear {
+            editedName = template.name
+            editedSets = template.defaultSets
+            editedRestTime = template.defaultRestTime
+            editedIsTimeBased = template.isTimeBased
+            editedReps = template.defaultReps ?? 8
+            editedDuration = template.defaultDuration ?? 30.0
+            editedWeight = template.defaultWeight ?? 50.0
+            editedTimeBeforeNext = template.timeBeforeNext
+            editedIsDistanceBased = template.isDistanceBased
+            editedDistance = template.defaultDistance ?? 200
+            
+            if let partnerID = template.supersetPartnerTemplateID,
+               let partner = allTemplates.first(where: { $0.id == partnerID }) {
+                isSuperset = true
+                partnerTemplate = partner
+                editedPartnerName = partner.name
+                editedPartnerIsTimeBased = partner.isTimeBased
+                editedPartnerReps = partner.defaultReps ?? 8
+                editedPartnerDuration = partner.defaultDuration ?? 30.0
+                editedPartnerWeight = partner.defaultWeight ?? 50.0
+            }
+        }
+    }
+    
+    private func saveChanges() {
+        template.name = editedName
+        template.defaultSets = editedSets
+        template.defaultRestTime = editedRestTime
+        template.isTimeBased = editedIsTimeBased
+        template.defaultReps = editedIsTimeBased ? nil : editedReps
+        template.defaultDuration = editedIsTimeBased ? editedDuration : nil
+        template.defaultWeight = editedWeight
+        template.timeBeforeNext = editedTimeBeforeNext
+        template.isDistanceBased = editedIsDistanceBased
+        template.defaultDistance = editedIsDistanceBased ? editedDistance : nil
+        
+        if isSuperset {
+            if let partner = partnerTemplate {
+                partner.name = editedPartnerName
+                partner.isTimeBased = editedPartnerIsTimeBased
+                partner.defaultReps = editedPartnerIsTimeBased ? nil : editedPartnerReps
+                partner.defaultDuration = editedPartnerIsTimeBased ? editedPartnerDuration : nil
+                partner.defaultWeight = editedPartnerWeight
+            } else {
+                let newPartner = ExerciseTemplate(
+                    name: editedPartnerName,
+                    defaultWeight: editedPartnerWeight,
+                    defaultSets: 0,
+                    defaultReps: editedPartnerIsTimeBased ? nil : editedPartnerReps,
+                    defaultDuration: editedPartnerIsTimeBased ? editedPartnerDuration : nil,
+                    defaultRestTime: 0.0,
+                    isTimeBased: editedPartnerIsTimeBased,
+                    isDistanceBased: false,
+                    defaultDistance: nil,
+                    timeBeforeNext: 0.0,
+                    supersetPartnerTemplateID: template.id,
+                    isTheSupersetTemplate: true
+                )
+                modelContext.insert(newPartner)
+                template.supersetPartnerTemplateID = newPartner.id
+                partnerTemplate = newPartner
+            }
+        } else {
+            if let partnerID = template.supersetPartnerTemplateID,
+               let partner = allTemplates.first(where: { $0.id == partnerID }) {
+                
+                if let partnerExercises = partner.exercises {
+                    for exercise in partnerExercises {
+                        exercise.template = nil
+                    }
+                }
+                
+                if let partnerHistory = partner.history {
+                    for historyEntry in partnerHistory {
+                        modelContext.delete(historyEntry)
+                    }
+                }
+                
+                template.supersetPartnerTemplateID = nil
+                modelContext.delete(partner)
+            }
+        }
+        
+        onSave(template)
+    }
+}
+
+// MARK: - ExerciseView Helper Functions (these should be moved inside ExerciseView)
+extension ExerciseView {
+    func copyExercises(to targetWorkout: Workout) {
         let selectedExercises: [Exercise] = workout.exercises!
             .filter { selectedExerciseIDs.contains($0.id) }
             .sorted { $0.orderIndex < $1.orderIndex }
@@ -977,6 +1659,9 @@ struct ExerciseView: View {
                 newExercise1.supersetPartnerID = newExercise2.id
                 newExercise2.supersetPartnerID = newExercise1.id
                 
+                newExercise1.template = mainExercise.template
+                newExercise2.template = supersetExercise.template
+                
                 targetWorkout.exercises!.append(newExercise1)
                 targetWorkout.exercises!.append(newExercise2)
                 newExercise1.workout = targetWorkout
@@ -984,6 +1669,13 @@ struct ExerciseView: View {
                 
                 modelContext.insert(newExercise1)
                 modelContext.insert(newExercise2)
+                
+                if let template = mainExercise.template {
+                    addToHistory(template: template, exercise: newExercise1, workout: targetWorkout)
+                }
+                if let template = supersetExercise.template {
+                    addToHistory(template: template, exercise: newExercise2, workout: targetWorkout)
+                }
             } else {
                 let newExercise: Exercise = Exercise(
                     name: exercise.name,
@@ -998,9 +1690,14 @@ struct ExerciseView: View {
                     isDistanceBased: exercise.isDistanceBased,
                     distance: exercise.distance
                 )
+                newExercise.template = exercise.template
                 targetWorkout.exercises!.append(newExercise)
                 newExercise.workout = targetWorkout
                 modelContext.insert(newExercise)
+                
+                if let template = exercise.template {
+                    addToHistory(template: template, exercise: newExercise, workout: targetWorkout)
+                }
             }
             
             newOrderIndex += 1
@@ -1056,11 +1753,387 @@ struct ExerciseView: View {
               let partner = workout.exercises?.first(where: { $0.id == partnerID }) else {
             return
         }
+        
+        if let mainTemplate = exercise.template {
+            mainTemplate.supersetPartnerTemplateID = nil
+        }
+        if let partnerTemplate = partner.template {
+            partnerTemplate.supersetPartnerTemplateID = nil
+            partnerTemplate.isTheSupersetTemplate = false
+        }
+        
         partner.supersetPartnerID = nil
         partner.isTheSuperset = false
         exercise.supersetPartnerID = nil
         exercise.isTheSuperset = false
         workout.exercises?.removeAll { $0.id == partnerID }
         modelContext.delete(partner)
+    }
+    
+    private func findOrCreateTemplate(name: String, weight: Double?, sets: Int, reps: Int?, duration: Double?, restTime: Double, isTimeBased: Bool, isDistanceBased: Bool, distance: Int?, timeBeforeNext: Double, isSupersetTemplate: Bool = false) -> ExerciseTemplate {
+        let normalizedName = name.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        
+        if let existingTemplate = allTemplates.first(where: { $0.name.lowercased() == normalizedName }) {
+            if weight != nil && existingTemplate.defaultWeight == nil {
+                existingTemplate.defaultWeight = weight
+            }
+            if sets > 0 && existingTemplate.defaultSets == 5 {
+                existingTemplate.defaultSets = sets
+            }
+            if reps != nil && existingTemplate.defaultReps == nil {
+                existingTemplate.defaultReps = reps
+            }
+            if duration != nil && existingTemplate.defaultDuration == nil {
+                existingTemplate.defaultDuration = duration
+            }
+            if restTime > 0 && existingTemplate.defaultRestTime == 30.0 {
+                existingTemplate.defaultRestTime = restTime
+            }
+            if timeBeforeNext > 0 && existingTemplate.timeBeforeNext == 120.0 {
+                existingTemplate.timeBeforeNext = timeBeforeNext
+            }
+            return existingTemplate
+        }
+        
+        let template = ExerciseTemplate(
+            name: name.trimmingCharacters(in: .whitespacesAndNewlines),
+            defaultWeight: weight,
+            defaultSets: sets > 0 ? sets : 5,
+            defaultReps: reps,
+            defaultDuration: duration,
+            defaultRestTime: restTime > 0 ? restTime : 30.0,
+            isTimeBased: isTimeBased,
+            isDistanceBased: isDistanceBased,
+            defaultDistance: distance,
+            timeBeforeNext: timeBeforeNext > 0 ? timeBeforeNext : 120.0,
+            supersetPartnerTemplateID: nil,
+            isTheSupersetTemplate: isSupersetTemplate
+        )
+        modelContext.insert(template)
+        return template
+    }
+    
+    private func addToHistory(template: ExerciseTemplate, exercise: Exercise, workout: Workout) {
+        let workoutDate = Calendar.current.startOfDay(for: workout.date)
+        
+        if template.history == nil {
+            template.history = []
+        }
+        
+        if let existingHistory = template.history!.first(where: { Calendar.current.isDate($0.date, inSameDayAs: workoutDate) }) {
+            if exercise.weight != nil && (existingHistory.weight == nil || exercise.weight! > existingHistory.weight!) {
+                existingHistory.weight = exercise.weight
+            }
+            if exercise.reps != nil && (existingHistory.reps == nil || exercise.reps! > existingHistory.reps!) {
+                existingHistory.reps = exercise.reps
+            }
+            if exercise.sets > existingHistory.sets {
+                existingHistory.sets = exercise.sets
+            }
+            if exercise.duration != nil && (existingHistory.duration == nil || exercise.duration! > existingHistory.duration!) {
+                existingHistory.duration = exercise.duration
+            }
+            if exercise.distance != nil && (existingHistory.distance == nil || exercise.distance! > existingHistory.distance!) {
+                existingHistory.distance = exercise.distance
+            }
+        } else {
+            let historyEntry = ExerciseHistory(
+                date: workoutDate,
+                weight: exercise.weight,
+                reps: exercise.reps,
+                sets: exercise.sets,
+                duration: exercise.duration,
+                distance: exercise.distance
+            )
+            historyEntry.template = template
+            template.history!.append(historyEntry)
+            modelContext.insert(historyEntry)
+        }
+    }
+    
+    private func updateTemplateFromExercise(template: ExerciseTemplate, exercise: Exercise, workout: Workout) {
+        template.name = exercise.name
+        template.defaultWeight = exercise.weight
+        template.defaultSets = exercise.sets
+        template.defaultReps = exercise.reps
+        template.defaultDuration = exercise.duration
+        template.defaultRestTime = exercise.restTime
+        template.isTimeBased = exercise.isTimeBased
+        template.isDistanceBased = exercise.isDistanceBased ?? false
+        template.defaultDistance = exercise.distance
+        template.timeBeforeNext = exercise.timeBeforeNext
+        
+        let currentWorkoutDate = Calendar.current.startOfDay(for: workout.date)
+        let templateID = template.id
+        
+        let descriptor = FetchDescriptor<Exercise>(
+            predicate: #Predicate<Exercise> { ex in
+                ex.template?.id == templateID
+            }
+        )
+        
+        guard let allExercises = try? modelContext.fetch(descriptor) else { return }
+        
+        for linkedExercise in allExercises {
+            guard let linkedWorkout = linkedExercise.workout else { continue }
+            let workoutDate = Calendar.current.startOfDay(for: linkedWorkout.date)
+            
+            if workoutDate > currentWorkoutDate {
+                linkedExercise.name = template.name
+                linkedExercise.weight = template.defaultWeight
+                linkedExercise.sets = template.defaultSets
+                linkedExercise.reps = template.defaultReps
+                linkedExercise.duration = template.defaultDuration
+                linkedExercise.restTime = template.defaultRestTime
+                linkedExercise.isTimeBased = template.isTimeBased
+                linkedExercise.isDistanceBased = template.isDistanceBased
+                linkedExercise.distance = template.defaultDistance
+                linkedExercise.timeBeforeNext = template.timeBeforeNext
+                
+                if let existingHistory = template.history?.first(where: { Calendar.current.isDate($0.date, inSameDayAs: workoutDate) }) {
+                    existingHistory.weight = linkedExercise.weight
+                    existingHistory.reps = linkedExercise.reps
+                    existingHistory.sets = linkedExercise.sets
+                    existingHistory.duration = linkedExercise.duration
+                    existingHistory.distance = linkedExercise.distance
+                } else {
+                    let historyEntry = ExerciseHistory(
+                        date: workoutDate,
+                        weight: linkedExercise.weight,
+                        reps: linkedExercise.reps,
+                        sets: linkedExercise.sets,
+                        duration: linkedExercise.duration,
+                        distance: linkedExercise.distance
+                    )
+                    historyEntry.template = template
+                    if template.history == nil {
+                        template.history = []
+                    }
+                    template.history!.append(historyEntry)
+                    modelContext.insert(historyEntry)
+                }
+            }
+        }
+        
+        try? modelContext.save()
+    }
+    
+    private func deleteTemplates(at offsets: IndexSet) {
+        let sortedTemplates = allTemplates.filter { !$0.isTheSupersetTemplate }.sorted(by: { $0.name < $1.name })
+        
+        for index in offsets {
+            let template = sortedTemplates[index]
+            
+            if let partnerTemplateID = template.supersetPartnerTemplateID,
+               let partnerTemplate = allTemplates.first(where: { $0.id == partnerTemplateID }) {
+                
+                if let partnerExercises = partnerTemplate.exercises {
+                    for exercise in partnerExercises {
+                        exercise.template = nil
+                    }
+                }
+                
+                if let partnerHistory = partnerTemplate.history {
+                    for historyEntry in partnerHistory {
+                        modelContext.delete(historyEntry)
+                    }
+                }
+                
+                modelContext.delete(partnerTemplate)
+            }
+            
+            if let exercises = template.exercises {
+                for exercise in exercises {
+                    exercise.template = nil
+                }
+            }
+            
+            if let history = template.history {
+                for historyEntry in history {
+                    modelContext.delete(historyEntry)
+                }
+            }
+            
+            modelContext.delete(template)
+        }
+        
+        try? modelContext.save()
+    }
+    
+    private func updateAllExercisesFromTemplate(template: ExerciseTemplate) {
+        let today = Calendar.current.startOfDay(for: Date())
+        let templateID = template.id
+        
+        let descriptor = FetchDescriptor<Exercise>(
+            predicate: #Predicate<Exercise> { ex in
+                ex.template?.id == templateID
+            }
+        )
+        
+        guard let allExercises = try? modelContext.fetch(descriptor) else { return }
+        
+        for linkedExercise in allExercises {
+            guard let linkedWorkout = linkedExercise.workout else { continue }
+            let workoutDate = Calendar.current.startOfDay(for: linkedWorkout.date)
+            
+            if workoutDate > today {
+                linkedExercise.name = template.name
+                linkedExercise.weight = template.defaultWeight
+                linkedExercise.sets = template.defaultSets
+                linkedExercise.reps = template.defaultReps
+                linkedExercise.duration = template.defaultDuration
+                linkedExercise.restTime = template.defaultRestTime
+                linkedExercise.isTimeBased = template.isTimeBased
+                linkedExercise.isDistanceBased = template.isDistanceBased
+                linkedExercise.distance = template.defaultDistance
+                linkedExercise.timeBeforeNext = template.timeBeforeNext
+                
+                if let existingHistory = template.history?.first(where: { Calendar.current.isDate($0.date, inSameDayAs: workoutDate) }) {
+                    existingHistory.weight = linkedExercise.weight
+                    existingHistory.reps = linkedExercise.reps
+                    existingHistory.sets = linkedExercise.sets
+                    existingHistory.duration = linkedExercise.duration
+                    existingHistory.distance = linkedExercise.distance
+                } else {
+                    let historyEntry = ExerciseHistory(
+                        date: workoutDate,
+                        weight: linkedExercise.weight,
+                        reps: linkedExercise.reps,
+                        sets: linkedExercise.sets,
+                        duration: linkedExercise.duration,
+                        distance: linkedExercise.distance
+                    )
+                    historyEntry.template = template
+                    if template.history == nil {
+                        template.history = []
+                    }
+                    template.history!.append(historyEntry)
+                    modelContext.insert(historyEntry)
+                }
+            }
+        }
+    }
+}
+
+struct TemplateHistoryViewContent: View {
+    let template: ExerciseTemplate
+    let weightUnit: Unit
+    let distanceUnit: Unit
+    
+    @Environment(\.modelContext) private var modelContext
+    @Query private var allHistory: [ExerciseHistory]
+    
+    private var historyEntries: [ExerciseHistory] {
+        allHistory.filter { $0.template?.id == template.id }.sorted(by: { $0.date > $1.date })
+    }
+    
+    private var filteredHistoryEntries: [ExerciseHistory] {
+        let sortedOldestFirst = historyEntries.sorted(by: { $0.date < $1.date })
+        guard !sortedOldestFirst.isEmpty else { return [] }
+        
+        var filtered: [ExerciseHistory] = [sortedOldestFirst[0]] // Always include the oldest entry
+        
+        for i in 1..<sortedOldestFirst.count {
+            let current = sortedOldestFirst[i]
+            let previous = sortedOldestFirst[i - 1]
+            
+            // Check if any value changed compared to the previous (older) entry
+            let hasChanges = current.weight != previous.weight ||
+                            current.reps != previous.reps ||
+                            current.sets != previous.sets ||
+                            current.duration != previous.duration ||
+                            current.distance != previous.distance
+            
+            if hasChanges {
+                filtered.append(current)
+            }
+        }
+        
+        // Reverse to show newest first in the UI
+        return filtered.reversed()
+    }
+    
+    private func deleteFilteredHistoryEntries(at offsets: IndexSet) {
+        let entriesToDelete = offsets.map { filteredHistoryEntries[$0] }
+        
+        for entry in entriesToDelete {
+            modelContext.delete(entry)
+        }
+        
+        try? modelContext.save()
+    }
+    
+    var body: some View {
+        List {
+            if !filteredHistoryEntries.isEmpty {
+                ForEach(filteredHistoryEntries) { entry in
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text(entry.date, style: .date)
+                            .font(.headline)
+                        
+                        HStack(spacing: 16) {
+                            if let weight = entry.weight {
+                                VStack(alignment: .leading) {
+                                    Text("weight".localized(comment: "Weight"))
+                                        .font(.caption)
+                                        .foregroundColor(.secondary)
+                                    Text("\(weight, specifier: "%.1f") \(weightUnit.symbol)")
+                                        .font(.body)
+                                }
+                            }
+                            
+                            if let reps = entry.reps {
+                                VStack(alignment: .leading) {
+                                    Text("reps".localized(comment: "Reps"))
+                                        .font(.caption)
+                                        .foregroundColor(.secondary)
+                                    Text("\(reps)")
+                                        .font(.body)
+                                }
+                            }
+                            
+                            if entry.sets > 0 {
+                                VStack(alignment: .leading) {
+                                    Text("sets".localized(comment: "Sets"))
+                                        .font(.caption)
+                                        .foregroundColor(.secondary)
+                                    Text("\(entry.sets)")
+                                        .font(.body)
+                                }
+                            }
+                            
+                            if let duration = entry.duration {
+                                VStack(alignment: .leading) {
+                                    Text("duration".localized(comment: "Duration"))
+                                        .font(.caption)
+                                        .foregroundColor(.secondary)
+                                    Text("\(Int(duration))s")
+                                        .font(.body)
+                                }
+                            }
+                            
+                            if let distance = entry.distance {
+                                VStack(alignment: .leading) {
+                                    Text("distance".localized(comment: "Distance"))
+                                        .font(.caption)
+                                        .foregroundColor(.secondary)
+                                    Text("\(distance) \(distanceUnit.symbol)")
+                                        .font(.body)
+                                }
+                            }
+                        }
+                    }
+                    .padding(.vertical, 4)
+                }
+                .onDelete { indexSet in
+                    deleteFilteredHistoryEntries(at: indexSet)
+                }
+            } else {
+                Text("no_history".localized(comment: "No history available"))
+                    .foregroundColor(.secondary)
+                    .padding()
+            }
+        }
+        .navigationTitle(template.name)
     }
 }

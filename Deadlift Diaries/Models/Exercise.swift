@@ -12,6 +12,8 @@ import SwiftData
 final class Exercise: Codable  {
     var id: UUID = UUID()
     
+    var template: ExerciseTemplate?
+    
     var name: String = ""
     var weight: Double?
     var sets: Int = 5
@@ -28,6 +30,46 @@ final class Exercise: Codable  {
     var isTheSuperset: Bool?
     var isDistanceBased: Bool?
     var distance: Int?
+    
+    var effectiveName: String {
+        template?.name ?? name
+    }
+    
+    var effectiveWeight: Double? {
+        weight ?? template?.defaultWeight
+    }
+    
+    var effectiveSets: Int {
+        sets > 0 ? sets : (template?.defaultSets ?? 5)
+    }
+    
+    var effectiveReps: Int? {
+        reps ?? template?.defaultReps
+    }
+    
+    var effectiveDuration: Double? {
+        duration ?? template?.defaultDuration
+    }
+    
+    var effectiveRestTime: Double {
+        restTime > 0 ? restTime : (template?.defaultRestTime ?? 30.0)
+    }
+    
+    var effectiveIsTimeBased: Bool {
+        template != nil ? template!.isTimeBased : isTimeBased
+    }
+    
+    var effectiveIsDistanceBased: Bool {
+        (isDistanceBased ?? false) || (template?.isDistanceBased ?? false)
+    }
+    
+    var effectiveDistance: Int? {
+        distance ?? template?.defaultDistance
+    }
+    
+    var effectiveTimeBeforeNext: Double {
+        timeBeforeNext > 0 ? timeBeforeNext : (template?.timeBeforeNext ?? 120.0)
+    }
     
     init(name: String, weight: Double? = nil, sets: Int, reps: Int? = nil, duration: Double? = 30.0, restTime: Double, isTimeBased: Bool, orderIndex: Int, timeBeforeNext: Double, supersetPartnerID: UUID? = nil, isTheSuperset: Bool? = false, isDistanceBased: Bool? = false, distance: Int? = 200) {
         self.id = UUID()
@@ -49,7 +91,7 @@ final class Exercise: Codable  {
     }
     
     enum CodingKeys: CodingKey {
-        case id, name, weight, sets, reps, duration, restTime, isTimeBased, orderIndex, elapsed, currentSet, timeBeforeNext, supersetPartnerID
+        case id, name, weight, sets, reps, duration, restTime, isTimeBased, orderIndex, elapsed, currentSet, timeBeforeNext, supersetPartnerID, isDistanceBased, distance
     }
     
     func encode(to encoder: Encoder) throws {
@@ -67,6 +109,8 @@ final class Exercise: Codable  {
         try container.encode(currentSet, forKey: .currentSet)
         try container.encode(timeBeforeNext, forKey: .timeBeforeNext)
         try container.encode(supersetPartnerID, forKey: .supersetPartnerID)
+        try container.encode(isDistanceBased, forKey: .isDistanceBased)
+        try container.encode(distance, forKey: .distance)
     }
     
     required init(from decoder: Decoder) throws {
@@ -83,6 +127,8 @@ final class Exercise: Codable  {
         self.elapsed = try container.decode(Double.self, forKey: .elapsed)
         self.currentSet = try container.decode(Int.self, forKey: .currentSet)
         self.timeBeforeNext = try container.decode(Double.self, forKey: .timeBeforeNext)
-        self.supersetPartnerID = try container.decode(UUID.self, forKey: .supersetPartnerID)
+        self.supersetPartnerID = try container.decodeIfPresent(UUID.self, forKey: .supersetPartnerID)
+        self.isDistanceBased = try container.decodeIfPresent(Bool.self, forKey: .isDistanceBased)
+        self.distance = try container.decodeIfPresent(Int.self, forKey: .distance)
     }
 }

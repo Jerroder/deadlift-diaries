@@ -16,11 +16,13 @@ struct Deadlift_DiariesApp: App {
         let isICouldEnabled = UserDefaults.standard.bool(forKey: "isICouldEnabled")
         do {
             container = try ModelContainer(
-                for: Mesocycle.self,
+                for: Mesocycle.self, Week.self, Workout.self, Exercise.self, ExerciseTemplate.self, ExerciseHistory.self,
                 configurations: ModelConfiguration(
                     cloudKitDatabase: isICouldEnabled ? .automatic : .none
                 )
             )
+            
+            MigrationManager.performMigrationIfNeeded(modelContext: container.mainContext)
         } catch {
             fatalError("Failed to configure ModelContainer: \(error)")
         }
@@ -30,6 +32,6 @@ struct Deadlift_DiariesApp: App {
         WindowGroup {
             ContentView()
         }
-        .modelContainer(for: [Mesocycle.self, Week.self, Workout.self, Exercise.self])
+        .modelContainer(for: [Mesocycle.self, Week.self, Workout.self, Exercise.self, ExerciseTemplate.self, ExerciseHistory.self])
     }
 }

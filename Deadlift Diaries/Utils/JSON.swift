@@ -9,21 +9,28 @@ import SwiftData
 import SwiftUI
 import UniformTypeIdentifiers
 
-func exportToJSON(_ mesocycles: [Mesocycle]) -> Data? {
+struct ExportData: Codable {
+    let mesocycles: [Mesocycle]
+    let templates: [ExerciseTemplate]
+    let history: [ExerciseHistory]
+}
+
+func exportToJSON(_ mesocycles: [Mesocycle], templates: [ExerciseTemplate], history: [ExerciseHistory]) -> Data? {
+    let exportData = ExportData(mesocycles: mesocycles, templates: templates, history: history)
     let encoder = JSONEncoder()
     encoder.dateEncodingStrategy = .iso8601
     encoder.outputFormatting = .prettyPrinted
     do {
-        let data = try encoder.encode(mesocycles)
+        let data = try encoder.encode(exportData)
         return data
     } catch {
-        print("Error encoding mesocycles: \(error)")
+        print("Error encoding data: \(error)")
         return nil
     }
 }
 
-func saveAndShareJSON(_ mesocycles: [Mesocycle]) {
-    guard let jsonData = exportToJSON(mesocycles) else { return }
+func saveAndShareJSON(_ mesocycles: [Mesocycle], templates: [ExerciseTemplate], history: [ExerciseHistory]) {
+    guard let jsonData = exportToJSON(mesocycles, templates: templates, history: history) else { return }
     
     let tempURL = FileManager.default.temporaryDirectory
         .appendingPathComponent("deadliftdiaries.json")
@@ -55,7 +62,7 @@ struct ActivityViewController: UIViewControllerRepresentable {
 }
 
 struct DocumentPicker: UIViewControllerRepresentable {
-    var onPick: ([Mesocycle]) -> Void
+    var onPick: ([Mesocycle], [ExerciseTemplate], [ExerciseHistory], [UUID: UUID]) -> Void
     
     func makeUIViewController(context: Context) -> UIDocumentPickerViewController {
         let picker = UIDocumentPickerViewController(forOpeningContentTypes: [UTType.json], asCopy: true)
@@ -71,9 +78,9 @@ struct DocumentPicker: UIViewControllerRepresentable {
     }
     
     class Coordinator: NSObject, UIDocumentPickerDelegate {
-        var onPick: ([Mesocycle]) -> Void
+        var onPick: ([Mesocycle], [ExerciseTemplate], [ExerciseHistory], [UUID: UUID]) -> Void
         
-        init(onPick: @escaping ([Mesocycle]) -> Void) {
+        init(onPick: @escaping ([Mesocycle], [ExerciseTemplate], [ExerciseHistory], [UUID: UUID]) -> Void) {
             self.onPick = onPick
         }
         
@@ -83,8 +90,30 @@ struct DocumentPicker: UIViewControllerRepresentable {
                 let data = try Data(contentsOf: url)
                 let decoder = JSONDecoder()
                 decoder.dateDecodingStrategy = .iso8601
-                let mesocycles = try decoder.decode([Mesocycle].self, from: data)
-                onPick(mesocycles)
+                
+                if let exportData = try? decoder.decode(ExportData.self, from: data) {
+                    if let jsonObject = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                       let historyArray = jsonObject["history"] as? [[String: Any]] {
+                        
+                        var historyToTemplateMap: [UUID: UUID] = [:]
+                        for historyDict in historyArray {
+                            if let historyIDString = historyDict["id"] as? String,
+                               let historyID = UUID(uuidString: historyIDString),
+                               let templateIDString = historyDict["templateID"] as? String,
+                               let templateID = UUID(uuidString: templateIDString) {
+                                historyToTemplateMap[historyID] = templateID
+                            }
+                        }
+                        
+                        onPick(exportData.mesocycles, exportData.templates, exportData.history, historyToTemplateMap)
+                    } else {
+                        onPick(exportData.mesocycles, exportData.templates, exportData.history, [:])
+                    }
+                } else {
+                    // Fallback to old format (only mesocycles)
+                    let mesocycles = try decoder.decode([Mesocycle].self, from: data)
+                    onPick(mesocycles, [], [], [:])
+                }
             } catch {
                 print("Error loading or decoding file: \(error)")
             }

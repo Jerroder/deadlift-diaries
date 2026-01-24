@@ -35,7 +35,7 @@ struct ContentView: View {
 extension ModelContainer {
     static func preview(with objects: [any PersistentModel]) -> ModelContainer {
         let config = ModelConfiguration(isStoredInMemoryOnly: true)
-        let container = try! ModelContainer(for: Mesocycle.self, Week.self, Workout.self, Exercise.self, configurations: config)
+        let container = try! ModelContainer(for: Mesocycle.self, Week.self, Workout.self, Exercise.self, ExerciseTemplate.self, ExerciseHistory.self, configurations: config)
         
         objects.forEach { container.mainContext.insert($0) }
         

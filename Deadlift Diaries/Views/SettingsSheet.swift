@@ -7,6 +7,7 @@
 
 import AudioToolbox
 import SwiftUI
+import SwiftData
 
 struct SettingsSheet: View {
     @Environment(\.modelContext) private var modelContext
@@ -15,6 +16,9 @@ struct SettingsSheet: View {
     
     @State private var showingShareSheet = false
     @State private var isShowingDocumentPicker = false
+    
+    @Query private var allTemplates: [ExerciseTemplate]
+    @Query private var allHistory: [ExerciseHistory]
     
     @AppStorage("isICouldEnabled") private var isICouldEnabled = false
     @AppStorage("selectedSoundID") private var selectedSoundID: Int = 1075
@@ -57,7 +61,7 @@ struct SettingsSheet: View {
                 Section {
                     if let mesocycles = mesocycles, !mesocycles.isEmpty {
                         Button("export".localized(comment: "Export")) {
-                            saveAndShareJSON(mesocycles)
+                            saveAndShareJSON(mesocycles, templates: allTemplates, history: allHistory)
                             showingShareSheet = true
                         }
                         .frame(maxWidth: .infinity, alignment: .center)
@@ -80,10 +84,26 @@ struct SettingsSheet: View {
                 ActivityViewController(activityItems: [FileManager.default.temporaryDirectory.appendingPathComponent("deadliftdiaries.json")], applicationActivities: nil)
             }
             .sheet(isPresented: $isShowingDocumentPicker) {
-                DocumentPicker { mesocycles in
+                DocumentPicker { mesocycles, templates, history, historyToTemplateMap in
+                    var templateMap: [UUID: ExerciseTemplate] = [:]
+                    for template in templates {
+                        modelContext.insert(template)
+                        templateMap[template.id] = template
+                    }
+                    
+                    for historyEntry in history {
+                        modelContext.insert(historyEntry)
+                        
+                        if let templateID = historyToTemplateMap[historyEntry.id],
+                           let template = templateMap[templateID] {
+                            historyEntry.template = template
+                        }
+                    }
+                    
                     for mesocycle in mesocycles {
                         modelContext.insert(mesocycle)
                     }
+                    
                     try? modelContext.save()
                 }
             }
