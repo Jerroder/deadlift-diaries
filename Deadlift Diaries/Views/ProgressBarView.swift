@@ -77,7 +77,7 @@ struct ProgressBarView: View {
         VStack {
             progressBars()
                 .frame(height: 20)
-                .padding(.horizontal)
+                .padding(.horizontal, totalSets > 6 ? 0 : nil)
             
             Text("remaining_x_sec".localized(with: Int(timeRemaining.rounded(.down)), comment: "Remaining: x sec"))
                 .font(.title)
@@ -168,9 +168,19 @@ struct ProgressBarView: View {
     @ViewBuilder
     private func progressBars() -> some View {
         GeometryReader { geometry in
-            let squareWidth: Double = geometry.size.width / CGFloat(2 * self.totalSets)
-            HStack(spacing: 4) {
-                ForEach(UInt8(1)..<2 * UInt8(self.totalSets) + 1, id: \.self) { index in
+            let needsScrolling = totalSets > 6
+            let squareWidth: Double = {
+                if needsScrolling {
+                    return 35 // Fixed width when scrolling
+                } else {
+                    return geometry.size.width / CGFloat(2 * self.totalSets) // Scale to fit when not scrolling
+                }
+            }()
+            
+            if needsScrolling {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 4) {
+                        ForEach(UInt8(1)..<2 * UInt8(self.totalSets) + 1, id: \.self) { index in
                     if isTimeBased { // time based
                         if index.isMultiple(of: 2) { // rest
                             if index == currentSet {
@@ -289,10 +299,138 @@ struct ProgressBarView: View {
                                     }
                             }
                         }
+                        }
                     }
                 }
+                .frame(height: 20)
+                }
+                .frame(width: geometry.size.width, height: 20)
+            } else {
+                HStack(spacing: 4) {
+                    ForEach(UInt8(1)..<2 * UInt8(self.totalSets) + 1, id: \.self) { index in
+                        if isTimeBased { // time based
+                            if index.isMultiple(of: 2) { // rest
+                                if index == currentSet {
+                                    ZStack(alignment: .leading) {
+                                        Rectangle()
+                                            .frame(width: squareWidth, height: 20)
+                                            .foregroundColor(orange.opacity(0.3))
+                                            .cornerRadius(4)
+                                        Rectangle()
+                                            .frame(width: squareWidth * self.restProgress, height: 20)
+                                            .foregroundColor(orange)
+                                            .cornerRadius(4)
+                                            .animation(.linear, value: self.restProgress)
+                                    }
+                                } else if index < currentSet {
+                                    Rectangle()
+                                        .frame(width: squareWidth, height: 20)
+                                        .foregroundColor(orange)
+                                        .cornerRadius(4)
+                                        .onTapGesture {
+                                            if !isTimerRunning {
+                                                resetValues(index: Int(index), isExerciseInterval: false)
+                                            }
+                                        }
+                                } else {
+                                    Rectangle()
+                                        .frame(width: squareWidth, height: 20)
+                                        .foregroundColor(orange.opacity(0.3))
+                                        .cornerRadius(4)
+                                        .onTapGesture {
+                                            if !isTimerRunning {
+                                                resetValues(index: Int(index), isExerciseInterval: false)
+                                            }
+                                        }
+                                }
+                            } else { // set
+                                if index == currentSet {
+                                    ZStack(alignment: .leading) {
+                                        Rectangle()
+                                            .frame(width: squareWidth, height: 20)
+                                            .foregroundColor(.accentColor.opacity(0.3))
+                                            .cornerRadius(4)
+                                        Rectangle()
+                                            .frame(width: squareWidth * self.restProgress, height: 20)
+                                            .foregroundColor(.accentColor)
+                                            .cornerRadius(4)
+                                            .animation(.linear, value: self.restProgress)
+                                    }
+                                } else if index < currentSet {
+                                    Rectangle()
+                                        .frame(width: squareWidth, height: 20)
+                                        .foregroundColor(.accentColor)
+                                        .cornerRadius(4)
+                                        .onTapGesture {
+                                            if !isTimerRunning {
+                                                resetValues(index: Int(index), isExerciseInterval: true)
+                                            }
+                                        }
+                                } else {
+                                    Rectangle()
+                                        .frame(width: squareWidth, height: 20)
+                                        .foregroundColor(.accentColor.opacity(0.3))
+                                        .cornerRadius(4)
+                                        .onTapGesture {
+                                            if !isTimerRunning {
+                                                resetValues(index: Int(index), isExerciseInterval: true)
+                                            }
+                                        }
+                                }
+                            }
+                        } else { // reps based
+                            if index.isMultiple(of: 2) { // rest
+                                if index / 2 == currentSet {
+                                    ZStack(alignment: .leading) {
+                                        Rectangle()
+                                            .frame(width: squareWidth, height: 20)
+                                            .foregroundColor(orange.opacity(0.3))
+                                            .cornerRadius(4)
+                                        Rectangle()
+                                            .frame(width: squareWidth * self.restProgress, height: 20)
+                                            .foregroundColor(orange)
+                                            .cornerRadius(4)
+                                            .animation(.linear, value: self.restProgress)
+                                    }
+                                } else if index / 2 < currentSet {
+                                    Rectangle()
+                                        .frame(width: squareWidth, height: 20)
+                                        .foregroundColor(orange)
+                                        .cornerRadius(4)
+                                } else {
+                                    Rectangle()
+                                        .frame(width: squareWidth, height: 20)
+                                        .foregroundColor(orange.opacity(0.3))
+                                        .cornerRadius(4)
+                                }
+                            } else { // set
+                                if (index + 1) / 2 <= currentSet {
+                                    Rectangle()
+                                        .frame(width: squareWidth, height: 20)
+                                        .foregroundColor(.accentColor)
+                                        .cornerRadius(4)
+                                        .onTapGesture {
+                                            if !isTimerRunning {
+                                                resetValues(index: Int((index + 1) / 2), isExerciseInterval: false)
+                                            }
+                                        }
+                                } else {
+                                    Rectangle()
+                                        .frame(width: squareWidth, height: 20)
+                                        .foregroundColor(.accentColor.opacity(0.3))
+                                        .cornerRadius(4)
+                                        .onTapGesture {
+                                            if !isTimerRunning {
+                                                resetValues(index: Int((index + 1) / 2), isExerciseInterval: false)
+                                            }
+                                        }
+                                }
+                            }
+                        }
+                    }
+                }
+                .frame(width: geometry.size.width, height: 20)
             }
-            .frame(width: geometry.size.width, height: 20)
         }
     }
     
