@@ -69,7 +69,16 @@ struct ExerciseView: View {
         workout.exercises!.sorted { $0.orderIndex < $1.orderIndex }
     }
     
+    private var currentMesocycle: Mesocycle? {
+        workout.week?.mesocycle
+    }
+    
     @Query private var allTemplates: [ExerciseTemplate]
+    
+    private var mesocycleTemplates: [ExerciseTemplate] {
+        guard let mesocycle = currentMesocycle else { return [] }
+        return allTemplates.filter { $0.mesocycle?.id == mesocycle.id }
+    }
     
     var body: some View {
         exerciseRow()
@@ -483,7 +492,7 @@ struct ExerciseView: View {
                                     
                                     if let selectedTemplate = selectedTemplate,
                                        let partnerTemplateID = selectedTemplate.supersetPartnerTemplateID,
-                                       let partnerTemplate = allTemplates.first(where: { $0.id == partnerTemplateID }) {
+                                       let partnerTemplate = mesocycleTemplates.first(where: { $0.id == partnerTemplateID }) {
                                         template1 = selectedTemplate
                                         template2 = partnerTemplate
                                     } else {
@@ -1048,10 +1057,10 @@ struct ExerciseView: View {
                     }
                 }
                 
-                if !allTemplates.isEmpty {
+                if !mesocycleTemplates.isEmpty {
                     Section("existing_exercises".localized(comment: "Existing Exercises")) {
-                        ForEach(allTemplates.filter { !$0.isTheSupersetTemplate }.sorted(by: { $0.name < $1.name })) { template in
-                            let partnerTemplate = template.supersetPartnerTemplateID != nil ? allTemplates.first(where: { $0.id == template.supersetPartnerTemplateID }) : nil
+                        ForEach(mesocycleTemplates.filter { !$0.isTheSupersetTemplate }.sorted(by: { $0.name < $1.name })) { template in
+                            let partnerTemplate = template.supersetPartnerTemplateID != nil ? mesocycleTemplates.first(where: { $0.id == template.supersetPartnerTemplateID }) : nil
                             
                             VStack(spacing: 0) {
                                 HStack(spacing: 12) {
@@ -1190,7 +1199,7 @@ struct ExerciseView: View {
                 set: { if !$0 { templateIDForDetailView = nil; templateDetailType = nil } }
             )) {
                 if let templateID = templateIDForDetailView,
-                   let template = allTemplates.first(where: { $0.id == templateID }) {
+                   let template = mesocycleTemplates.first(where: { $0.id == templateID }) {
                     NavigationStack {
                         if templateDetailType == .history {
                             templateHistoryView(template: template)
@@ -1272,15 +1281,16 @@ struct ExerciseView: View {
     private func templateEditView(template: ExerciseTemplate) -> some View {
         TemplateEditViewContent(
             template: template,
-            allTemplates: allTemplates,
+            allTemplates: mesocycleTemplates,
             weightUnit: weightUnit,
             distanceUnit: distanceUnit,
             modelContext: modelContext,
+            mesocycle: currentMesocycle,
             onSave: { updatedTemplate in
                 updateAllExercisesFromTemplate(template: updatedTemplate)
                 
                 if let partnerID = updatedTemplate.supersetPartnerTemplateID,
-                   let partnerTemplate = allTemplates.first(where: { $0.id == partnerID }) {
+                   let partnerTemplate = mesocycleTemplates.first(where: { $0.id == partnerID }) {
                     updateAllExercisesFromTemplate(template: partnerTemplate)
                 }
                 
@@ -1304,6 +1314,7 @@ struct TemplateEditViewContent: View {
     let weightUnit: Unit
     let distanceUnit: Unit
     let modelContext: ModelContext
+    let mesocycle: Mesocycle?
     let onSave: (ExerciseTemplate) -> Void
     let onCancel: () -> Void
     
@@ -1614,6 +1625,7 @@ struct TemplateEditViewContent: View {
                     supersetPartnerTemplateID: template.id,
                     isTheSupersetTemplate: true
                 )
+                newPartner.mesocycle = mesocycle
                 modelContext.insert(newPartner)
                 template.supersetPartnerTemplateID = newPartner.id
                 partnerTemplate = newPartner
@@ -1880,7 +1892,7 @@ extension ExerciseView {
     private func findOrCreateTemplate(name: String, weight: Double?, sets: Int, reps: Int?, duration: Double?, restTime: Double, isTimeBased: Bool, isDistanceBased: Bool, distance: Int?, timeBeforeNext: Double, isSupersetTemplate: Bool = false) -> ExerciseTemplate {
         let normalizedName = name.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
         
-        if let existingTemplate = allTemplates.first(where: { $0.name.lowercased() == normalizedName }) {
+        if let existingTemplate = mesocycleTemplates.first(where: { $0.name.lowercased() == normalizedName }) {
             if weight != nil && existingTemplate.defaultWeight == nil {
                 existingTemplate.defaultWeight = weight
             }
@@ -1916,6 +1928,7 @@ extension ExerciseView {
             supersetPartnerTemplateID: nil,
             isTheSupersetTemplate: isSupersetTemplate
         )
+        template.mesocycle = currentMesocycle
         modelContext.insert(template)
         return template
     }
@@ -2024,13 +2037,13 @@ extension ExerciseView {
     }
     
     private func deleteTemplates(at offsets: IndexSet) {
-        let sortedTemplates = allTemplates.filter { !$0.isTheSupersetTemplate }.sorted(by: { $0.name < $1.name })
+        let sortedTemplates = mesocycleTemplates.filter { !$0.isTheSupersetTemplate }.sorted(by: { $0.name < $1.name })
         
         for index in offsets {
             let template = sortedTemplates[index]
             
             if let partnerTemplateID = template.supersetPartnerTemplateID,
-               let partnerTemplate = allTemplates.first(where: { $0.id == partnerTemplateID }) {
+               let partnerTemplate = mesocycleTemplates.first(where: { $0.id == partnerTemplateID }) {
                 
                 if let partnerExercises = partnerTemplate.exercises {
                     for exercise in partnerExercises {

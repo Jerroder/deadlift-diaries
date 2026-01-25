@@ -88,10 +88,28 @@ struct SettingsSheet: View {
             }
             .sheet(isPresented: $isShowingDocumentPicker) {
                 DocumentPicker { mesocycles, templates, history, historyToTemplateMap in
+                    for mesocycle in mesocycles {
+                        modelContext.insert(mesocycle)
+                    }
+                    
                     var templateMap: [UUID: ExerciseTemplate] = [:]
+                    
+                    for mesocycle in mesocycles {
+                        if let mesocycleTemplates = mesocycle.templates {
+                            for template in mesocycleTemplates {
+                                templateMap[template.id] = template
+                            }
+                        }
+                    }
+                    
                     for template in templates {
-                        modelContext.insert(template)
-                        templateMap[template.id] = template
+                        if templateMap[template.id] == nil {
+                            if let firstMesocycle = mesocycles.first {
+                                template.mesocycle = firstMesocycle
+                            }
+                            modelContext.insert(template)
+                            templateMap[template.id] = template
+                        }
                     }
                     
                     for historyEntry in history {
@@ -101,10 +119,6 @@ struct SettingsSheet: View {
                            let template = templateMap[templateID] {
                             historyEntry.template = template
                         }
-                    }
-                    
-                    for mesocycle in mesocycles {
-                        modelContext.insert(mesocycle)
                     }
                     
                     try? modelContext.save()

@@ -25,6 +25,8 @@ final class ExerciseTemplate: Codable {
     var supersetPartnerTemplateID: UUID?
     var isTheSupersetTemplate: Bool = false
     
+    var mesocycle: Mesocycle?
+    
     @Relationship(deleteRule: .nullify, inverse: \Exercise.template) var exercises: [Exercise]?
     @Relationship(deleteRule: .cascade) var history: [ExerciseHistory]?
     
@@ -45,7 +47,7 @@ final class ExerciseTemplate: Codable {
     }
     
     enum CodingKeys: CodingKey {
-        case id, name, defaultWeight, defaultSets, defaultReps, defaultDuration, defaultRestTime, isTimeBased, isDistanceBased, defaultDistance, timeBeforeNext, supersetPartnerTemplateID, isTheSupersetTemplate
+        case id, name, defaultWeight, defaultSets, defaultReps, defaultDuration, defaultRestTime, isTimeBased, isDistanceBased, defaultDistance, timeBeforeNext, supersetPartnerTemplateID, isTheSupersetTemplate, mesocycleID
     }
     
     func encode(to encoder: Encoder) throws {
@@ -63,6 +65,7 @@ final class ExerciseTemplate: Codable {
         try container.encode(timeBeforeNext, forKey: .timeBeforeNext)
         try container.encode(supersetPartnerTemplateID, forKey: .supersetPartnerTemplateID)
         try container.encode(isTheSupersetTemplate, forKey: .isTheSupersetTemplate)
+        try container.encodeIfPresent(mesocycle?.id, forKey: .mesocycleID)
     }
     
     required init(from decoder: Decoder) throws {

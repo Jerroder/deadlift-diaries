@@ -12,6 +12,7 @@ import SwiftData
 class MigrationManager {
     private static let migrationKey = "hasPerformedExerciseTemplateMigration"
     private static let timerSettingsMigrationKey = "hasPerformedTimerSettingsMigration"
+    private static let templateMesocycleMigrationKey = "hasPerformedTemplateMesocycleMigration"
     
     static func migrateTimerSettings() {
         if UserDefaults.standard.bool(forKey: timerSettingsMigrationKey) {
@@ -30,6 +31,110 @@ class MigrationManager {
         }
         
         UserDefaults.standard.set(true, forKey: timerSettingsMigrationKey)
+    }
+    
+    static func migrateTemplatesToMesocycles(modelContext: ModelContext) {
+        // Check if migration has already been performed
+        if UserDefaults.standard.bool(forKey: templateMesocycleMigrationKey) {
+            return
+        }
+        
+        // Fetch all templates without a mesocycle
+        let templateDescriptor = FetchDescriptor<ExerciseTemplate>(
+            predicate: #Predicate<ExerciseTemplate> { template in
+                template.mesocycle == nil
+            }
+        )
+        
+        guard let orphanedTemplates = try? modelContext.fetch(templateDescriptor), !orphanedTemplates.isEmpty else {
+            UserDefaults.standard.set(true, forKey: templateMesocycleMigrationKey)
+            return
+        }
+        
+        // Fetch all mesocycles
+        let mesocycleDescriptor = FetchDescriptor<Mesocycle>()
+        guard let mesocycles = try? modelContext.fetch(mesocycleDescriptor), !mesocycles.isEmpty else {
+            // No mesocycles exist, just mark migration as done
+            UserDefaults.standard.set(true, forKey: templateMesocycleMigrationKey)
+            return
+        }
+        
+        print("Migrating \(orphanedTemplates.count) templates to \(mesocycles.count) mesocycles")
+        
+        // For each mesocycle, duplicate all orphaned templates
+        for (index, mesocycle) in mesocycles.enumerated() {
+            var templateMapping: [UUID: ExerciseTemplate] = [:]
+            
+            for originalTemplate in orphanedTemplates {
+                let newTemplate: ExerciseTemplate
+                
+                if index == 0 {
+                    // For the first mesocycle, use the original template
+                    newTemplate = originalTemplate
+                } else {
+                    // For other mesocycles, create a duplicate
+                    newTemplate = ExerciseTemplate(
+                        name: originalTemplate.name,
+                        defaultWeight: originalTemplate.defaultWeight,
+                        defaultSets: originalTemplate.defaultSets,
+                        defaultReps: originalTemplate.defaultReps,
+                        defaultDuration: originalTemplate.defaultDuration,
+                        defaultRestTime: originalTemplate.defaultRestTime,
+                        isTimeBased: originalTemplate.isTimeBased,
+                        isDistanceBased: originalTemplate.isDistanceBased,
+                        defaultDistance: originalTemplate.defaultDistance,
+                        timeBeforeNext: originalTemplate.timeBeforeNext,
+                        supersetPartnerTemplateID: nil, // Will be set later
+                        isTheSupersetTemplate: originalTemplate.isTheSupersetTemplate
+                    )
+                    modelContext.insert(newTemplate)
+                }
+                
+                // Associate with mesocycle
+                newTemplate.mesocycle = mesocycle
+                templateMapping[originalTemplate.id] = newTemplate
+            }
+            
+            // Fix superset partner references
+            for originalTemplate in orphanedTemplates {
+                if let partnerID = originalTemplate.supersetPartnerTemplateID,
+                   let newTemplate = templateMapping[originalTemplate.id],
+                   let newPartner = templateMapping[partnerID] {
+                    newTemplate.supersetPartnerTemplateID = newPartner.id
+                }
+            }
+            
+            // For duplicates (index > 0), also duplicate history
+            if index > 0 {
+                for originalTemplate in orphanedTemplates {
+                    guard let newTemplate = templateMapping[originalTemplate.id],
+                          let originalHistory = originalTemplate.history else {
+                        continue
+                    }
+                    
+                    for historyEntry in originalHistory {
+                        let newHistory = ExerciseHistory(
+                            date: historyEntry.date,
+                            weight: historyEntry.weight,
+                            reps: historyEntry.reps,
+                            sets: historyEntry.sets,
+                            duration: historyEntry.duration,
+                            distance: historyEntry.distance
+                        )
+                        newHistory.template = newTemplate
+                        modelContext.insert(newHistory)
+                    }
+                }
+            }
+        }
+        
+        do {
+            try modelContext.save()
+            UserDefaults.standard.set(true, forKey: templateMesocycleMigrationKey)
+            print("Template to mesocycle migration completed successfully")
+        } catch {
+            print("Error during template migration: \(error)")
+        }
     }
     
     static func performMigrationIfNeeded(modelContext: ModelContext) {

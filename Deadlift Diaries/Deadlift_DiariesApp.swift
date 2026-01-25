@@ -25,6 +25,7 @@ struct Deadlift_DiariesApp: App {
             )
             
             MigrationManager.performMigrationIfNeeded(modelContext: container.mainContext)
+            MigrationManager.migrateTemplatesToMesocycles(modelContext: container.mainContext)
         } catch {
             fatalError("Failed to configure ModelContainer: \(error)")
         }

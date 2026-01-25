@@ -17,6 +17,7 @@ final class Mesocycle: Codable {
     var numberOfWeeks: Int = 4
     var orderIndex: Int = 0
     @Relationship(deleteRule: .cascade) var weeks: [Week]?
+    @Relationship(deleteRule: .cascade, inverse: \ExerciseTemplate.mesocycle) var templates: [ExerciseTemplate]?
     
     init(name: String, startDate: Date, numberOfWeeks: Int, orderIndex: Int) {
         self.id = UUID()
@@ -28,7 +29,7 @@ final class Mesocycle: Codable {
     }
     
     enum CodingKeys: CodingKey {
-        case id, name, startDate, numberOfWeeks, orderIndex, weeks
+        case id, name, startDate, numberOfWeeks, orderIndex, weeks, templates
     }
     
     func encode(to encoder: Encoder) throws {
@@ -39,6 +40,7 @@ final class Mesocycle: Codable {
         try container.encode(numberOfWeeks, forKey: .numberOfWeeks)
         try container.encode(orderIndex, forKey: .orderIndex)
         try container.encode(weeks, forKey: .weeks)
+        try container.encode(templates, forKey: .templates)
     }
     
     required init(from decoder: Decoder) throws {
@@ -49,5 +51,6 @@ final class Mesocycle: Codable {
         self.numberOfWeeks = try container.decode(Int.self, forKey: .numberOfWeeks)
         self.orderIndex = try container.decode(Int.self, forKey: .orderIndex)
         self.weeks = try container.decode([Week].self, forKey: .weeks)
+        self.templates = try container.decodeIfPresent([ExerciseTemplate].self, forKey: .templates)
     }
 }
