@@ -174,47 +174,29 @@ struct ExerciseView: View {
     
     @ViewBuilder
     private func exerciseRow() -> some View {
-        if editMode?.wrappedValue.isEditing == true {
-            List(selection: $selectedExerciseIDs) {
-                ForEach(sortedExercises, id: \.id) { exercise in
-                    if let partner = partner(for: exercise), partner.isTheSuperset ?? false {
-                        displayExercise(for: exercise)
-                            .tag(exercise.id)
-                            .opacity(((exercise.effectiveIsTimeBased ? exercise.effectiveSets * 2 : exercise.effectiveSets) == exercise.currentSet - 1) ? 0.5 : 1)
-                            .listRowSeparator(.hidden)
-                        displayExercise(for: partner, isSuperset: true)
-                            .tag(partner.id)
-                            .opacity(((exercise.effectiveIsTimeBased ? exercise.effectiveSets * 2 : exercise.effectiveSets) == exercise.currentSet - 1) ? 0.5 : 1)
-                            .listRowSeparator(.hidden)
-                    } else if exercise.supersetPartnerID == nil {
-                        displayExercise(for: exercise)
-                            .tag(exercise.id)
-                            .opacity(((exercise.effectiveIsTimeBased ? exercise.effectiveSets * 2 : exercise.effectiveSets) == exercise.currentSet - 1) ? 0.5 : 1)
-                            .listRowSeparator(.hidden)
-                    }
+        List(selection: editMode?.wrappedValue.isEditing == true ? $selectedExerciseIDs : .constant(Set<UUID>())) {
+            ForEach(sortedExercises, id: \.id) { exercise in
+                if let partner = partner(for: exercise), partner.isTheSuperset ?? false {
+                    displayExercise(for: exercise)
+                        .tag(exercise.id)
+                        .opacity(((exercise.effectiveIsTimeBased ? exercise.effectiveSets * 2 : exercise.effectiveSets) == exercise.currentSet - 1) ? 0.5 : 1)
+                        .listRowSeparator(.hidden)
+                    displayExercise(for: partner, isSuperset: true)
+                        .tag(partner.id)
+                        .opacity(((exercise.effectiveIsTimeBased ? exercise.effectiveSets * 2 : exercise.effectiveSets) == exercise.currentSet - 1) ? 0.5 : 1)
+                        .listRowSeparator(.hidden)
+                } else if exercise.supersetPartnerID == nil {
+                    displayExercise(for: exercise)
+                        .tag(exercise.id)
+                        .opacity(((exercise.effectiveIsTimeBased ? exercise.effectiveSets * 2 : exercise.effectiveSets) == exercise.currentSet - 1) ? 0.5 : 1)
+                        .listRowSeparator(.hidden)
                 }
-                .onMove(perform: moveExercise)
             }
-        } else {
-            List {
-                ForEach(sortedExercises, id: \.id) { exercise in
-                    if let partner = partner(for: exercise), partner.isTheSuperset ?? false {
-                        displayExercise(for: exercise)
-                            .tag(exercise.id)
-                            .opacity(((exercise.effectiveIsTimeBased ? exercise.effectiveSets * 2 : exercise.effectiveSets) == exercise.currentSet - 1) ? 0.5 : 1)
-                            .listRowSeparator(.hidden)
-                        displayExercise(for: partner, isSuperset: true)
-                            .tag(partner.id)
-                            .opacity(((exercise.effectiveIsTimeBased ? exercise.effectiveSets * 2 : exercise.effectiveSets) == exercise.currentSet - 1) ? 0.5 : 1)
-                            .listRowSeparator(.hidden)
-                    } else if exercise.supersetPartnerID == nil {
-                        displayExercise(for: exercise)
-                            .tag(exercise.id)
-                            .opacity(((exercise.effectiveIsTimeBased ? exercise.effectiveSets * 2 : exercise.effectiveSets) == exercise.currentSet - 1) ? 0.5 : 1)
-                            .listRowSeparator(.hidden)
-                    }
-                }
-                .onMove(perform: moveExercise)
+            .onMove(perform: moveExercise)
+        }
+        .onChange(of: editMode?.wrappedValue.isEditing) { _, isEditing in
+            if isEditing == false {
+                selectedExerciseIDs.removeAll()
             }
         }
     }

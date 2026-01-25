@@ -121,7 +121,7 @@ struct WorkoutView: View {
     
     @ViewBuilder
     private func workoutRows() -> some View {
-        List(selection: $selectedWorkoutIDs) {
+        List(selection: editMode?.wrappedValue.isEditing == true ? $selectedWorkoutIDs : .constant(Set<UUID>())) {
             ForEach(sortedWorkouts) { workout in
                 let isPast: Bool = Calendar.current.startOfDay(for: workout.date) < Calendar.current.startOfDay(for: Date())
                 Section {
@@ -166,6 +166,11 @@ struct WorkoutView: View {
                     }
                 }
                 .tag(workout.id)
+            }
+        }
+        .onChange(of: editMode?.wrappedValue.isEditing) { _, isEditing in
+            if isEditing == false {
+                selectedWorkoutIDs.removeAll()
             }
         }
     }

@@ -69,7 +69,7 @@ struct WeekView: View {
     
     @ViewBuilder
     private func buildWeekRows() -> some View {
-        List(selection: $selectedWeekIDs) {
+        List(selection: editMode?.wrappedValue.isEditing == true ? $selectedWeekIDs : .constant(Set<UUID>())) {
             ForEach(sortedWeeks, id: \.id) { week in
                 let isPast: Bool = isWeekPast(week)
                 NavigationLink {
@@ -85,6 +85,11 @@ struct WeekView: View {
                     }
                 }
                 .tag(week.id)
+            }
+        }
+        .onChange(of: editMode?.wrappedValue.isEditing) { _, isEditing in
+            if isEditing == false {
+                selectedWeekIDs.removeAll()
             }
         }
     }
