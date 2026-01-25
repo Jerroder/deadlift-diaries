@@ -325,8 +325,8 @@ struct MesocycleView: View {
                         return workout.exercises?.first { $0.id == partnerID }
                     }
                     
-                    let daysFromWeekStart: Int = Calendar.current.dateComponents([.day], from: week.startDate, to: workout.date).day ?? 0
-                    let newWorkoutDate: Date = Calendar.current.date(byAdding: .day, value: daysFromWeekStart, to: newWeekStartDate)!
+                    let timeIntervalFromWeekStart: TimeInterval = workout.date.timeIntervalSince(week.startDate)
+                    let newWorkoutDate: Date = newWeekStartDate.addingTimeInterval(timeIntervalFromWeekStart)
                     let newWorkout: Workout = Workout(
                         name: workout.name,
                         orderIndex: workout.orderIndex,
