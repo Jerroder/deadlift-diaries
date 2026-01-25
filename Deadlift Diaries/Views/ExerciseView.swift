@@ -1101,7 +1101,7 @@ struct ExerciseView: View {
                                                     .font(.headline)
                                                     .foregroundColor(.primary)
                                                 if partnerTemplate != nil {
-                                                    Text("(Superset)")
+                                                    Text("p_superset_p".localized(comment: "(Superset)"))
                                                         .font(.caption)
                                                         .foregroundColor(.orange)
                                                 }
@@ -1511,7 +1511,7 @@ struct TemplateEditViewContent: View {
             }
             
             if isSuperset {
-                Section("Superset Partner") {
+                Section("superset_parner".localized(comment: "Superset Partner")) {
                     TextField("exercise_name".localized(comment: "Exercise name"), text: $editedPartnerName)
                         .focused($focusedField, equals: .supersetName)
                     
@@ -2304,14 +2304,14 @@ struct ProgressChartCard: View {
             if data.count >= 2 {
                 Chart(data) { point in
                     LineMark(
-                        x: .value("Date", point.date),
+                        x: .value("date".localized(comment: "Date"), point.date),
                         y: .value(title, point.value)
                     )
                     .foregroundStyle(color)
                     .interpolationMethod(.catmullRom)
                     
                     AreaMark(
-                        x: .value("Date", point.date),
+                        x: .value("date".localized(comment: "Date"), point.date),
                         y: .value(title, point.value)
                     )
                     .foregroundStyle(
@@ -2324,7 +2324,7 @@ struct ProgressChartCard: View {
                     .interpolationMethod(.catmullRom)
                     
                     PointMark(
-                        x: .value("Date", point.date),
+                        x: .value("date".localized(comment: "Date"), point.date),
                         y: .value(title, point.value)
                     )
                     .foregroundStyle(color)
@@ -2343,7 +2343,7 @@ struct ProgressChartCard: View {
                 .frame(height: 200)
                 .clipped()
             } else if data.count == 1 {
-                Text("Need at least 2 data points to show progression")
+                Text("need_2_points".localized(comment: "Need at least 2 data points to show progression"))
                     .font(.caption)
                     .foregroundColor(.secondary)
                     .frame(height: 200)
@@ -2354,7 +2354,7 @@ struct ProgressChartCard: View {
             
             HStack {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("Current")
+                    Text("current".localized(comment: "Current"))
                         .font(.caption)
                         .foregroundColor(.secondary)
                     if let last = data.last {
@@ -2367,7 +2367,7 @@ struct ProgressChartCard: View {
                 Spacer()
                 
                 VStack(alignment: .trailing, spacing: 4) {
-                    Text("Best")
+                    Text("best".localized(comment: "Best"))
                         .font(.caption)
                         .foregroundColor(.secondary)
                     Text("\(maxValue, specifier: valueFormat) \(unit)")
