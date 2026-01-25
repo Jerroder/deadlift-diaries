@@ -26,7 +26,8 @@ struct ProgressBarView: View {
     
     @AppStorage("selectedSoundID") private var selectedSoundID: Int = 1075
     @AppStorage("sendNotification") private var sendNotification: Bool = false
-    @AppStorage("isContinuousModeEnabled") private var isContinuousModeEnabled: Bool = false
+    @AppStorage("autoStartSetAfterRest") private var autoStartSetAfterRest: Bool = false
+    @AppStorage("autoStartRestAfterSet") private var autoStartRestAfterSet: Bool = false
     @AppStorage("autoResetTimer") private var autoResetTimer: Bool = false
     
     @State private var isExerciseDone: Bool = false
@@ -349,9 +350,6 @@ struct ProgressBarView: View {
                     
                     if isTimeBased {
                         isExerciseInterval.toggle()
-                        if isContinuousModeEnabled && !isExerciseDone {
-                            toggleTimer()
-                        }
                     }
                     
                     if currentSet < nbSet {
@@ -371,6 +369,12 @@ struct ProgressBarView: View {
                     if currentSet == nbSet {
                         isExerciseDone = true
                         timeRemaining = timeBeforeNextExercise
+                    }
+                    
+                    if isTimeBased && !isExerciseDone {
+                        if (isExerciseInterval && autoStartSetAfterRest) || (!isExerciseInterval && autoStartRestAfterSet) {
+                            toggleTimer()
+                        }
                     }
                 } else if round(timeRemaining) == 1 {
                     if isActive {

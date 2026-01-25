@@ -13,6 +13,8 @@ struct Deadlift_DiariesApp: App {
     let container: ModelContainer
     
     init() {
+        MigrationManager.migrateTimerSettings()
+        
         let isICouldEnabled = UserDefaults.standard.bool(forKey: "isICouldEnabled")
         do {
             container = try ModelContainer(

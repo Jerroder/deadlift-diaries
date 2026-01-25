@@ -11,6 +11,26 @@ import SwiftData
 @MainActor
 class MigrationManager {
     private static let migrationKey = "hasPerformedExerciseTemplateMigration"
+    private static let timerSettingsMigrationKey = "hasPerformedTimerSettingsMigration"
+    
+    static func migrateTimerSettings() {
+        if UserDefaults.standard.bool(forKey: timerSettingsMigrationKey) {
+            return
+        }
+        
+        if UserDefaults.standard.object(forKey: "isContinuousModeEnabled") != nil {
+            let oldValue = UserDefaults.standard.bool(forKey: "isContinuousModeEnabled")
+            
+            if oldValue {
+                UserDefaults.standard.set(true, forKey: "autoStartSetAfterRest")
+                UserDefaults.standard.set(true, forKey: "autoStartRestAfterSet")
+            }
+            
+            UserDefaults.standard.removeObject(forKey: "isContinuousModeEnabled")
+        }
+        
+        UserDefaults.standard.set(true, forKey: timerSettingsMigrationKey)
+    }
     
     static func performMigrationIfNeeded(modelContext: ModelContext) {
         // Check if migration has already been performed

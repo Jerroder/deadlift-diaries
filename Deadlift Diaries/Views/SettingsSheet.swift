@@ -23,7 +23,8 @@ struct SettingsSheet: View {
     @AppStorage("isICouldEnabled") private var isICouldEnabled = false
     @AppStorage("selectedSoundID") private var selectedSoundID: Int = 1075
     @AppStorage("sendNotification") private var sendNotification: Bool = false
-    @AppStorage("isContinuousModeEnabled") private var isContinuousModeEnabled: Bool = false
+    @AppStorage("autoStartSetAfterRest") private var autoStartSetAfterRest: Bool = false
+    @AppStorage("autoStartRestAfterSet") private var autoStartRestAfterSet: Bool = false
     @AppStorage("autoResetTimer") private var autoResetTimer: Bool = false
     
     var body: some View {
@@ -50,7 +51,9 @@ struct SettingsSheet: View {
                 }
                 
                 Section {
-                    Toggle("do_not_stop_timer".localized(comment: "Do not stop timer between sets and rest"), isOn: $isContinuousModeEnabled)
+                    Toggle("auto_start_set_after_rest".localized(comment: "Automatically start the next set after rest ends"), isOn: $autoStartSetAfterRest)
+                        .padding([.leading, .trailing])
+                    Toggle("auto_start_rest_after_set".localized(comment: "Automatically start rest after a set ends"), isOn: $autoStartRestAfterSet)
                         .padding([.leading, .trailing])
                     Toggle("automatically_reset_timer".localized(comment: "Automatically reset timer at the end of an exercise"), isOn: $autoResetTimer)
                         .padding([.leading, .trailing])
