@@ -174,25 +174,48 @@ struct ExerciseView: View {
     
     @ViewBuilder
     private func exerciseRow() -> some View {
-        List(selection: $selectedExerciseIDs) {
-            ForEach(sortedExercises, id: \.id) { exercise in
-                if let partner = partner(for: exercise), partner.isTheSuperset ?? false {
-                    displayExercise(for: exercise)
-                        .tag(exercise.id)
-                        .opacity(((exercise.effectiveIsTimeBased ? exercise.effectiveSets * 2 : exercise.effectiveSets) == exercise.currentSet - 1) ? 0.5 : 1)
-                        .listRowSeparator(.hidden)
-                    displayExercise(for: partner, isSuperset: true)
-                        .tag(partner.id)
-                        .opacity(((exercise.effectiveIsTimeBased ? exercise.effectiveSets * 2 : exercise.effectiveSets) == exercise.currentSet - 1) ? 0.5 : 1)
-                        .listRowSeparator(.hidden)
-                } else if exercise.supersetPartnerID == nil {
-                    displayExercise(for: exercise)
-                        .tag(exercise.id)
-                        .opacity(((exercise.effectiveIsTimeBased ? exercise.effectiveSets * 2 : exercise.effectiveSets) == exercise.currentSet - 1) ? 0.5 : 1)
-                        .listRowSeparator(.hidden)
+        if editMode?.wrappedValue.isEditing == true {
+            List(selection: $selectedExerciseIDs) {
+                ForEach(sortedExercises, id: \.id) { exercise in
+                    if let partner = partner(for: exercise), partner.isTheSuperset ?? false {
+                        displayExercise(for: exercise)
+                            .tag(exercise.id)
+                            .opacity(((exercise.effectiveIsTimeBased ? exercise.effectiveSets * 2 : exercise.effectiveSets) == exercise.currentSet - 1) ? 0.5 : 1)
+                            .listRowSeparator(.hidden)
+                        displayExercise(for: partner, isSuperset: true)
+                            .tag(partner.id)
+                            .opacity(((exercise.effectiveIsTimeBased ? exercise.effectiveSets * 2 : exercise.effectiveSets) == exercise.currentSet - 1) ? 0.5 : 1)
+                            .listRowSeparator(.hidden)
+                    } else if exercise.supersetPartnerID == nil {
+                        displayExercise(for: exercise)
+                            .tag(exercise.id)
+                            .opacity(((exercise.effectiveIsTimeBased ? exercise.effectiveSets * 2 : exercise.effectiveSets) == exercise.currentSet - 1) ? 0.5 : 1)
+                            .listRowSeparator(.hidden)
+                    }
                 }
+                .onMove(perform: moveExercise)
             }
-            .onMove(perform: moveExercise)
+        } else {
+            List {
+                ForEach(sortedExercises, id: \.id) { exercise in
+                    if let partner = partner(for: exercise), partner.isTheSuperset ?? false {
+                        displayExercise(for: exercise)
+                            .tag(exercise.id)
+                            .opacity(((exercise.effectiveIsTimeBased ? exercise.effectiveSets * 2 : exercise.effectiveSets) == exercise.currentSet - 1) ? 0.5 : 1)
+                            .listRowSeparator(.hidden)
+                        displayExercise(for: partner, isSuperset: true)
+                            .tag(partner.id)
+                            .opacity(((exercise.effectiveIsTimeBased ? exercise.effectiveSets * 2 : exercise.effectiveSets) == exercise.currentSet - 1) ? 0.5 : 1)
+                            .listRowSeparator(.hidden)
+                    } else if exercise.supersetPartnerID == nil {
+                        displayExercise(for: exercise)
+                            .tag(exercise.id)
+                            .opacity(((exercise.effectiveIsTimeBased ? exercise.effectiveSets * 2 : exercise.effectiveSets) == exercise.currentSet - 1) ? 0.5 : 1)
+                            .listRowSeparator(.hidden)
+                    }
+                }
+                .onMove(perform: moveExercise)
+            }
         }
     }
     
