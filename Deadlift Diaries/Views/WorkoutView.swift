@@ -18,6 +18,7 @@ struct WorkoutView: View {
     @State private var newWorkoutDate: Date = Date()
     @State private var selectedWorkoutIDs: Set<UUID> = Set<Workout.ID>()
     @State private var isShowingWeekPicker: Bool = false
+    @State private var templateWorkout: Workout? = nil
     
     @State private var isKeyboardShowing: Bool = false
     @FocusState.Binding var focusedField: FocusableField?
@@ -37,6 +38,24 @@ struct WorkoutView: View {
     
     private var sortedWorkouts: [Workout] {
         week.workouts!.sorted(by: { $0.date < $1.date })
+    }
+    
+    private var allAvailableWorkouts: [Workout] {
+        guard let mesocycle = week.mesocycle else { return [] }
+        return mesocycle.weeks!
+            .flatMap { $0.workouts ?? [] }
+            .sorted { $0.date > $1.date }
+    }
+    
+    private func groupedWorkoutsByWeek() -> [(week: Week, workouts: [Workout])] {
+        guard let mesocycle = week.mesocycle else { return [] }
+        
+        return mesocycle.weeks!
+            .sorted { $0.startDate < $1.startDate }
+            .compactMap { week in
+                let workouts = week.workouts?.sorted { $0.date < $1.date } ?? []
+                return workouts.isEmpty ? nil : (week: week, workouts: workouts)
+            }
     }
     
     // MARK: - Main view
@@ -60,6 +79,7 @@ struct WorkoutView: View {
                         isAddingNewWorkout = true
                         newWorkoutName = ""
                         newWorkoutDate = calculateDefaultWorkoutDate()
+                        templateWorkout = nil
                     }) {
                         Image(systemName: "plus")
                             .font(.system(size: 22))
@@ -73,6 +93,7 @@ struct WorkoutView: View {
                         isAddingNewWorkout = true
                         newWorkoutName = ""
                         newWorkoutDate = calculateDefaultWorkoutDate()
+                        templateWorkout = nil
                     }) {
                         Image(systemName: "plus")
                             .font(.system(size: 22))
@@ -167,6 +188,35 @@ struct WorkoutView: View {
                     in: weekDateRange,
                     displayedComponents: .date
                 )
+                
+                if workout == nil && !allAvailableWorkouts.isEmpty {
+                    Section {
+                        NavigationLink {
+                            templatePickerView()
+                        } label: {
+                            HStack {
+                                Text("use_as_template".localized(comment: "Use as template"))
+                                Spacer()
+                                if let template = templateWorkout {
+                                    VStack(alignment: .trailing, spacing: 2) {
+                                        Text(template.name)
+                                            .foregroundColor(.secondary)
+                                        if let exercises = template.exercises, !exercises.isEmpty {
+                                            Text("x_exercises".localized(with: exercises.count, comment: "x exercises"))
+                                                .font(.caption)
+                                                .foregroundColor(.secondary)
+                                        }
+                                    }
+                                } else {
+                                    Text("empty_workout".localized(comment: "Empty workout"))
+                                        .foregroundColor(.secondary)
+                                }
+                            }
+                        }
+                    } header: {
+                        Text("template".localized(comment: "Template"))
+                    }
+                }
             }
             .withTextFieldToolbarDone(isKeyboardShowing: $isKeyboardShowing, focusedField: $focusedField)
             .navigationTitle(workout == nil ? "new_workout".localized(comment: "New Workout") : "rename_workout".localized(comment: "Rename Workout"))
@@ -175,14 +225,19 @@ struct WorkoutView: View {
                     Button("", systemImage: "checkmark") {
                         if workout == nil {
                             let orderIndex: Int = (week.workouts!.map { $0.orderIndex }.max() ?? 0) + 1
-                            let workout: Workout = Workout(name: newWorkoutName, orderIndex: orderIndex, date: newWorkoutDate)
-                            week.workouts!.append(workout)
-                            workout.week = week
-                            modelContext.insert(workout)
+                            let newWorkout: Workout = Workout(name: newWorkoutName, orderIndex: orderIndex, date: newWorkoutDate)
+                            week.workouts!.append(newWorkout)
+                            newWorkout.week = week
+                            modelContext.insert(newWorkout)
+                            
+                            if let template = templateWorkout {
+                                copyExercisesFromTemplate(template: template, to: newWorkout)
+                            }
                         }
                         try? modelContext.save()
                         selectedWorkout = nil
                         isAddingNewWorkout = false
+                        templateWorkout = nil
                     }
                 }
                 ToolbarItem(placement: .cancellationAction) {
@@ -224,6 +279,82 @@ struct WorkoutView: View {
                 Image(systemName: "ellipsis")
             }
         }
+    }
+    
+    @ViewBuilder
+    private func templatePickerView() -> some View {
+        List {
+            Section {
+                Button(action: {
+                    templateWorkout = nil
+                }) {
+                    HStack {
+                        VStack(alignment: .leading) {
+                            Text("empty_workout".localized(comment: "Empty workout"))
+                                .font(.headline)
+                                .foregroundColor(.primary)
+                            Text("start_from_scratch".localized(comment: "Start from scratch"))
+                                .font(.subheadline)
+                                .foregroundColor(.secondary)
+                        }
+                        Spacer()
+                        if templateWorkout == nil {
+                            Image(systemName: "checkmark")
+                                .foregroundColor(.accentColor)
+                        }
+                    }
+                }
+            }
+            
+            ForEach(groupedWorkoutsByWeek(), id: \.week.id) { group in
+                Section {
+                    ForEach(group.workouts) { availableWorkout in
+                        Button(action: {
+                            templateWorkout = availableWorkout
+                        }) {
+                            HStack {
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text(availableWorkout.name)
+                                        .font(.headline)
+                                        .foregroundColor(.primary)
+                                    
+                                    if let exercises = availableWorkout.exercises, !exercises.isEmpty {
+                                        Text("x_exercises".localized(with: exercises.count, comment: "x exercises"))
+                                            .font(.subheadline)
+                                            .foregroundColor(.secondary)
+                                        
+                                        let exerciseNames = exercises
+                                            .sorted { $0.orderIndex < $1.orderIndex }
+                                            .filter { !($0.isTheSuperset ?? false) }
+                                            .prefix(3)
+                                            .map { $0.name }
+                                            .joined(separator: ", ")
+                                        
+                                        Text(exerciseNames + (exercises.count > 3 ? "..." : ""))
+                                            .font(.caption)
+                                            .foregroundColor(.secondary)
+                                            .lineLimit(2)
+                                    } else {
+                                        Text("no_exercises".localized(comment: "No exercises"))
+                                            .font(.subheadline)
+                                            .foregroundColor(.secondary)
+                                    }
+                                }
+                                Spacer()
+                                if templateWorkout?.id == availableWorkout.id {
+                                    Image(systemName: "checkmark")
+                                        .foregroundColor(.accentColor)
+                                }
+                            }
+                        }
+                    }
+                } header: {
+                    Text("week_x".localized(with: group.week.number, comment: "Week x"))
+                }
+            }
+        }
+        .navigationTitle("select_template".localized(comment: "Select Template"))
+        .navigationBarTitleDisplayMode(.inline)
     }
     
     @ViewBuilder
@@ -482,5 +613,82 @@ struct WorkoutView: View {
             return week.startDate
         }
         return Calendar.current.date(byAdding: .day, value: 1, to: lastWorkout.date) ?? week.startDate
+    }
+    
+    private func copyExercisesFromTemplate(template: Workout, to newWorkout: Workout) {
+        func partner(for exercise: Exercise) -> Exercise? {
+            guard let partnerID = exercise.supersetPartnerID else { return nil }
+            return template.exercises?.first { $0.id == partnerID }
+        }
+        
+        let exercises = template.exercises!.sorted { $0.orderIndex < $1.orderIndex }
+        var processedPartnerIDs = Set<UUID>()
+        
+        for exercise in exercises {
+            if processedPartnerIDs.contains(exercise.id) {
+                continue
+            }
+            
+            if let partner = partner(for: exercise) {
+                let mainExercise = exercise.isTheSuperset ?? false ? partner : exercise
+                let supersetExercise = exercise.isTheSuperset ?? false ? exercise : partner
+                
+                processedPartnerIDs.insert(mainExercise.id)
+                processedPartnerIDs.insert(supersetExercise.id)
+                
+                let newMainExercise = Exercise(
+                    name: mainExercise.name,
+                    weight: mainExercise.weight,
+                    sets: mainExercise.sets,
+                    reps: mainExercise.reps,
+                    duration: mainExercise.duration,
+                    restTime: mainExercise.restTime,
+                    isTimeBased: mainExercise.isTimeBased,
+                    orderIndex: mainExercise.orderIndex,
+                    timeBeforeNext: mainExercise.timeBeforeNext,
+                    isDistanceBased: mainExercise.isDistanceBased
+                )
+                let newSupersetExercise = Exercise(
+                    name: supersetExercise.name,
+                    weight: supersetExercise.weight,
+                    sets: supersetExercise.sets,
+                    reps: supersetExercise.reps,
+                    duration: supersetExercise.duration,
+                    restTime: supersetExercise.restTime,
+                    isTimeBased: supersetExercise.isTimeBased,
+                    orderIndex: supersetExercise.orderIndex,
+                    timeBeforeNext: supersetExercise.timeBeforeNext,
+                    isTheSuperset: true,
+                    isDistanceBased: supersetExercise.isDistanceBased
+                )
+                newMainExercise.supersetPartnerID = newSupersetExercise.id
+                newSupersetExercise.supersetPartnerID = newMainExercise.id
+                
+                newWorkout.exercises!.append(newMainExercise)
+                newWorkout.exercises!.append(newSupersetExercise)
+                newMainExercise.workout = newWorkout
+                newSupersetExercise.workout = newWorkout
+                
+                modelContext.insert(newMainExercise)
+                modelContext.insert(newSupersetExercise)
+            } else {
+                let newExercise: Exercise = Exercise(
+                    name: exercise.name,
+                    weight: exercise.weight,
+                    sets: exercise.sets,
+                    reps: exercise.reps,
+                    duration: exercise.duration,
+                    restTime: exercise.restTime,
+                    isTimeBased: exercise.isTimeBased,
+                    orderIndex: exercise.orderIndex,
+                    timeBeforeNext: exercise.timeBeforeNext,
+                    isDistanceBased: exercise.isDistanceBased,
+                    distance: exercise.distance
+                )
+                newWorkout.exercises!.append(newExercise)
+                newExercise.workout = newWorkout
+                modelContext.insert(newExercise)
+            }
+        }
     }
 }
