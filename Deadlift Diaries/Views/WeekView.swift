@@ -379,12 +379,19 @@ struct WeekView: View {
     
     private func renumberWeeks() {
         for (index, week) in sortedWeeks.enumerated() {
+            let oldStartDate = week.startDate
+            
             week.number = index + 1
             if index == 0 {
                 week.startDate = mesocycle.startDate
             } else {
                 let previousWeek = sortedWeeks[index - 1]
                 week.startDate = Calendar.current.date(byAdding: .day, value: 7, to: previousWeek.startDate)!
+            }
+            
+            let daysDifference = Calendar.current.dateComponents([.day], from: oldStartDate, to: week.startDate).day ?? 0
+            for workout in week.workouts ?? [] {
+                workout.date = Calendar.current.date(byAdding: .day, value: daysDifference, to: workout.date)!
             }
         }
         mesocycle.numberOfWeeks = sortedWeeks.count
