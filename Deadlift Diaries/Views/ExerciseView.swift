@@ -7,6 +7,7 @@
 
 import SwiftUI
 import SwiftData
+import Charts
 
 struct ExerciseView: View {
     let workout: Workout
@@ -2123,114 +2124,245 @@ struct TemplateHistoryViewContent: View {
     @Query private var allHistory: [ExerciseHistory]
     
     private var historyEntries: [ExerciseHistory] {
-        allHistory.filter { $0.template?.id == template.id }.sorted(by: { $0.date > $1.date })
+        allHistory.filter { $0.template?.id == template.id }.sorted(by: { $0.date < $1.date })
     }
     
-    private var filteredHistoryEntries: [ExerciseHistory] {
-        let sortedOldestFirst = historyEntries.sorted(by: { $0.date < $1.date })
-        guard !sortedOldestFirst.isEmpty else { return [] }
-        
-        var filtered: [ExerciseHistory] = [sortedOldestFirst[0]]
-        
-        for i in 1..<sortedOldestFirst.count {
-            let current = sortedOldestFirst[i]
-            let previous = sortedOldestFirst[i - 1]
-            
-            let hasChanges = current.weight != previous.weight ||
-                            current.reps != previous.reps ||
-                            current.sets != previous.sets ||
-                            current.duration != previous.duration ||
-                            current.distance != previous.distance
-            
-            if hasChanges {
-                filtered.append(current)
-            }
-        }
-        
-        return filtered.reversed()
+    private var hasWeightData: Bool {
+        historyEntries.contains { $0.weight != nil }
     }
     
-    private func deleteFilteredHistoryEntries(at offsets: IndexSet) {
-        let entriesToDelete = offsets.map { filteredHistoryEntries[$0] }
-        
-        for entry in entriesToDelete {
-            modelContext.delete(entry)
-        }
-        
-        try? modelContext.save()
+    private var hasRepsData: Bool {
+        historyEntries.contains { $0.reps != nil }
+    }
+    
+    private var hasSetsData: Bool {
+        historyEntries.contains { $0.sets > 0 }
+    }
+    
+    private var hasDurationData: Bool {
+        historyEntries.contains { $0.duration != nil }
+    }
+    
+    private var hasDistanceData: Bool {
+        historyEntries.contains { $0.distance != nil }
     }
     
     var body: some View {
-        List {
-            if !filteredHistoryEntries.isEmpty {
-                ForEach(filteredHistoryEntries) { entry in
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text(entry.date, style: .date)
-                            .font(.headline)
-                        
-                        HStack(spacing: 16) {
-                            if let weight = entry.weight {
-                                VStack(alignment: .leading) {
-                                    Text("weight".localized(comment: "Weight"))
-                                        .font(.caption)
-                                        .foregroundColor(.secondary)
-                                    Text("\(weight, specifier: "%.1f") \(weightUnit.symbol)")
-                                        .font(.body)
-                                }
-                            }
-                            
-                            if let reps = entry.reps {
-                                VStack(alignment: .leading) {
-                                    Text("reps".localized(comment: "Reps"))
-                                        .font(.caption)
-                                        .foregroundColor(.secondary)
-                                    Text("\(reps)")
-                                        .font(.body)
-                                }
-                            }
-                            
-                            if entry.sets > 0 {
-                                VStack(alignment: .leading) {
-                                    Text("sets".localized(comment: "Sets"))
-                                        .font(.caption)
-                                        .foregroundColor(.secondary)
-                                    Text("\(entry.sets)")
-                                        .font(.body)
-                                }
-                            }
-                            
-                            if let duration = entry.duration {
-                                VStack(alignment: .leading) {
-                                    Text("duration".localized(comment: "Duration"))
-                                        .font(.caption)
-                                        .foregroundColor(.secondary)
-                                    Text("\(Int(duration))s")
-                                        .font(.body)
-                                }
-                            }
-                            
-                            if let distance = entry.distance {
-                                VStack(alignment: .leading) {
-                                    Text("distance".localized(comment: "Distance"))
-                                        .font(.caption)
-                                        .foregroundColor(.secondary)
-                                    Text("\(distance) \(distanceUnit.symbol)")
-                                        .font(.body)
-                                }
-                            }
-                        }
+        ScrollView {
+            if !historyEntries.isEmpty {
+                VStack(spacing: 24) {
+                    if hasWeightData {
+                        ProgressChartCard(
+                            title: "weight".localized(comment: "Weight"),
+                            data: historyEntries.compactMap { entry in
+                                guard let weight = entry.weight else { return nil }
+                                return ChartDataPoint(date: entry.date, value: weight)
+                            },
+                            unit: weightUnit.symbol,
+                            color: .blue
+                        )
                     }
-                    .padding(.vertical, 4)
+                    
+                    if hasRepsData {
+                        ProgressChartCard(
+                            title: "reps".localized(comment: "Reps"),
+                            data: historyEntries.compactMap { entry in
+                                guard let reps = entry.reps else { return nil }
+                                return ChartDataPoint(date: entry.date, value: Double(reps))
+                            },
+                            unit: "",
+                            color: .green,
+                            valueFormat: "%.0f"
+                        )
+                    }
+                    
+                    if hasSetsData {
+                        ProgressChartCard(
+                            title: "sets".localized(comment: "Sets"),
+                            data: historyEntries.compactMap { entry in
+                                guard entry.sets > 0 else { return nil }
+                                return ChartDataPoint(date: entry.date, value: Double(entry.sets))
+                            },
+                            unit: "",
+                            color: .orange,
+                            valueFormat: "%.0f"
+                        )
+                    }
+                    
+                    if hasDurationData {
+                        ProgressChartCard(
+                            title: "duration".localized(comment: "Duration"),
+                            data: historyEntries.compactMap { entry in
+                                guard let duration = entry.duration else { return nil }
+                                return ChartDataPoint(date: entry.date, value: duration)
+                            },
+                            unit: "s",
+                            color: .purple,
+                            valueFormat: "%.0f"
+                        )
+                    }
+                    
+                    if hasDistanceData && template.isDistanceBased {
+                        ProgressChartCard(
+                            title: "distance".localized(comment: "Distance"),
+                            data: historyEntries.compactMap { entry in
+                                guard let distance = entry.distance else { return nil }
+                                return ChartDataPoint(date: entry.date, value: Double(distance))
+                            },
+                            unit: distanceUnit.symbol,
+                            color: .red,
+                            valueFormat: "%.0f"
+                        )
+                    }
                 }
-                .onDelete { indexSet in
-                    deleteFilteredHistoryEntries(at: indexSet)
-                }
+                .padding()
             } else {
-                Text("no_history".localized(comment: "No history available"))
-                    .foregroundColor(.secondary)
-                    .padding()
+                VStack {
+                    Spacer()
+                    Text("no_history".localized(comment: "No history available"))
+                        .foregroundColor(.secondary)
+                    Spacer()
+                }
             }
         }
         .navigationTitle(template.name)
+    }
+}
+
+struct ChartDataPoint: Identifiable {
+    let id = UUID()
+    let date: Date
+    let value: Double
+}
+
+struct ProgressChartCard: View {
+    let title: String
+    let data: [ChartDataPoint]
+    let unit: String
+    let color: Color
+    var valueFormat: String = "%.1f"
+    
+    private var minValue: Double {
+        data.map(\.value).min() ?? 0
+    }
+    
+    private var maxValue: Double {
+        data.map(\.value).max() ?? 0
+    }
+    
+    private var improvement: Double? {
+        guard data.count >= 2,
+              let first = data.first?.value,
+              let last = data.last?.value,
+              first > 0 else { return nil }
+        return ((last - first) / first) * 100
+    }
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Text(title)
+                    .font(.headline)
+                
+                Spacer()
+                
+                if let improvement = improvement {
+                    HStack(spacing: 4) {
+                        Image(systemName: improvement >= 0 ? "arrow.up.right" : "arrow.down.right")
+                            .font(.caption)
+                        Text("\(abs(improvement), specifier: "%.1f")%")
+                            .font(.caption)
+                    }
+                    .foregroundColor(improvement >= 0 ? .green : .red)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(
+                        RoundedRectangle(cornerRadius: 8)
+                            .fill(improvement >= 0 ? Color.green.opacity(0.1) : Color.red.opacity(0.1))
+                    )
+                }
+            }
+            
+            if data.count >= 2 {
+                Chart(data) { point in
+                    LineMark(
+                        x: .value("Date", point.date),
+                        y: .value(title, point.value)
+                    )
+                    .foregroundStyle(color)
+                    .interpolationMethod(.catmullRom)
+                    
+                    AreaMark(
+                        x: .value("Date", point.date),
+                        y: .value(title, point.value)
+                    )
+                    .foregroundStyle(
+                        LinearGradient(
+                            gradient: Gradient(colors: [color.opacity(0.3), color.opacity(0.05)]),
+                            startPoint: .top,
+                            endPoint: .bottom
+                        )
+                    )
+                    .interpolationMethod(.catmullRom)
+                    
+                    PointMark(
+                        x: .value("Date", point.date),
+                        y: .value(title, point.value)
+                    )
+                    .foregroundStyle(color)
+                }
+                .chartXAxis {
+                    AxisMarks(values: .automatic) { value in
+                        if let date = value.as(Date.self) {
+                            AxisValueLabel {
+                                Text(date, format: .dateTime.month(.abbreviated).day())
+                            }
+                        }
+                        AxisGridLine()
+                    }
+                }
+                .chartYScale(domain: (minValue * 0.9)...(maxValue * 1.1))
+                .frame(height: 200)
+                .clipped()
+            } else if data.count == 1 {
+                Text("Need at least 2 data points to show progression")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                    .frame(height: 200)
+                    .frame(maxWidth: .infinity)
+                    .background(Color.gray.opacity(0.1))
+                    .cornerRadius(8)
+            }
+            
+            HStack {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Current")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                    if let last = data.last {
+                        Text("\(last.value, specifier: valueFormat) \(unit)")
+                            .font(.subheadline)
+                            .fontWeight(.semibold)
+                    }
+                }
+                
+                Spacer()
+                
+                VStack(alignment: .trailing, spacing: 4) {
+                    Text("Best")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                    Text("\(maxValue, specifier: valueFormat) \(unit)")
+                        .font(.subheadline)
+                        .fontWeight(.semibold)
+                }
+            }
+        }
+        .padding()
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(Color(uiColor: .systemBackground))
+                .shadow(color: Color.black.opacity(0.1), radius: 5, x: 0, y: 2)
+        )
     }
 }
