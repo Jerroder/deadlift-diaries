@@ -1221,17 +1221,26 @@ struct ExerciseView: View {
                     }
                 }
             
-            List(targetWorkouts) { targetWorkout in
-                Button(action: {
-                    copyExercises(to: targetWorkout)
-                    isShowingWorkoutPicker = false
-                }) {
-                    VStack(alignment: .leading) {
-                        Text(targetWorkout.name)
-                            .font(.headline)
-                        Text("week_x".localized(with: targetWorkout.week?.number ?? 0, comment: "Week x"))
-                            .font(.subheadline)
-                            .foregroundColor(Color(UIColor.secondaryLabel))
+            let groupedWorkouts = Dictionary(grouping: targetWorkouts) { workout -> Int in
+                workout.week?.number ?? 0
+            }
+            let sortedWeeks = groupedWorkouts.keys.sorted()
+            
+            List {
+                ForEach(sortedWeeks, id: \.self) { weekNumber in
+                    Section(header: Text("week_x".localized(with: weekNumber, comment: "Week x"))) {
+                        ForEach(groupedWorkouts[weekNumber] ?? []) { targetWorkout in
+                            Button(action: {
+                                copyExercises(to: targetWorkout)
+                                isShowingWorkoutPicker = false
+                            }) {
+                                HStack {
+                                    Text(targetWorkout.name)
+                                        .font(.body)
+                                    Spacer()
+                                }
+                            }
+                        }
                     }
                 }
             }
