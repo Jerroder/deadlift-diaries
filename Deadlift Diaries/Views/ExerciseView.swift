@@ -417,6 +417,8 @@ struct ExerciseView: View {
                                             template1.supersetPartnerTemplateID = template2.id
                                             template2.supersetPartnerTemplateID = template1.id
                                             template2.isTheSupersetTemplate = true
+                                            
+                                            updateFutureExercisesWithSuperset(mainTemplate: template1, supersetTemplate: template2)
                                         }
                                         
                                         let partner = Exercise(
@@ -1783,10 +1785,11 @@ extension ExerciseView {
             return
         }
         
-        if let mainTemplate = exercise.template {
+        if let mainTemplate = exercise.template,
+           let partnerTemplate = partner.template {
+            removeSupersetFromFutureExercises(mainTemplate: mainTemplate, supersetTemplate: partnerTemplate)
+            
             mainTemplate.supersetPartnerTemplateID = nil
-        }
-        if let partnerTemplate = partner.template {
             partnerTemplate.supersetPartnerTemplateID = nil
             partnerTemplate.isTheSupersetTemplate = false
         }
@@ -1797,6 +1800,75 @@ extension ExerciseView {
         exercise.isTheSuperset = false
         workout.exercises?.removeAll { $0.id == partnerID }
         modelContext.delete(partner)
+    }
+    
+    private func removeSupersetFromFutureExercises(mainTemplate: ExerciseTemplate, supersetTemplate: ExerciseTemplate) {
+        guard let exercisesWithTemplate = mainTemplate.exercises else { return }
+        
+        let currentWorkoutDate = workout.date
+        
+        for futureExercise in exercisesWithTemplate {
+            guard let futureWorkout = futureExercise.workout,
+                  futureWorkout.date > currentWorkoutDate,
+                  let futurePartnerID = futureExercise.supersetPartnerID else {
+                continue
+            }
+            
+            if let futurePartner = futureWorkout.exercises?.first(where: { $0.id == futurePartnerID }),
+               futurePartner.template?.id == supersetTemplate.id {
+                futurePartner.supersetPartnerID = nil
+                futurePartner.isTheSuperset = false
+                futureExercise.supersetPartnerID = nil
+                futureExercise.isTheSuperset = false
+                futureWorkout.exercises?.removeAll { $0.id == futurePartnerID }
+                modelContext.delete(futurePartner)
+            }
+        }
+    }
+    
+    private func updateFutureExercisesWithSuperset(mainTemplate: ExerciseTemplate, supersetTemplate: ExerciseTemplate) {
+        guard let exercisesWithTemplate = mainTemplate.exercises else { return }
+        
+        let currentWorkoutDate = workout.date
+        
+        for futureExercise in exercisesWithTemplate {
+            guard let futureWorkout = futureExercise.workout,
+                  futureWorkout.date > currentWorkoutDate,
+                  futureExercise.supersetPartnerID == nil else {
+                continue
+            }
+            
+            let existingPartner = futureWorkout.exercises?.first { exercise in
+                exercise.template?.id == supersetTemplate.id &&
+                exercise.orderIndex == futureExercise.orderIndex
+            }
+            
+            if existingPartner == nil {
+                let partnerExercise = Exercise(
+                    name: supersetTemplate.name,
+                    weight: supersetTemplate.defaultWeight,
+                    sets: 0,
+                    reps: supersetTemplate.defaultReps,
+                    duration: supersetTemplate.defaultDuration,
+                    restTime: 0.0,
+                    isTimeBased: supersetTemplate.isTimeBased,
+                    orderIndex: futureExercise.orderIndex,
+                    timeBeforeNext: 0.0,
+                    isTheSuperset: true,
+                    isDistanceBased: supersetTemplate.isDistanceBased,
+                    distance: supersetTemplate.defaultDistance
+                )
+                
+                partnerExercise.supersetPartnerID = futureExercise.id
+                futureExercise.supersetPartnerID = partnerExercise.id
+                
+                partnerExercise.template = supersetTemplate
+                
+                futureWorkout.exercises!.append(partnerExercise)
+                partnerExercise.workout = futureWorkout
+                modelContext.insert(partnerExercise)
+            }
+        }
     }
     
     private func findOrCreateTemplate(name: String, weight: Double?, sets: Int, reps: Int?, duration: Double?, restTime: Double, isTimeBased: Bool, isDistanceBased: Bool, distance: Int?, timeBeforeNext: Double, isSupersetTemplate: Bool = false) -> ExerciseTemplate {
