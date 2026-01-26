@@ -154,6 +154,15 @@ struct ProgressBarView: View {
             case .active:
                 isActive = true
                 print("App became active")
+                
+                if isTimerRunning, let start = timeStarted {
+                    let now = Date.now.timeIntervalSince1970 * 1000
+                    let totalElapsed = (now - start) / 1000
+                    let remaining = max(0, realDuration - totalElapsed - elapsed)
+                    timeRemaining = remaining
+                    restProgress = 1 - (CGFloat(timeRemaining.rounded(.down)) / CGFloat(realDuration.rounded(.up)))
+                    print("Timer recalculated on foreground: \(timeRemaining)s remaining")
+                }
             case .inactive:
                 print("App became inactive")
             case .background:
@@ -475,7 +484,7 @@ struct ProgressBarView: View {
         }
         
         timeStarted = Date.now.timeIntervalSince1970 * 1000
-        timeRemaining = max(0, realDuration - self.elapsed) // prevent notification from crashing the app because timeRemaining < 0
+        timeRemaining = max(0, realDuration - self.elapsed)
         cancelPendingNotifications()
         if sendNotification {
             scheduleNotification()
@@ -493,8 +502,9 @@ struct ProgressBarView: View {
         timer?.setEventHandler { [self] in
             DispatchQueue.main.async {
                 let now: Double = Date.now.timeIntervalSince1970 * 1000
-                let elapsed: Double = max(0, now - (timeStarted ?? 0)) / 1000
-                let remaining: Double = max(0, realDuration - elapsed - self.elapsed)
+                let elapsedSinceStart: Double = max(0, now - (timeStarted ?? 0)) / 1000
+                let totalElapsed: Double = elapsedSinceStart + self.elapsed // elapsed = accumulated paused time
+                let remaining: Double = max(0, realDuration - totalElapsed)
                 timeRemaining = remaining
                 restProgress = 1 - (CGFloat(timeRemaining.rounded(.down)) / CGFloat(realDuration.rounded(.up)))
                 
@@ -548,7 +558,8 @@ struct ProgressBarView: View {
     private func stopTimer() {
         let now: Double = Date.now.timeIntervalSince1970 * 1000
         if let timeStarted = timeStarted {
-            elapsed += max(0, now - timeStarted) / 1000
+            let elapsedSinceStart = max(0, now - timeStarted) / 1000
+            elapsed += elapsedSinceStart
             timeRemaining = max(0, realDuration - elapsed)
         }
         timer?.cancel()
