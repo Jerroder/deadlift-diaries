@@ -76,7 +76,9 @@ struct ExerciseView: View {
     @Query private var allTemplates: [ExerciseTemplate]
     
     private var mesocycleTemplates: [ExerciseTemplate] {
-        guard let mesocycle = currentMesocycle else { return [] }
+        guard let mesocycle = currentMesocycle else {
+            return allTemplates
+        }
         return allTemplates.filter { $0.mesocycle?.id == mesocycle.id }
     }
     

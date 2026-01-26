@@ -133,8 +133,6 @@ class MigrationManager {
             return
         }
         
-        print("Starting duplicate template cleanup migration")
-        
         let templateDescriptor = FetchDescriptor<ExerciseTemplate>()
         guard let allTemplates = try? modelContext.fetch(templateDescriptor) else {
             UserDefaults.standard.set(true, forKey: duplicateCleanupMigrationKey)
@@ -170,7 +168,6 @@ class MigrationManager {
                     $0.name.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() == exerciseName 
                 }) {
                     exercise.template = matchingTemplate
-                    print("Linked orphaned exercise '\(exercise.name)' to template '\(matchingTemplate.name)'")
                 }
             }
         }
@@ -212,8 +209,7 @@ class MigrationManager {
         
         var templatesToDelete: Set<UUID> = []
         
-        for (name, duplicates) in regularTemplateGroups where duplicates.count > 1 {
-            print("Found \(duplicates.count) duplicate regular templates for '\(name)'")
+        for (_, duplicates) in regularTemplateGroups where duplicates.count > 1 {
             
             let sorted = duplicates.sorted { t1, t2 in
                 let score1 = (t1.exercises?.count ?? 0) * 100 + (t1.history?.count ?? 0)
@@ -262,7 +258,7 @@ class MigrationManager {
         
         var processedSupersetTemplates: Set<UUID> = []
         
-        for (pairKey, templates) in supersetPairGroups {
+        for (_, templates) in supersetPairGroups {
             var pairs: [(main: ExerciseTemplate, superset: ExerciseTemplate)] = []
             
             for template in templates where !processedSupersetTemplates.contains(template.id) {
@@ -281,7 +277,6 @@ class MigrationManager {
             }
             
             if pairs.count > 1 {
-                print("Found \(pairs.count) duplicate superset pairs for '\(pairKey)'")
                 
                 let sortedPairs = pairs.sorted { pair1, pair2 in
                     let mainExercises1 = pair1.main.exercises?.count ?? 0
@@ -358,14 +353,12 @@ class MigrationManager {
         do {
             try modelContext.save()
             UserDefaults.standard.set(true, forKey: duplicateCleanupMigrationKey)
-            print("Duplicate template cleanup completed. Removed \(templatesToDelete.count) duplicate templates")
         } catch {
             print("Error during duplicate cleanup: \(error)")
         }
     }
     
     static func performMigrationIfNeeded(modelContext: ModelContext) {
-        // Check if migration has already been performed
         if UserDefaults.standard.bool(forKey: migrationKey) {
             return
         }
@@ -383,22 +376,6 @@ class MigrationManager {
         if exercises.isEmpty {
             UserDefaults.standard.set(true, forKey: migrationKey)
             return
-        }
-        
-        let mesocycleDescriptor = FetchDescriptor<Mesocycle>()
-        var targetMesocycle: Mesocycle?
-        
-        if let mesocycles = try? modelContext.fetch(mesocycleDescriptor), !mesocycles.isEmpty {
-            targetMesocycle = mesocycles.first
-        } else {
-            let newMesocycle = Mesocycle(
-                name: "Migrated Templates",
-                startDate: Date(),
-                numberOfWeeks: 4,
-                orderIndex: 0
-            )
-            modelContext.insert(newMesocycle)
-            targetMesocycle = newMesocycle
         }
         
         var processedExerciseIDs: Set<UUID> = []
@@ -419,12 +396,14 @@ class MigrationManager {
             }
             processedPairIDs.insert(pairID)
             
+            let name1 = exercise.name.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+            let name2 = partner.name.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+            
+            let sortedNames = [name1, name2].sorted()
+            let pairKey = "\(sortedNames[0])___\(sortedNames[1])"
+            
             let mainExercise = exercise.isTheSuperset ?? false ? partner : exercise
             let supersetExercise = exercise.isTheSuperset ?? false ? exercise : partner
-            
-            let mainName = mainExercise.name.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-            let supersetName = supersetExercise.name.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-            let pairKey = "\(mainName)___\(supersetName)"
             
             if supersetGroups[pairKey] == nil {
                 supersetGroups[pairKey] = []
@@ -475,11 +454,6 @@ class MigrationManager {
             
             mainTemplate.supersetPartnerTemplateID = supersetTemplate.id
             supersetTemplate.supersetPartnerTemplateID = mainTemplate.id
-            
-            if let mesocycle = targetMesocycle {
-                mainTemplate.mesocycle = mesocycle
-                supersetTemplate.mesocycle = mesocycle
-            }
             
             modelContext.insert(mainTemplate)
             modelContext.insert(supersetTemplate)
@@ -570,15 +544,12 @@ class MigrationManager {
                 timeBeforeNext: representativeExercise.timeBeforeNext > 0 ? representativeExercise.timeBeforeNext : 120.0
             )
             
-            if let mesocycle = targetMesocycle {
-                template.mesocycle = mesocycle
-            }
-            
             modelContext.insert(template)
             templates[normalizedName] = template
             
             for exercise in exerciseList {
                 exercise.template = template
+                processedExerciseIDs.insert(exercise.id)
             }
             
             var historyByDate: [Date: ExerciseHistory] = [:]
@@ -622,7 +593,6 @@ class MigrationManager {
         do {
             try modelContext.save()
             UserDefaults.standard.set(true, forKey: migrationKey)
-            print("Exercise template migration completed successfully")
         } catch {
             print("Error during migration: \(error)")
         }
