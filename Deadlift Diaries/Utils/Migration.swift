@@ -161,6 +161,20 @@ class MigrationManager {
             template.mesocycle = targetMesocycle
         }
         
+        let exerciseDescriptor = FetchDescriptor<Exercise>()
+        if let allExercises = try? modelContext.fetch(exerciseDescriptor) {
+            for exercise in allExercises where exercise.template == nil {
+                let exerciseName = exercise.name.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+                
+                if let matchingTemplate = allTemplates.first(where: { 
+                    $0.name.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() == exerciseName 
+                }) {
+                    exercise.template = matchingTemplate
+                    print("Linked orphaned exercise '\(exercise.name)' to template '\(matchingTemplate.name)'")
+                }
+            }
+        }
+        
         var regularTemplateGroups: [String: [ExerciseTemplate]] = [:]
         var supersetPairGroups: [String: [ExerciseTemplate]] = [:]
         
@@ -391,13 +405,19 @@ class MigrationManager {
         var templates: [String: ExerciseTemplate] = [:]
         
         var supersetGroups: [String: [Exercise]] = [:]
+        var processedPairIDs: Set<String> = []
         
-        for exercise in exercises where exercise.supersetPartnerID != nil && !processedExerciseIDs.contains(exercise.id) {
+        for exercise in exercises where exercise.supersetPartnerID != nil {
             guard let partnerID = exercise.supersetPartnerID,
-                  let partner = exercises.first(where: { $0.id == partnerID }),
-                  !processedExerciseIDs.contains(partnerID) else {
+                  let partner = exercises.first(where: { $0.id == partnerID }) else {
                 continue
             }
+            
+            let pairID = [exercise.id.uuidString, partnerID.uuidString].sorted().joined(separator: "_")
+            guard !processedPairIDs.contains(pairID) else {
+                continue
+            }
+            processedPairIDs.insert(pairID)
             
             let mainExercise = exercise.isTheSuperset ?? false ? partner : exercise
             let supersetExercise = exercise.isTheSuperset ?? false ? exercise : partner
@@ -411,9 +431,6 @@ class MigrationManager {
             }
             supersetGroups[pairKey]?.append(mainExercise)
             supersetGroups[pairKey]?.append(supersetExercise)
-            
-            processedExerciseIDs.insert(mainExercise.id)
-            processedExerciseIDs.insert(supersetExercise.id)
         }
         
         for (_, exercisesInGroup) in supersetGroups {
@@ -473,6 +490,7 @@ class MigrationManager {
                 } else {
                     exercise.template = mainTemplate
                 }
+                processedExerciseIDs.insert(exercise.id)
             }
             
             var mainHistoryByDate: [Date: ExerciseHistory] = [:]
