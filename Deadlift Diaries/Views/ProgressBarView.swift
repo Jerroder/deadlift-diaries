@@ -9,7 +9,6 @@ import AudioToolbox
 import AVFoundation
 import SwiftUI
 import UserNotifications
-import ActivityKit
 
 struct ProgressBarView: View {
     let totalSets: Int
@@ -38,7 +37,6 @@ struct ProgressBarView: View {
     @State private var timeStarted: Double?
     @State private var timeRemaining: Double = 60.0
     @State private var isExerciseInterval: Bool = true
-    @State private var timerActivity: Activity<TimerWidgetAttributes>?
     
     // accentColor is 0x5DA79B
     let orange: Color = Color(red: 0xFF/255, green: 0xBC/255, blue: 0x8E/255)
@@ -170,11 +168,6 @@ struct ProgressBarView: View {
                 print("App entered background")
             @unknown default:
                 print("Unknown scene phase")
-            }
-        }
-        .onDisappear {
-            if !isTimerRunning {
-                endLiveActivity()
             }
         }
     }
@@ -465,8 +458,6 @@ struct ProgressBarView: View {
         timeStarted = nil
         elapsed = 0.0
         endBackgroundTask()
-        
-        endLiveActivity()
     }
     
     private func toggleTimer() {
@@ -488,12 +479,6 @@ struct ProgressBarView: View {
         cancelPendingNotifications()
         if sendNotification {
             scheduleNotification()
-        }
-        
-        if timerActivity == nil {
-            startLiveActivity()
-        } else {
-            updateLiveActivity()
         }
         
         let queue: DispatchQueue = DispatchQueue(label: "com.jerroder.deadliftdiaries.timer", qos: .userInitiated)
@@ -520,24 +505,18 @@ struct ProgressBarView: View {
                         timeRemaining = realDuration
                         restProgress = 0
                         self.elapsed = 0.0
-                        
-                        updateLiveActivity()
                     }
                     
                     if currentSet == nbSet && isExerciseDone {
                         currentSet += 1
                         if autoResetTimer && isCalledFromTimer {
                             resetValues(index: 1, isExerciseInterval: isTimeBased)
-                        } else {
-                            endLiveActivity()
                         }
                     }
                     
                     if currentSet == nbSet {
                         isExerciseDone = true
                         timeRemaining = timeBeforeNextExercise
-                        
-                        updateLiveActivity()
                     }
                     
                     if isTimeBased && !isExerciseDone {
@@ -566,8 +545,6 @@ struct ProgressBarView: View {
         timer = nil
         cancelPendingNotifications()
         endBackgroundTask()
-        
-        updateLiveActivity()
     }
     
     private func endBackgroundTask() {
@@ -632,84 +609,5 @@ struct ProgressBarView: View {
     
     private func cancelPendingNotifications() {
         UNUserNotificationCenter.current().removeAllPendingNotificationRequests()
-    }
-    
-    // MARK: - Live Activity Functions
-    
-    private func startLiveActivity() {
-        guard ActivityAuthorizationInfo().areActivitiesEnabled else {
-            print("Live Activities are not enabled")
-            return
-        }
-        
-        let attributes = TimerWidgetAttributes(
-            timerType: isExerciseDone ? "beforeNext" : (isExerciseInterval ? "exercise" : "rest")
-        )
-        
-        let contentState = TimerWidgetAttributes.ContentState(
-            timeRemaining: timeRemaining,
-            totalDuration: realDuration,
-            currentSet: isTimeBased ? (currentSet + 1) / 2 : currentSet,
-            totalSets: totalSets,
-            isResting: !isExerciseInterval,
-            isRunning: true,
-            startTime: Date()
-        )
-        
-        do {
-            timerActivity = try Activity.request(
-                attributes: attributes,
-                content: .init(state: contentState, staleDate: nil),
-                pushType: nil
-            )
-            print("Live Activity started successfully")
-        } catch {
-            print("Error starting Live Activity: \(error.localizedDescription)")
-        }
-    }
-    
-    private func updateLiveActivity() {
-        guard let activity = timerActivity else { return }
-        
-        let updatedState = TimerWidgetAttributes.ContentState(
-            timeRemaining: timeRemaining,
-            totalDuration: realDuration,
-            currentSet: isTimeBased ? (currentSet + 1) / 2 : currentSet,
-            totalSets: totalSets,
-            isResting: !isExerciseInterval,
-            isRunning: isTimerRunning,
-            startTime: isTimerRunning ? Date().addingTimeInterval(-((realDuration - timeRemaining))) : nil
-        )
-        
-        Task {
-            await activity.update(
-                ActivityContent<TimerWidgetAttributes.ContentState>(
-                    state: updatedState,
-                    staleDate: nil
-                )
-            )
-        }
-    }
-    
-    private func endLiveActivity() {
-        guard let activity = timerActivity else { return }
-        
-        let finalState = TimerWidgetAttributes.ContentState(
-            timeRemaining: 0,
-            totalDuration: realDuration,
-            currentSet: isTimeBased ? (currentSet + 1) / 2 : currentSet,
-            totalSets: totalSets,
-            isResting: !isExerciseInterval,
-            isRunning: false,
-            startTime: nil
-        )
-        
-        Task {
-            await activity.end(
-                ActivityContent(state: finalState, staleDate: nil),
-                dismissalPolicy: .immediate
-            )
-            timerActivity = nil
-        }
     }
 }

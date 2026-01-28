@@ -7,41 +7,11 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		460F2F3A2F2795ED00287EE6 /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 460F2F392F2795ED00287EE6 /* WidgetKit.framework */; };
-		460F2F3C2F2795ED00287EE6 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 460F2F3B2F2795ED00287EE6 /* SwiftUI.framework */; };
-		460F2F4D2F2795EE00287EE6 /* TimerWidgetExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 460F2F372F2795ED00287EE6 /* TimerWidgetExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		463AEADC2DF632CB00F1189B /* Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = 463AEADB2DF632CB00F1189B /* Localizable.xcstrings */; };
 		463EC1B52DF4BCC200ED7B0F /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 463EC1B42DF4BCC200ED7B0F /* PrivacyInfo.xcprivacy */; };
 /* End PBXBuildFile section */
 
-/* Begin PBXContainerItemProxy section */
-		460F2F4B2F2795EE00287EE6 /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = 465E04BF2DE1FCCC00CD70D8 /* Project object */;
-			proxyType = 1;
-			remoteGlobalIDString = 460F2F362F2795ED00287EE6;
-			remoteInfo = TimerWidgetExtension;
-		};
-/* End PBXContainerItemProxy section */
-
-/* Begin PBXCopyFilesBuildPhase section */
-		460F2F522F2795EE00287EE6 /* Embed Foundation Extensions */ = {
-			isa = PBXCopyFilesBuildPhase;
-			buildActionMask = 2147483647;
-			dstPath = "";
-			dstSubfolderSpec = 13;
-			files = (
-				460F2F4D2F2795EE00287EE6 /* TimerWidgetExtension.appex in Embed Foundation Extensions */,
-			);
-			name = "Embed Foundation Extensions";
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-/* End PBXCopyFilesBuildPhase section */
-
 /* Begin PBXFileReference section */
-		460F2F372F2795ED00287EE6 /* TimerWidgetExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = TimerWidgetExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
-		460F2F392F2795ED00287EE6 /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
-		460F2F3B2F2795ED00287EE6 /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
 		463AEADB2DF632CB00F1189B /* Localizable.xcstrings */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; path = Localizable.xcstrings; sourceTree = "<group>"; };
 		463EC1AD2DF37D5000ED7B0F /* README.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = "<group>"; };
 		463EC1B42DF4BCC200ED7B0F /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
@@ -49,20 +19,6 @@
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
-		460F2F512F2795EE00287EE6 /* Exceptions for "TimerWidget" folder in "TimerWidgetExtension" target */ = {
-			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
-			membershipExceptions = (
-				Info.plist,
-			);
-			target = 460F2F362F2795ED00287EE6 /* TimerWidgetExtension */;
-		};
-		460F2F5C2F27994200287EE6 /* Exceptions for "Deadlift Diaries" folder in "TimerWidgetExtension" target */ = {
-			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
-			membershipExceptions = (
-				Utils/TimerActivityAttributes.swift,
-			);
-			target = 460F2F362F2795ED00287EE6 /* TimerWidgetExtension */;
-		};
 		4677AE442EA622E3006844E1 /* Exceptions for "Images" folder in "Deadlift Diaries" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
@@ -105,19 +61,8 @@
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
-		460F2F3D2F2795ED00287EE6 /* TimerWidget */ = {
-			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-				460F2F512F2795EE00287EE6 /* Exceptions for "TimerWidget" folder in "TimerWidgetExtension" target */,
-			);
-			path = TimerWidget;
-			sourceTree = "<group>";
-		};
 		465E04C92DE1FCCC00CD70D8 /* Deadlift Diaries */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-				460F2F5C2F27994200287EE6 /* Exceptions for "Deadlift Diaries" folder in "TimerWidgetExtension" target */,
-			);
 			path = "Deadlift Diaries";
 			sourceTree = "<group>";
 		};
@@ -132,15 +77,6 @@
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
-		460F2F342F2795ED00287EE6 /* Frameworks */ = {
-			isa = PBXFrameworksBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-				460F2F3C2F2795ED00287EE6 /* SwiftUI.framework in Frameworks */,
-				460F2F3A2F2795ED00287EE6 /* WidgetKit.framework in Frameworks */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
 		465E04C42DE1FCCC00CD70D8 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -151,15 +87,6 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
-		460F2F382F2795ED00287EE6 /* Frameworks */ = {
-			isa = PBXGroup;
-			children = (
-				460F2F392F2795ED00287EE6 /* WidgetKit.framework */,
-				460F2F3B2F2795ED00287EE6 /* SwiftUI.framework */,
-			);
-			name = Frameworks;
-			sourceTree = "<group>";
-		};
 		465E04BE2DE1FCCC00CD70D8 = {
 			isa = PBXGroup;
 			children = (
@@ -169,37 +96,12 @@
 				463EC1B42DF4BCC200ED7B0F /* PrivacyInfo.xcprivacy */,
 				463EC1AD2DF37D5000ED7B0F /* README.md */,
 				46AC66012E85E59900DAA16F /* Deadlift Diaries.app */,
-				460F2F372F2795ED00287EE6 /* TimerWidgetExtension.appex */,
-				460F2F3D2F2795ED00287EE6 /* TimerWidget */,
-				460F2F382F2795ED00287EE6 /* Frameworks */,
 			);
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		460F2F362F2795ED00287EE6 /* TimerWidgetExtension */ = {
-			isa = PBXNativeTarget;
-			buildConfigurationList = 460F2F4E2F2795EE00287EE6 /* Build configuration list for PBXNativeTarget "TimerWidgetExtension" */;
-			buildPhases = (
-				460F2F332F2795ED00287EE6 /* Sources */,
-				460F2F342F2795ED00287EE6 /* Frameworks */,
-				460F2F352F2795ED00287EE6 /* Resources */,
-			);
-			buildRules = (
-			);
-			dependencies = (
-			);
-			fileSystemSynchronizedGroups = (
-				460F2F3D2F2795ED00287EE6 /* TimerWidget */,
-			);
-			name = TimerWidgetExtension;
-			packageProductDependencies = (
-			);
-			productName = TimerWidgetExtension;
-			productReference = 460F2F372F2795ED00287EE6 /* TimerWidgetExtension.appex */;
-			productType = "com.apple.product-type.app-extension";
-		};
 		465E04C62DE1FCCC00CD70D8 /* Deadlift Diaries */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = 465E04EA2DE1FCCD00CD70D8 /* Build configuration list for PBXNativeTarget "Deadlift Diaries" */;
@@ -207,12 +109,10 @@
 				465E04C32DE1FCCC00CD70D8 /* Sources */,
 				465E04C42DE1FCCC00CD70D8 /* Frameworks */,
 				465E04C52DE1FCCC00CD70D8 /* Resources */,
-				460F2F522F2795EE00287EE6 /* Embed Foundation Extensions */,
 			);
 			buildRules = (
 			);
 			dependencies = (
-				460F2F4C2F2795EE00287EE6 /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				465E04C92DE1FCCC00CD70D8 /* Deadlift Diaries */,
@@ -232,12 +132,9 @@
 			isa = PBXProject;
 			attributes = {
 				BuildIndependentTargetsInParallel = 1;
-				LastSwiftUpdateCheck = 2620;
+				LastSwiftUpdateCheck = 1630;
 				LastUpgradeCheck = 2600;
 				TargetAttributes = {
-					460F2F362F2795ED00287EE6 = {
-						CreatedOnToolsVersion = 26.2;
-					};
 					465E04C62DE1FCCC00CD70D8 = {
 						CreatedOnToolsVersion = 16.3;
 					};
@@ -261,19 +158,11 @@
 			projectRoot = "";
 			targets = (
 				465E04C62DE1FCCC00CD70D8 /* Deadlift Diaries */,
-				460F2F362F2795ED00287EE6 /* TimerWidgetExtension */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
-		460F2F352F2795ED00287EE6 /* Resources */ = {
-			isa = PBXResourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
 		465E04C52DE1FCCC00CD70D8 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -286,13 +175,6 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
-		460F2F332F2795ED00287EE6 /* Sources */ = {
-			isa = PBXSourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
 		465E04C32DE1FCCC00CD70D8 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -302,81 +184,7 @@
 		};
 /* End PBXSourcesBuildPhase section */
 
-/* Begin PBXTargetDependency section */
-		460F2F4C2F2795EE00287EE6 /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			target = 460F2F362F2795ED00287EE6 /* TimerWidgetExtension */;
-			targetProxy = 460F2F4B2F2795EE00287EE6 /* PBXContainerItemProxy */;
-		};
-/* End PBXTargetDependency section */
-
 /* Begin XCBuildConfiguration section */
-		460F2F4F2F2795EE00287EE6 /* Debug */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
-				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
-				CODE_SIGN_IDENTITY = "Apple Development";
-				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = JUA2K3U263;
-				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_FILE = TimerWidget/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = TimerWidget;
-				INFOPLIST_KEY_NSHumanReadableCopyright = "";
-				IPHONEOS_DEPLOYMENT_TARGET = 18.6;
-				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
-					"@executable_path/Frameworks",
-					"@executable_path/../../Frameworks",
-				);
-				MARKETING_VERSION = 1.3;
-				PRODUCT_BUNDLE_IDENTIFIER = com.jerroder.deadliftdiaries.TimerWidget;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				PROVISIONING_PROFILE_SPECIFIER = "";
-				SKIP_INSTALL = YES;
-				STRING_CATALOG_GENERATE_SYMBOLS = YES;
-				SWIFT_APPROACHABLE_CONCURRENCY = YES;
-				SWIFT_EMIT_LOC_STRINGS = YES;
-				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
-				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2";
-			};
-			name = Debug;
-		};
-		460F2F502F2795EE00287EE6 /* Release */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
-				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
-				CODE_SIGN_IDENTITY = "Apple Development";
-				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = JUA2K3U263;
-				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_FILE = TimerWidget/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = TimerWidget;
-				INFOPLIST_KEY_NSHumanReadableCopyright = "";
-				IPHONEOS_DEPLOYMENT_TARGET = 18.6;
-				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
-					"@executable_path/Frameworks",
-					"@executable_path/../../Frameworks",
-				);
-				MARKETING_VERSION = 1.3;
-				PRODUCT_BUNDLE_IDENTIFIER = com.jerroder.deadliftdiaries.TimerWidget;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				PROVISIONING_PROFILE_SPECIFIER = "";
-				SKIP_INSTALL = YES;
-				STRING_CATALOG_GENERATE_SYMBOLS = YES;
-				SWIFT_APPROACHABLE_CONCURRENCY = YES;
-				SWIFT_EMIT_LOC_STRINGS = YES;
-				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
-				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2";
-			};
-			name = Release;
-		};
 		465E04E82DE1FCCD00CD70D8 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -510,7 +318,7 @@
 				CODE_SIGN_ENTITLEMENTS = "Deadlift Diaries/Deadlift Diaries.entitlements";
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
 				CODE_SIGN_STYLE = Manual;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 3;
 				DEVELOPMENT_TEAM = "";
 				"DEVELOPMENT_TEAM[sdk=iphoneos*]" = JUA2K3U263;
 				ENABLE_PREVIEWS = YES;
@@ -518,18 +326,17 @@
 				INFOPLIST_FILE = "Deadlift-Diaries-Info.plist";
 				INFOPLIST_KEY_CFBundleDisplayName = "Deadlift Diaries";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.healthcare-fitness";
-				INFOPLIST_KEY_NSSupportsLiveActivities = YES;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
-				IPHONEOS_DEPLOYMENT_TARGET = 18.6;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.6;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.3;
+				MARKETING_VERSION = 1.2.1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.jerroder.deadliftdiaries;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
@@ -552,7 +359,7 @@
 				CODE_SIGN_ENTITLEMENTS = "Deadlift Diaries/Deadlift Diaries.entitlements";
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Distribution";
 				CODE_SIGN_STYLE = Manual;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 3;
 				DEVELOPMENT_TEAM = "";
 				"DEVELOPMENT_TEAM[sdk=iphoneos*]" = JUA2K3U263;
 				ENABLE_PREVIEWS = YES;
@@ -560,18 +367,17 @@
 				INFOPLIST_FILE = "Deadlift-Diaries-Info.plist";
 				INFOPLIST_KEY_CFBundleDisplayName = "Deadlift Diaries";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.healthcare-fitness";
-				INFOPLIST_KEY_NSSupportsLiveActivities = YES;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
-				IPHONEOS_DEPLOYMENT_TARGET = 18.6;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.6;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.3;
+				MARKETING_VERSION = 1.2.1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.jerroder.deadliftdiaries;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
@@ -589,15 +395,6 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		460F2F4E2F2795EE00287EE6 /* Build configuration list for PBXNativeTarget "TimerWidgetExtension" */ = {
-			isa = XCConfigurationList;
-			buildConfigurations = (
-				460F2F4F2F2795EE00287EE6 /* Debug */,
-				460F2F502F2795EE00287EE6 /* Release */,
-			);
-			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Release;
-		};
 		465E04C22DE1FCCC00CD70D8 /* Build configuration list for PBXProject "Deadlift Diaries" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
