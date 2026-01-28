@@ -215,7 +215,6 @@ struct MesocycleView: View {
                     Button("", systemImage: "checkmark") {
                         if let mesocycle = mesocycle {
                             updateWeeks(for: mesocycle, newStartDate: mesocycle.startDate, newWeekCount: mesocycle.numberOfWeeks)
-                            updateWorkoutDates(for: mesocycle)
                         } else {
                             let orderIndex: Int = (mesocycles.map { $0.orderIndex }.max() ?? 0) + 1
                             let mesocycle = Mesocycle(
@@ -252,24 +251,33 @@ struct MesocycleView: View {
     }
     
     private func updateWeeks(for mesocycle: Mesocycle, newStartDate: Date, newWeekCount: Int) {
-        let currentWeekCount = mesocycle.weeks?.count ?? 0
+        let originalWeekCount = mesocycle.weeks?.count ?? 0
+        var originalWeekStartDates: [UUID: Date] = [:]
         
-        if newWeekCount > currentWeekCount {
-            for weekNumber in (currentWeekCount + 1)...newWeekCount {
+        for week in mesocycle.weeks ?? [] {
+            originalWeekStartDates[week.id] = week.startDate
+        }
+        
+        if newWeekCount > originalWeekCount {
+            for weekNumber in (originalWeekCount + 1)...newWeekCount {
                 let weekStartDate = Calendar.current.date(byAdding: .day, value: (weekNumber - 1) * 7, to: newStartDate)!
                 let newWeek = Week(number: weekNumber, startDate: weekStartDate)
                 mesocycle.weeks?.append(newWeek)
                 newWeek.mesocycle = mesocycle
                 modelContext.insert(newWeek)
             }
-        } else if newWeekCount < currentWeekCount {
-            let weeksToRemove = mesocycle.weeks?.sorted { $0.number > $1.number }.prefix(currentWeekCount - newWeekCount) ?? []
+        } else if newWeekCount < originalWeekCount {
+            let weeksToRemove = mesocycle.weeks?.sorted { $0.number > $1.number }.prefix(originalWeekCount - newWeekCount) ?? []
             for week in weeksToRemove {
-                for workout in week.workouts ?? [] {
-                    for exercise in workout.exercises ?? [] {
-                        modelContext.delete(exercise)
+                if let workouts = week.workouts {
+                    for workout in workouts {
+                        if let exercises = workout.exercises {
+                            for exercise in exercises {
+                                modelContext.delete(exercise)
+                            }
+                        }
+                        modelContext.delete(workout)
                     }
-                    modelContext.delete(workout)
                 }
                 modelContext.delete(week)
             }
@@ -281,20 +289,24 @@ struct MesocycleView: View {
         
         mesocycle.numberOfWeeks = newWeekCount
         try? modelContext.save()
+        
+        updateWorkoutDates(for: mesocycle, originalWeekStartDates: originalWeekStartDates)
     }
+
     
-    private func updateWorkoutDates(for mesocycle: Mesocycle) {
-        for week in mesocycle.weeks! {
-            for workout in week.workouts! {
-                let weekStartDate: Date = week.startDate
-                let weekEndDate: Date = Calendar.current.date(byAdding: .day, value: 6, to: weekStartDate)!
+    private func updateWorkoutDates(for mesocycle: Mesocycle, originalWeekStartDates: [UUID: Date]) {
+        for week in mesocycle.weeks ?? [] {
+            if let originalWeekStartDate = originalWeekStartDates[week.id] {
+                let timeShift = week.startDate.timeIntervalSince(originalWeekStartDate)
                 
-                if workout.date < weekStartDate || workout.date > weekEndDate {
-                    workout.date = weekStartDate
+                for workout in week.workouts ?? [] {
+                    let newWorkoutDate = workout.date.addingTimeInterval(timeShift)
+                    workout.date = newWorkoutDate
                 }
             }
         }
     }
+
     
     private func duplicateSelectedMesocycles() {
         let selectedMesocycles: [Mesocycle] = mesocycles.filter { selectedMesocycleIDs.contains($0.id) }
