@@ -33,21 +33,26 @@ struct TimerWidgetLiveActivity: Widget {
                 
                 Spacer()
                 
-                VStack(alignment: .trailing, spacing: 4) {
-                    if let endDate = context.state.startTime, context.state.isRunning {
-                        Text(endDate, style: .timer)
+                VStack(alignment: .center, spacing: 4) {
+                    if let startTime = context.state.startTime, context.state.isRunning {
+                        Text(startTime.addingTimeInterval(context.state.timeRemaining), style: .timer)
                             .font(.system(size: 40, weight: .bold, design: .rounded))
                             .monospacedDigit()
                             .foregroundColor(context.state.isResting ? orange : accentColor)
-                            .multilineTextAlignment(.trailing)
+                            .frame(width: 100)
                     } else {
                         Text(formatTime(context.state.timeRemaining))
                             .font(.system(size: 40, weight: .bold, design: .rounded))
                             .monospacedDigit()
                             .foregroundColor(context.state.isResting ? orange : accentColor)
-                            .multilineTextAlignment(.trailing)
+                            .frame(width: 100)
                     }
+                    
+                    ProgressView(value: 1 - (context.state.timeRemaining / context.state.totalDuration))
+                        .tint(context.state.isResting ? orange : accentColor)
+                        .frame(width: 100)
                 }
+                .padding(.trailing, 8)
             }
             .padding()
             .activityBackgroundTint(Color(UIColor.systemBackground))
@@ -64,8 +69,8 @@ struct TimerWidgetLiveActivity: Widget {
                     }
                 }
                 DynamicIslandExpandedRegion(.trailing) {
-                    if let endDate = context.state.startTime, context.state.isRunning {
-                        Text(endDate, style: .timer)
+                    if let startTime = context.state.startTime, context.state.isRunning {
+                        Text(startTime.addingTimeInterval(context.state.timeRemaining), style: .timer)
                             .font(.title2)
                             .fontWeight(.semibold)
                             .monospacedDigit()
@@ -81,12 +86,16 @@ struct TimerWidgetLiveActivity: Widget {
                         .font(.caption)
                         .foregroundColor(.secondary)
                 }
+                DynamicIslandExpandedRegion(.bottom) {
+                    ProgressView(value: 1 - (context.state.timeRemaining / context.state.totalDuration))
+                        .tint(context.state.isResting ? orange : accentColor)
+                }
             } compactLeading: {
                 Image(systemName: "timer")
                     .foregroundColor(context.state.isResting ? orange : accentColor)
             } compactTrailing: {
-                if let endDate = context.state.startTime, context.state.isRunning {
-                    Text(endDate, style: .timer)
+                if let startTime = context.state.startTime, context.state.isRunning {
+                    Text(startTime.addingTimeInterval(context.state.timeRemaining), style: .timer)
                         .monospacedDigit()
                         .font(.caption2)
                         .fontWeight(.semibold)
@@ -111,7 +120,11 @@ struct TimerWidgetLiveActivity: Widget {
         let minutes = seconds / 60
         let remainingSeconds = seconds % 60
         
-        return String(format: "%d:%02d", minutes, remainingSeconds)
+        if minutes > 0 {
+            return String(format: "%d:%02d", minutes, remainingSeconds)
+        } else {
+            return String(format: "%ds", remainingSeconds)
+        }
     }
 }
 
