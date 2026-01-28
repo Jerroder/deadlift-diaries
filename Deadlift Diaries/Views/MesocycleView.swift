@@ -300,6 +300,8 @@ struct MesocycleView: View {
         let selectedMesocycles: [Mesocycle] = mesocycles.filter { selectedMesocycleIDs.contains($0.id) }
         let maxOrderIndex: Int = mesocycles.map { $0.orderIndex }.max() ?? 0
         
+        var templateMapping: [UUID: ExerciseTemplate] = [:]
+        
         for (index, mesocycle) in selectedMesocycles.enumerated() {
             let newOrderIndex: Int = maxOrderIndex + index + 1
             let newStartDate: Date = Calendar.current.date(byAdding: .day, value: mesocycle.numberOfWeeks * 7, to: mesocycle.startDate) ?? Date()
@@ -311,6 +313,38 @@ struct MesocycleView: View {
                 orderIndex: newOrderIndex
             )
             modelContext.insert(newMesocycle)
+            
+            if let originalTemplates = mesocycle.templates {
+                for originalTemplate in originalTemplates {
+                    let newTemplate = ExerciseTemplate(
+                        name: originalTemplate.name,
+                        defaultWeight: originalTemplate.defaultWeight,
+                        defaultSets: originalTemplate.defaultSets,
+                        defaultReps: originalTemplate.defaultReps,
+                        defaultDuration: originalTemplate.defaultDuration,
+                        defaultRestTime: originalTemplate.defaultRestTime,
+                        isTimeBased: originalTemplate.isTimeBased,
+                        isDistanceBased: originalTemplate.isDistanceBased,
+                        defaultDistance: originalTemplate.defaultDistance,
+                        timeBeforeNext: originalTemplate.timeBeforeNext,
+                        supersetPartnerTemplateID: nil,
+                        isTheSupersetTemplate: originalTemplate.isTheSupersetTemplate
+                    )
+                    newTemplate.mesocycle = newMesocycle
+                    modelContext.insert(newTemplate)
+                    templateMapping[originalTemplate.id] = newTemplate
+                }
+            }
+            
+            for originalTemplate in mesocycle.templates ?? [] {
+                if let partnerID = originalTemplate.supersetPartnerTemplateID,
+                   let partnerTemplate = templateMapping[partnerID] {
+                    if let newTemplate = templateMapping[originalTemplate.id] {
+                        newTemplate.supersetPartnerTemplateID = partnerTemplate.id
+                        partnerTemplate.supersetPartnerTemplateID = newTemplate.id
+                    }
+                }
+            }
             
             for week in mesocycle.weeks!.sorted(by: { $0.number < $1.number }) {
                 let newWeekStartDate: Date = Calendar.current.date(byAdding: .day, value: (week.number - 1) * 7, to: newStartDate)!
@@ -363,6 +397,16 @@ struct MesocycleView: View {
                                 timeBeforeNext: mainExercise.timeBeforeNext,
                                 isDistanceBased: mainExercise.isDistanceBased
                             )
+                            
+                            if let originalTemplate = mainExercise.template,
+                               let newTemplate = templateMapping[originalTemplate.id] {
+                                newMainExercise.template = newTemplate
+                            }
+                            
+                            newWorkout.exercises!.append(newMainExercise)
+                            newMainExercise.workout = newWorkout
+                            modelContext.insert(newMainExercise)
+                            
                             let newSupersetExercise = Exercise(
                                 name: supersetExercise.name,
                                 weight: supersetExercise.weight,
@@ -376,18 +420,17 @@ struct MesocycleView: View {
                                 isTheSuperset: true,
                                 isDistanceBased: supersetExercise.isDistanceBased
                             )
+                            
+                            if let originalTemplate = supersetExercise.template,
+                               let newTemplate = templateMapping[originalTemplate.id] {
+                                newSupersetExercise.template = newTemplate
+                            }
+                            
                             newMainExercise.supersetPartnerID = newSupersetExercise.id
                             newSupersetExercise.supersetPartnerID = newMainExercise.id
                             
-                            newMainExercise.template = mainExercise.template
-                            newSupersetExercise.template = supersetExercise.template
-                            
-                            newWorkout.exercises!.append(newMainExercise)
                             newWorkout.exercises!.append(newSupersetExercise)
-                            newMainExercise.workout = newWorkout
                             newSupersetExercise.workout = newWorkout
-                            
-                            modelContext.insert(newMainExercise)
                             modelContext.insert(newSupersetExercise)
                         } else {
                             let newExercise: Exercise = Exercise(
@@ -403,7 +446,12 @@ struct MesocycleView: View {
                                 isDistanceBased: exercise.isDistanceBased,
                                 distance: exercise.distance
                             )
-                            newExercise.template = exercise.template
+                            
+                            if let originalTemplate = exercise.template,
+                               let newTemplate = templateMapping[originalTemplate.id] {
+                                newExercise.template = newTemplate
+                            }
+                            
                             newWorkout.exercises!.append(newExercise)
                             newExercise.workout = newWorkout
                             modelContext.insert(newExercise)
@@ -418,6 +466,7 @@ struct MesocycleView: View {
         selectedMesocycleIDs.removeAll()
         try? modelContext.save()
     }
+
     
     private func deleteSelectedMesocycles() {
         let mesocyclesToDelete: [Mesocycle] = mesocycles.filter { selectedMesocycleIDs.contains($0.id) }
