@@ -480,6 +480,10 @@ struct ProgressBarView: View {
     }
     
     private func startTimer() {
+        if timerActivity != nil {
+            endLiveActivity()
+        }
+        
         backgroundTask = UIApplication.shared.beginBackgroundTask { [self] in
             self.endBackgroundTask()
         }
@@ -492,11 +496,7 @@ struct ProgressBarView: View {
             scheduleNotification()
         }
         
-        if timerActivity == nil {
-            startLiveActivity()
-        } else {
-            updateLiveActivity()
-        }
+        startLiveActivity()
         
         let queue: DispatchQueue = DispatchQueue(label: "com.jerroder.deadliftdiaries.timer", qos: .userInitiated)
         timer = DispatchSource.makeTimerSource(queue: queue)
@@ -523,14 +523,6 @@ struct ProgressBarView: View {
                         restProgress = 0
                         self.elapsed = 0.0
                         timerEndDate = nil
-                        
-                        let willAutoStart = isTimeBased && !isExerciseDone && 
-                                          ((isExerciseInterval && autoStartSetAfterRest) || 
-                                           (!isExerciseInterval && autoStartRestAfterSet))
-                        
-                        if !willAutoStart {
-                            updateLiveActivity()
-                        }
                     }
                     
                     if currentSet == nbSet && isExerciseDone {
@@ -546,8 +538,6 @@ struct ProgressBarView: View {
                         isExerciseDone = true
                         timeRemaining = timeBeforeNextExercise
                         timerEndDate = nil
-                        
-                        updateLiveActivity()
                     }
                     
                     if isTimeBased && !isExerciseDone {
@@ -578,7 +568,7 @@ struct ProgressBarView: View {
         cancelPendingNotifications()
         endBackgroundTask()
         
-        updateLiveActivity()
+        endLiveActivity()
     }
     
     private func endBackgroundTask() {
@@ -664,6 +654,7 @@ struct ProgressBarView: View {
             isInRestPeriod = true
         }
         
+        let endTime = Date().addingTimeInterval(timeRemaining)
         let contentState = TimerWidgetAttributes.ContentState(
             timeRemaining: timeRemaining,
             totalDuration: realDuration,
@@ -671,49 +662,18 @@ struct ProgressBarView: View {
             totalSets: totalSets,
             isResting: isInRestPeriod,
             isRunning: true,
-            startTime: timerEndDate
+            startTime: Date(),
+            endTime: endTime
         )
         
         do {
             timerActivity = try Activity.request(
                 attributes: attributes,
-                content: .init(state: contentState, staleDate: nil),
+                content: .init(state: contentState, staleDate: endTime),
                 pushType: nil
             )
         } catch {
             print("Error starting Live Activity: \(error.localizedDescription)")
-        }
-    }
-    
-    private func updateLiveActivity() {
-        guard let activity = timerActivity else {
-            return
-        }
-        
-        let isInRestPeriod: Bool
-        if isTimeBased {
-            isInRestPeriod = !isExerciseInterval
-        } else {
-            isInRestPeriod = true
-        }
-        
-        let updatedState = TimerWidgetAttributes.ContentState(
-            timeRemaining: timeRemaining,
-            totalDuration: realDuration,
-            currentSet: isTimeBased ? (currentSet + 1) / 2 : currentSet,
-            totalSets: totalSets,
-            isResting: isInRestPeriod,
-            isRunning: isTimerRunning,
-            startTime: timerEndDate
-        )
-        
-        Task {
-            await activity.update(
-                ActivityContent<TimerWidgetAttributes.ContentState>(
-                    state: updatedState,
-                    staleDate: nil
-                )
-            )
         }
     }
     
@@ -729,7 +689,8 @@ struct ProgressBarView: View {
             totalSets: totalSets,
             isResting: !isExerciseInterval,
             isRunning: false,
-            startTime: nil
+            startTime: nil,
+            endTime: Date()
         )
         
         Task {

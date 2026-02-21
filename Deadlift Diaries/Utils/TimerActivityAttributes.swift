@@ -17,6 +17,7 @@ struct TimerWidgetAttributes: ActivityAttributes {
         var isResting: Bool
         var isRunning: Bool
         var startTime: Date?
+        var endTime: Date?
     }
 
     var timerType: String // "rest" or "exercise" or "beforeNext"

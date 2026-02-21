@@ -34,8 +34,8 @@ struct TimerWidgetLiveActivity: Widget {
                 Spacer()
                 
                 VStack(alignment: .trailing, spacing: 4) {
-                    if let endDate = context.state.startTime, context.state.isRunning {
-                        Text(endDate, style: .timer)
+                    if let endTime = context.state.endTime, context.state.isRunning {
+                        Text(timerInterval: Date.now...endTime, countsDown: true)
                             .font(.system(size: 40, weight: .bold, design: .rounded))
                             .monospacedDigit()
                             .foregroundColor(context.state.isResting ? orange : accentColor)
@@ -64,8 +64,8 @@ struct TimerWidgetLiveActivity: Widget {
                     }
                 }
                 DynamicIslandExpandedRegion(.trailing) {
-                    if let endDate = context.state.startTime, context.state.isRunning {
-                        Text(endDate, style: .timer)
+                    if let endTime = context.state.endTime, context.state.isRunning {
+                        Text(timerInterval: Date.now...endTime, countsDown: true)
                             .font(.title2)
                             .fontWeight(.semibold)
                             .monospacedDigit()
@@ -85,8 +85,8 @@ struct TimerWidgetLiveActivity: Widget {
                 Image(systemName: "timer")
                     .foregroundColor(context.state.isResting ? orange : accentColor)
             } compactTrailing: {
-                if let endDate = context.state.startTime, context.state.isRunning {
-                    Text(endDate, style: .timer)
+                if let endTime = context.state.endTime, context.state.isRunning {
+                    Text(timerInterval: Date.now...endTime, countsDown: true)
                         .monospacedDigit()
                         .font(.caption2)
                         .fontWeight(.semibold)
@@ -113,6 +113,17 @@ struct TimerWidgetLiveActivity: Widget {
         
         return String(format: "%d:%02d", minutes, remainingSeconds)
     }
+    
+    private func formatTimeInterval(_ endTime: Date) -> String {
+        let remainingTime = endTime.timeIntervalSinceNow
+        guard remainingTime > 0 else {
+            return "0:00"
+        }
+        
+        let minutes = Int(remainingTime) / 60
+        let seconds = Int(remainingTime) % 60
+        return String(format: "%d:%02d", minutes, seconds)
+    }
 }
 
 extension TimerWidgetAttributes {
@@ -130,7 +141,8 @@ extension TimerWidgetAttributes.ContentState {
             totalSets: 5,
             isResting: true,
             isRunning: true,
-            startTime: Date()
+            startTime: Date(),
+            endTime: Date().addingTimeInterval(60)
         )
     }
      
@@ -142,7 +154,8 @@ extension TimerWidgetAttributes.ContentState {
             totalSets: 5,
             isResting: false,
             isRunning: true,
-            startTime: Date()
+            startTime: Date(),
+            endTime: Date().addingTimeInterval(30)
         )
     }
 }
