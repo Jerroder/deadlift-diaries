@@ -18,7 +18,7 @@ struct TimerWidgetLiveActivity: Widget {
         ActivityConfiguration(for: TimerWidgetAttributes.self) { context in
             HStack(spacing: 16) {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text(context.state.isResting ? "Rest Timer" : "Exercise Timer")
+                    Text(context.state.isResting ? "Resting" : "Exercise")
                         .font(.headline)
                         .foregroundColor(.primary)
                     
@@ -56,30 +56,36 @@ struct TimerWidgetLiveActivity: Widget {
         } dynamicIsland: { context in
             DynamicIsland {
                 DynamicIslandExpandedRegion(.leading) {
-                    HStack(spacing: 4) {
-                        Image(systemName: "dumbbell.fill")
-                            .font(.caption)
-                        Text("Set \(context.state.currentSet)/\(context.state.totalSets)")
-                            .font(.caption)
+                    VStack(alignment: .leading) {
+                        Text(context.state.isResting ? "Resting" : "Exercise")
+                            .font(.headline)
+                        HStack(spacing: 4) {
+                            Image(systemName: "dumbbell.fill")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                            Text("Set \(context.state.currentSet)/\(context.state.totalSets)")
+                                .font(.subheadline)
+                                .foregroundColor(.secondary)
+                        }
                     }
+                    .padding()
                 }
                 DynamicIslandExpandedRegion(.trailing) {
                     if let endTime = context.state.endTime, context.state.isRunning {
                         Text(timerInterval: Date.now...endTime, countsDown: true)
-                            .font(.title2)
-                            .fontWeight(.semibold)
+                            .font(.title)
+                            .fontWeight(.bold)
                             .monospacedDigit()
+                            .foregroundColor(context.state.isResting ? orange : accentColor)
+                            .padding()
                     } else {
                         Text(formatTime(context.state.timeRemaining))
-                            .font(.title2)
-                            .fontWeight(.semibold)
+                            .font(.title)
+                            .fontWeight(.bold)
                             .monospacedDigit()
+                            .foregroundColor(context.state.isResting ? orange : accentColor)
+                            .padding()
                     }
-                }
-                DynamicIslandExpandedRegion(.center) {
-                    Text(context.state.isResting ? "Resting" : "Exercise")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
                 }
             } compactLeading: {
                 Image(systemName: "timer")
@@ -91,12 +97,14 @@ struct TimerWidgetLiveActivity: Widget {
                         .font(.caption2)
                         .fontWeight(.semibold)
                         .foregroundColor(context.state.isResting ? orange : accentColor)
+                        .frame(minWidth: 20, idealWidth: 30, maxWidth: .infinity, alignment: .leading)
                 } else {
                     Text(formatTime(context.state.timeRemaining))
                         .monospacedDigit()
                         .font(.caption2)
                         .fontWeight(.semibold)
                         .foregroundColor(context.state.isResting ? orange : accentColor)
+                        .frame(minWidth: 20, idealWidth: 30, maxWidth: .infinity, alignment: .leading)
                 }
             } minimal: {
                 Image(systemName: "timer")
