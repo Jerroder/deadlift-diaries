@@ -221,10 +221,3 @@ extension TimerWidgetAttributes.ContentState {
         )
     }
 }
-
-#Preview("Notification", as: .content, using: TimerWidgetAttributes.preview) {
-   TimerWidgetLiveActivity()
-} contentStates: {
-    TimerWidgetAttributes.ContentState.resting
-    TimerWidgetAttributes.ContentState.exercising
-}

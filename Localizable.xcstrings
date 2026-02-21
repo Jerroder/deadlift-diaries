@@ -707,6 +707,36 @@
         }
       }
     },
+    "edit_template" : {
+      "comment" : "Edit template",
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vorlage bearbeiten"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Edit template"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Editar plantilla"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Modifier le modèle"
+          }
+        }
+      }
+    },
     "empty_workout" : {
       "comment" : "Empty workout",
       "extractionState" : "manual",
@@ -1153,6 +1183,36 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Aucun exercice"
+          }
+        }
+      }
+    },
+    "no_history" : {
+      "comment" : "No history available",
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kein Verlauf verfügbar"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No history available"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No hay historial disponible"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aucun historique disponible"
           }
         }
       }
