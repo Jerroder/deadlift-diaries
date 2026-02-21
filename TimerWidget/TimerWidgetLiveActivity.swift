@@ -16,42 +16,59 @@ struct TimerWidgetLiveActivity: Widget {
     
     var body: some WidgetConfiguration {
         ActivityConfiguration(for: TimerWidgetAttributes.self) { context in
-            HStack(spacing: 16) {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(context.state.isResting ? "Resting" : "Exercise")
-                        .font(.headline)
-                        .foregroundColor(.primary)
+            VStack(spacing: 8) {
+                HStack(spacing: 16) {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(context.state.isResting ? "Resting" : "Exercise")
+                            .font(.headline)
+                            .foregroundColor(.primary)
+                        
+                        HStack(spacing: 4) {
+                            Image(systemName: "dumbbell.fill")
+                                .font(.caption)
+                            Text("Set \(context.state.currentSet)/\(context.state.totalSets)")
+                                .font(.subheadline)
+                        }
+                        .foregroundColor(.secondary)
+                    }
+                    .padding(.horizontal)
                     
-                    HStack(spacing: 4) {
-                        Image(systemName: "dumbbell.fill")
-                            .font(.caption)
-                        Text("Set \(context.state.currentSet)/\(context.state.totalSets)")
-                            .font(.subheadline)
+                    Spacer()
+                    
+                    VStack(alignment: .trailing, spacing: 4) {
+                        if let endTime = context.state.endTime, context.state.isRunning {
+                            Text(timerInterval: Date.now...endTime, countsDown: true)
+                                .font(.system(size: 40, weight: .bold, design: .rounded))
+                                .monospacedDigit()
+                                .foregroundColor(context.state.isResting ? orange : accentColor)
+                                .multilineTextAlignment(.trailing)
+                        } else {
+                            Text(formatTime(context.state.timeRemaining))
+                                .font(.system(size: 40, weight: .bold, design: .rounded))
+                                .monospacedDigit()
+                                .foregroundColor(context.state.isResting ? orange : accentColor)
+                                .multilineTextAlignment(.trailing)
+                        }
                     }
-                    .foregroundColor(.secondary)
+                    .padding(.horizontal)
                 }
+                .padding([.top, .horizontal])
+                .activityBackgroundTint(Color(UIColor.systemBackground))
+                .activitySystemActionForegroundColor(Color.primary)
                 
-                Spacer()
-                
-                VStack(alignment: .trailing, spacing: 4) {
-                    if let endTime = context.state.endTime, context.state.isRunning {
-                        Text(timerInterval: Date.now...endTime, countsDown: true)
-                            .font(.system(size: 40, weight: .bold, design: .rounded))
-                            .monospacedDigit()
-                            .foregroundColor(context.state.isResting ? orange : accentColor)
-                            .multilineTextAlignment(.trailing)
-                    } else {
-                        Text(formatTime(context.state.timeRemaining))
-                            .font(.system(size: 40, weight: .bold, design: .rounded))
-                            .monospacedDigit()
-                            .foregroundColor(context.state.isResting ? orange : accentColor)
-                            .multilineTextAlignment(.trailing)
-                    }
+                if let endTime = context.state.endTime, context.state.isRunning {
+                    ProgressView(
+                        timerInterval: Date.now...endTime,
+                        countsDown: false,
+                        label: { EmptyView() },
+                        currentValueLabel: { EmptyView() }
+                    )
+                    .progressViewStyle(.linear)
+                    .tint(context.state.isResting ? orange : accentColor)
+                    .padding(.bottom)
+                    .padding(.horizontal, 30)
                 }
             }
-            .padding()
-            .activityBackgroundTint(Color(UIColor.systemBackground))
-            .activitySystemActionForegroundColor(Color.primary)
 
         } dynamicIsland: { context in
             DynamicIsland {
@@ -68,7 +85,7 @@ struct TimerWidgetLiveActivity: Widget {
                                 .foregroundColor(.secondary)
                         }
                     }
-                    .padding()
+                    .padding(.horizontal)
                 }
                 DynamicIslandExpandedRegion(.trailing) {
                     if let endTime = context.state.endTime, context.state.isRunning {
@@ -77,19 +94,45 @@ struct TimerWidgetLiveActivity: Widget {
                             .fontWeight(.bold)
                             .monospacedDigit()
                             .foregroundColor(context.state.isResting ? orange : accentColor)
-                            .padding()
+                            .multilineTextAlignment(.trailing)
+                            .padding(.horizontal)
                     } else {
                         Text(formatTime(context.state.timeRemaining))
                             .font(.title)
                             .fontWeight(.bold)
                             .monospacedDigit()
                             .foregroundColor(context.state.isResting ? orange : accentColor)
-                            .padding()
+                            .multilineTextAlignment(.trailing)
+                            .padding(.horizontal)
+                    }
+                }
+                DynamicIslandExpandedRegion(.bottom) {
+                    if let endTime = context.state.endTime, context.state.isRunning {
+                        ProgressView(
+                            timerInterval: Date.now...endTime,
+                            countsDown: false,
+                            label: { EmptyView() },
+                            currentValueLabel: { EmptyView() }
+                        )
+                        .progressViewStyle(.linear)
+                        .tint(context.state.isResting ? orange : accentColor)
+                        .padding(.horizontal)
                     }
                 }
             } compactLeading: {
-                Image(systemName: "timer")
-                    .foregroundColor(context.state.isResting ? orange : accentColor)
+                if let endTime = context.state.endTime, context.state.isRunning {
+                    ProgressView(
+                        timerInterval: Date.now...endTime,
+                        countsDown: true,
+                        label: { EmptyView() },
+                        currentValueLabel: { EmptyView() }
+                    )
+                    .progressViewStyle(.circular)
+                    .tint(context.state.isResting ? orange : accentColor)
+                } else {
+                    Image(systemName: "timer")
+                        .foregroundColor(context.state.isResting ? orange : accentColor)
+                }
             } compactTrailing: {
                 if let endTime = context.state.endTime, context.state.isRunning {
                     Text(timerInterval: Date.now...endTime, countsDown: true)
@@ -107,8 +150,19 @@ struct TimerWidgetLiveActivity: Widget {
                         .frame(minWidth: 20, idealWidth: 30, maxWidth: .infinity, alignment: .leading)
                 }
             } minimal: {
-                Image(systemName: "timer")
-                    .foregroundColor(context.state.isResting ? orange : accentColor)
+                if let endTime = context.state.endTime, context.state.isRunning {
+                    ProgressView(
+                        timerInterval: Date.now...endTime,
+                        countsDown: true,
+                        label: { EmptyView() },
+                        currentValueLabel: { EmptyView() }
+                    )
+                    .progressViewStyle(.circular)
+                    .tint(context.state.isResting ? orange : accentColor)
+                } else {
+                    Image(systemName: "timer")
+                        .foregroundColor(context.state.isResting ? orange : accentColor)
+                }
             }
             .keylineTint(context.state.isResting ? orange : accentColor)
         }
