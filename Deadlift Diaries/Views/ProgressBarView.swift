@@ -471,6 +471,7 @@ struct ProgressBarView: View {
     
     private func toggleTimer() {
         isTimerRunning.toggle()
+        updateLiveActivity()
         
         if isTimerRunning {
             startTimer()
@@ -480,10 +481,6 @@ struct ProgressBarView: View {
     }
     
     private func startTimer() {
-        if timerActivity != nil {
-            endLiveActivity()
-        }
-        
         backgroundTask = UIApplication.shared.beginBackgroundTask { [self] in
             self.endBackgroundTask()
         }
@@ -496,7 +493,11 @@ struct ProgressBarView: View {
             scheduleNotification()
         }
         
-        startLiveActivity()
+        if timerActivity != nil {
+            updateLiveActivity()
+        } else {
+            startLiveActivity()
+        }
         
         let queue: DispatchQueue = DispatchQueue(label: "com.jerroder.deadliftdiaries.timer", qos: .userInitiated)
         timer = DispatchSource.makeTimerSource(queue: queue)
@@ -567,8 +568,6 @@ struct ProgressBarView: View {
         timerEndDate = nil
         cancelPendingNotifications()
         endBackgroundTask()
-        
-        endLiveActivity()
     }
     
     private func endBackgroundTask() {
@@ -674,6 +673,35 @@ struct ProgressBarView: View {
             )
         } catch {
             print("Error starting Live Activity: \(error.localizedDescription)")
+        }
+    }
+    
+    private func updateLiveActivity() {
+        guard let activity = timerActivity else {
+            return
+        }
+        
+        let isInRestPeriod: Bool
+        if isTimeBased {
+            isInRestPeriod = !isExerciseInterval
+        } else {
+            isInRestPeriod = true
+        }
+        
+        let endTime = Date().addingTimeInterval(timeRemaining)
+        let contentState = TimerWidgetAttributes.ContentState(
+            timeRemaining: timeRemaining,
+            totalDuration: realDuration,
+            currentSet: isTimeBased ? (currentSet + 1) / 2 : currentSet,
+            totalSets: totalSets,
+            isResting: isInRestPeriod,
+            isRunning: isTimerRunning,
+            startTime: Date(),
+            endTime: endTime
+        )
+        
+        Task {
+            await activity.update(using: contentState) // deprecated but not sure how to fix it
         }
     }
     
