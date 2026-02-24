@@ -3,7 +3,7 @@
 This is an iOS app which allows you to plan workouts as well as track your sets and reps. You can also time your rests and play a sound at the end.
 
 <p align="center">
-    <a href="https://apps.apple.com/app/remote-lens/id6748348414">
+    <a href="https://apps.apple.com/app/deadlift-diaries/id6754616006">
         <img src="Images/Download_on_the_App_Store.svg" alt="download_on_appstore" width="400"/>
     </a>
 </p>
