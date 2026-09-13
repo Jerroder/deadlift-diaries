@@ -182,12 +182,12 @@ struct TimerView: View {
                 )
             }
             .navigationTitle("timer".localized(comment: "Timer"))
-            .sheet(isPresented: $showingSoundPickerSheet) {
-                SettingsSheet(
-                    isPresented: $showingSoundPickerSheet,
-                    mesocycles: nil
-                )
-            }
+//            .sheet(isPresented: $showingSoundPickerSheet) {
+//                SettingsSheet(
+//                    isPresented: $showingSoundPickerSheet,
+//                    mesocycles: nil
+//                )
+//            }
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     Menu {

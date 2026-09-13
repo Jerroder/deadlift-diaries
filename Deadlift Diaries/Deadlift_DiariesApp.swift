@@ -13,20 +13,20 @@ struct Deadlift_DiariesApp: App {
     let container: ModelContainer
     
     init() {
-        MigrationManager.migrateTimerSettings()
+//        MigrationManager.migrateTimerSettings()
         
         let isICouldEnabled = UserDefaults.standard.bool(forKey: "isICouldEnabled")
         do {
             container = try ModelContainer(
-                for: Mesocycle.self, Week.self, Workout.self, Exercise.self, ExerciseTemplate.self, ExerciseHistory.self,
+                for: Exercise.self, PerformedExercise.self, PerformedSet.self, ScheduledWorkout.self, TrainingBlock.self, WorkoutExercise.self, WorkoutSession.self, WorkoutTemplate.self,
                 configurations: ModelConfiguration(
                     cloudKitDatabase: isICouldEnabled ? .automatic : .none
                 )
             )
             
-            MigrationManager.performMigrationIfNeeded(modelContext: container.mainContext)
-            MigrationManager.migrateTemplatesToMesocycles(modelContext: container.mainContext)
-            MigrationManager.cleanupDuplicateTemplates(modelContext: container.mainContext)
+//            MigrationManager.performMigrationIfNeeded(modelContext: container.mainContext)
+//            MigrationManager.migrateTemplatesToMesocycles(modelContext: container.mainContext)
+//            MigrationManager.cleanupDuplicateTemplates(modelContext: container.mainContext)
         } catch {
             fatalError("Failed to configure ModelContainer: \(error)")
         }
@@ -36,6 +36,6 @@ struct Deadlift_DiariesApp: App {
         WindowGroup {
             ContentView()
         }
-        .modelContainer(for: [Mesocycle.self, Week.self, Workout.self, Exercise.self, ExerciseTemplate.self, ExerciseHistory.self])
+        .modelContainer(for: [Exercise.self, PerformedExercise.self, PerformedSet.self, ScheduledWorkout.self, TrainingBlock.self, WorkoutExercise.self, WorkoutSession.self, WorkoutTemplate.self])
     }
 }
