@@ -701,7 +701,12 @@ struct ProgressBarView: View {
         )
         
         Task {
-            await activity.update(using: contentState) // deprecated but not sure how to fix it
+            await activity.update(
+                ActivityContent(
+                    state: contentState,
+                    staleDate: endTime
+                )
+            )
         }
     }
     
