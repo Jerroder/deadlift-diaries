@@ -5,23 +5,35 @@ import SwiftUI
 
 @Model
 final class WorkoutTemplate {
-    var id: UUID = UUID()
-
-    var name: String = ""
-    var notes: String = ""
-    var colorHex: String?
-
-    @Relationship(deleteRule: .cascade)
+    @Attribute(.unique)
+    var id: UUID
+    
+    var name: String
+    var notes: String?
+    
+    var createdAt: Date
+    var updatedAt: Date
+    
+    @Relationship(
+        deleteRule: .cascade,
+        inverse: \WorkoutExercise.workoutTemplate
+    )
     var exercises: [WorkoutExercise] = []
-
+    
+    @Relationship(
+        deleteRule: .cascade,
+        inverse: \ScheduledWorkout.workoutTemplate
+    )
+    var scheduledWorkouts: [ScheduledWorkout] = []
+    
     init(
         name: String,
-        notes: String = "",
-        colorHex: String? = nil
+        notes: String? = nil
     ) {
         self.id = UUID()
         self.name = name
         self.notes = notes
-        self.colorHex = colorHex
+        self.createdAt = Date()
+        self.updatedAt = Date()
     }
 }

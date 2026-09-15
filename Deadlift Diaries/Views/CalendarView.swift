@@ -6,16 +6,265 @@
 import SwiftData
 import SwiftUI
 
+struct AddWorkoutView: View {
+    @Environment(\.dismiss) private var dismiss
+    @Environment(\.modelContext) private var modelContext
+    
+    // MARK: - Workout
+    
+    @State private var name = ""
+    @State private var notes = ""
+    
+    // MARK: - Schedule
+    
+    @State private var startDate = Date()
+    @State private var numberOfWeeks = 1
+    
+    private var weekday: Int {
+        Calendar.current.component(
+            .weekday,
+            from: startDate
+        )
+    }
+    
+    var body: some View {
+        NavigationStack {
+            Form {
+                // MARK: - Workout
+                
+                Section {
+                    TextField(
+                        "Workout Name",
+                        text: $name
+                    )
+                    
+                    TextField(
+                        "Notes",
+                        text: $notes,
+                        axis: .vertical
+                    )
+                    .lineLimit(3...6)
+                } header: {
+                    Text("Workout")
+                }
+                
+                // MARK: - Schedule
+                
+                Section {
+                    DatePicker(
+                        "Start Date",
+                        selection: $startDate,
+                        displayedComponents: .date
+                    )
+                    
+                    Stepper(
+                        value: $numberOfWeeks,
+                        in: 1...52
+                    ) {
+                        HStack {
+                            Text("Duration")
+                            
+                            Spacer()
+                            
+                            Text(
+                                "\(numberOfWeeks) " +
+                                "\(numberOfWeeks == 1 ? "week" : "weeks")"
+                            )
+                            .foregroundStyle(.secondary)
+                        }
+                    }
+                    
+                    HStack {
+                        Text("Repeats")
+                        
+                        Spacer()
+                        
+                        Text(
+                            startDate.formatted(
+                                .dateTime.weekday(.wide)
+                            )
+                        )
+                        .foregroundStyle(.secondary)
+                    }
+                    
+                    if let endDate = calculatedEndDate {
+                        HStack {
+                            Text("Ends")
+                            
+                            Spacer()
+                            
+                            Text(
+                                endDate.formatted(
+                                    .dateTime
+                                        .month(.abbreviated)
+                                        .day()
+                                        .year()
+                                )
+                            )
+                            .foregroundStyle(.secondary)
+                        }
+                    }
+                } header: {
+                    Text("Schedule")
+                } footer: {
+                    Text(
+                        "The workout will repeat every " +
+                        "\(startDate.formatted(.dateTime.weekday(.wide))) " +
+                        "for \(numberOfWeeks) " +
+                        "\(numberOfWeeks == 1 ? "week" : "weeks")."
+                    )
+                }
+                
+                // MARK: - Exercises
+                
+                Section {
+                    Button {
+                        // Exercise logic will be added later.
+                    } label: {
+                        Label(
+                            "Add Exercise",
+                            systemImage: "plus"
+                        )
+                    }
+                } header: {
+                    Text("Exercises")
+                }
+            }
+            .navigationTitle("Add Workout")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("", systemImage: "xmark") {
+                        dismiss()
+                    }
+                }
+                
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("", systemImage: "checkmark") {
+                        saveWorkout()
+                    }
+                    .disabled(
+                        name
+                            .trimmingCharacters(
+                                in: .whitespacesAndNewlines
+                            )
+                            .isEmpty
+                    )
+                }
+            }
+        }
+    }
+    
+    // MARK: - Computed Properties
+    
+    private var calculatedEndDate: Date? {
+        guard numberOfWeeks > 0 else {
+            return nil
+        }
+        
+        return Calendar.current.date(
+            byAdding: .weekOfYear,
+            value: numberOfWeeks - 1,
+            to: startDate
+        )
+    }
+    
+    // MARK: - Save
+    
+    private func saveWorkout() {
+        let trimmedName = name.trimmingCharacters(
+            in: .whitespacesAndNewlines
+        )
+        
+        guard !trimmedName.isEmpty else {
+            return
+        }
+        
+        let trimmedNotes = notes.trimmingCharacters(
+            in: .whitespacesAndNewlines
+        )
+        
+        let calendar = Calendar.current
+        
+        // The final occurrence is numberOfWeeks - 1
+        // weeks after the start date.
+        guard let endDate = calendar.date(
+            byAdding: .weekOfYear,
+            value: numberOfWeeks - 1,
+            to: startDate
+        ) else {
+            return
+        }
+        
+        // 1. Create the reusable workout template.
+        
+        let workoutTemplate = WorkoutTemplate(
+            name: trimmedName,
+            notes: trimmedNotes.isEmpty
+            ? nil
+            : trimmedNotes
+        )
+        
+        // 2. Create the recurring schedule.
+        
+        let schedule = WorkoutSchedule(
+            startDate: startDate,
+            endDate: endDate,
+            weekday: weekday,
+            workoutTemplate: workoutTemplate
+        )
+        
+        // 3. Create each scheduled occurrence.
+        
+        var scheduledDate = startDate
+        
+        for _ in 0..<numberOfWeeks {
+            let scheduledWorkout = ScheduledWorkout(
+                scheduledDate: scheduledDate,
+                workoutTemplate: workoutTemplate
+            )
+            
+            modelContext.insert(scheduledWorkout)
+            
+            guard let nextDate = calendar.date(
+                byAdding: .weekOfYear,
+                value: 1,
+                to: scheduledDate
+            ) else {
+                break
+            }
+            
+            scheduledDate = nextDate
+        }
+        
+        // 4. Insert the template and schedule.
+        
+        modelContext.insert(workoutTemplate)
+        modelContext.insert(schedule)
+        
+        // 5. Save everything.
+        
+        do {
+            try modelContext.save()
+            dismiss()
+        } catch {
+            print("Failed to save workout: \(error)")
+        }
+    }
+}
+
 struct CalendarView: View {
     @Environment(\.modelContext) private var modelContext
 
-    @Query(sort: \ScheduledWorkout.date)
+    @Query(sort: \ScheduledWorkout.scheduledDate)
     private var scheduledWorkouts: [ScheduledWorkout]
 
     @FocusState.Binding var focusedField: FocusableField?
 
     @State private var displayedMonth: Date = Date()
     @State private var selectedDate: Date = Date()
+    
+    @State private var showAddWorkoutSheet: Bool = false
 
     private var calendar: Calendar {
         var calendar = Calendar.current
@@ -55,6 +304,9 @@ struct CalendarView: View {
                 }
             }
         }
+        .sheet(isPresented: $showAddWorkoutSheet) {
+            AddWorkoutView()
+        }
     }
 
     // MARK: - Month Header
@@ -90,9 +342,9 @@ struct CalendarView: View {
 
     private var calendarGrid: some View {
         VStack(spacing: 8) {
-
+            
             weekdayHeader
-
+            
             LazyVGrid(
                 columns: Array(
                     repeating: GridItem(.flexible(), spacing: 4),
@@ -100,7 +352,10 @@ struct CalendarView: View {
                 ),
                 spacing: 8
             ) {
-                ForEach(monthDays, id: \.self) { date in
+                ForEach(
+                    Array(monthDays.enumerated()),
+                    id: \.offset
+                ) { _, date in
                     if let date {
                         dayCell(date)
                     } else {
@@ -178,7 +433,7 @@ struct CalendarView: View {
                         id: \.id
                     ) { workout in
                         Circle()
-                            .fill(workoutColor(for: workout))
+                            .fill(Color.red)
                             .frame(width: 5, height: 5)
                     }
                 }
@@ -238,9 +493,10 @@ struct CalendarView: View {
                 } else {
                     VStack(spacing: 12) {
                         ForEach(workouts) { scheduledWorkout in
-                            ScheduledWorkoutCard(
-                                scheduledWorkout: scheduledWorkout
-                            )
+//                            ScheduledWorkoutCard(
+//                                scheduledWorkout: scheduledWorkout
+//                            )
+                            Text(scheduledWorkout.notes ?? "empty")
                         }
                     }
                     .padding(.horizontal)
@@ -267,7 +523,7 @@ struct CalendarView: View {
                 .foregroundStyle(.secondary)
 
             Button {
-                // Add workout action
+                showAddWorkoutSheet = true
             } label: {
                 Label(
                     "Add Workout",
@@ -335,20 +591,10 @@ struct CalendarView: View {
     private func workouts(on date: Date) -> [ScheduledWorkout] {
         scheduledWorkouts.filter {
             calendar.isDate(
-                $0.date,
+                $0.scheduledDate,
                 inSameDayAs: date
             )
         }
-    }
-
-    private func workoutColor(
-        for scheduledWorkout: ScheduledWorkout
-    ) -> Color {
-        if let hex = scheduledWorkout.workout?.colorHex {
-            return Color(hex: hex)
-        }
-
-        return .accentColor
     }
 
     // MARK: - Navigation
@@ -361,18 +607,9 @@ struct CalendarView: View {
         ) else {
             return
         }
-
+        
         withAnimation(.easeInOut(duration: 0.2)) {
             displayedMonth = newMonth
-
-            // Keep selection inside the displayed month.
-            if !calendar.isDate(
-                selectedDate,
-                equalTo: newMonth,
-                toGranularity: .month
-            ) {
-                selectedDate = newMonth
-            }
         }
     }
 
@@ -381,151 +618,6 @@ struct CalendarView: View {
             displayedMonth = Date()
             selectedDate = Date()
         }
-    }
-}
-
-// MARK: - Scheduled Workout Card
-
-private struct ScheduledWorkoutCard: View {
-    let scheduledWorkout: ScheduledWorkout
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-
-            HStack {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(
-                        scheduledWorkout.workout?.name
-                        ?? "Workout"
-                    )
-                    .font(.headline)
-
-                    if let block = scheduledWorkout.trainingBlock {
-                        Text(block.name)
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
-                }
-
-                Spacer()
-
-                statusBadge
-            }
-
-            if let exercises = scheduledWorkout.workout?.exercises {
-                VStack(spacing: 8) {
-                    ForEach(
-                        exercises.sorted {
-                            $0.orderIndex < $1.orderIndex
-                        }
-                    ) { exercise in
-                        exerciseRow(exercise)
-                    }
-                }
-            }
-
-            Button {
-                // Start workout
-            } label: {
-                Text("Start Workout")
-                    .frame(maxWidth: .infinity)
-            }
-            .buttonStyle(.borderedProminent)
-        }
-        .padding()
-        .background(
-            RoundedRectangle(cornerRadius: 16)
-                .fill(Color(.secondarySystemBackground))
-        )
-    }
-
-    private var statusBadge: some View {
-        Text(statusText)
-            .font(.caption)
-            .fontWeight(.medium)
-            .padding(.horizontal, 9)
-            .padding(.vertical, 5)
-            .background(
-                Capsule()
-                    .fill(statusColor.opacity(0.15))
-            )
-            .foregroundStyle(statusColor)
-    }
-
-    private var statusText: String {
-        switch scheduledWorkout.status {
-        case .planned:
-            return "Planned"
-        case .completed:
-            return "Completed"
-        case .skipped:
-            return "Skipped"
-        }
-    }
-
-    private var statusColor: Color {
-        switch scheduledWorkout.status {
-        case .planned:
-            return .accentColor
-        case .completed:
-            return .green
-        case .skipped:
-            return .secondary
-        }
-    }
-
-    private func exerciseRow(
-        _ workoutExercise: WorkoutExercise
-    ) -> some View {
-        HStack {
-
-            Text(
-                workoutExercise.exercise?.name
-                ?? "Exercise"
-            )
-            .font(.subheadline)
-
-            Spacer()
-
-            Text(prescriptionText(workoutExercise))
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-        }
-    }
-
-    private func prescriptionText(
-        _ exercise: WorkoutExercise
-    ) -> String {
-
-        if let reps = exercise.reps {
-            var text = "\(exercise.sets) × \(reps)"
-
-            if let weight = exercise.weight {
-                text += " @ \(formattedWeight(weight))"
-            }
-
-            return text
-        }
-
-        if let duration = exercise.duration {
-            return "\(exercise.sets) × \(Int(duration))s"
-        }
-
-        if let distance = exercise.distance {
-            return "\(exercise.sets) × \(distance)m"
-        }
-
-        return "\(exercise.sets) sets"
-    }
-
-    private func formattedWeight(
-        _ weight: Double
-    ) -> String {
-        if weight.rounded() == weight {
-            return "\(Int(weight)) kg"
-        }
-
-        return String(format: "%.1f kg", weight)
     }
 }
 

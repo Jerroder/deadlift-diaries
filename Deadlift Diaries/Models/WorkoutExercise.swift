@@ -10,47 +10,41 @@ import SwiftUI
 
 @Model
 final class WorkoutExercise {
-    var id: UUID = UUID()
-
+    @Attribute(.unique)
+    var id: UUID
+    
+    var order: Int
+    
+    var targetSets: Int
+    var targetReps: Int
+    
+    var targetWeight: Double?
+    var restSeconds: Int?
+    
+    var notes: String?
+    
+    // The global exercise this refers to
     var exercise: Exercise?
-
-    var orderIndex: Int = 0
-
-    var weight: Double?
-    var sets: Int = 3
-    var reps: Int?
-    var duration: Double?
-    var distance: Int?
-
-    var restTime: Double = 30
-    var timeBeforeNext: Double = 120
-
-    var supersetGroupID: UUID?
-
-    var workout: WorkoutTemplate?
-
+    
+    // The workout template containing this exercise
+    var workoutTemplate: WorkoutTemplate?
+    
     init(
-        exercise: Exercise? = nil,
-        orderIndex: Int = 0,
-        weight: Double? = nil,
-        sets: Int = 3,
-        reps: Int? = nil,
-        duration: Double? = nil,
-        distance: Int? = nil,
-        restTime: Double = 30,
-        timeBeforeNext: Double = 120,
-        supersetGroupID: UUID? = nil
+        exercise: Exercise,
+        order: Int,
+        targetSets: Int,
+        targetReps: Int,
+        targetWeight: Double? = nil,
+        restSeconds: Int? = nil,
+        notes: String? = nil
     ) {
         self.id = UUID()
         self.exercise = exercise
-        self.orderIndex = orderIndex
-        self.weight = weight
-        self.sets = sets
-        self.reps = reps
-        self.duration = duration
-        self.distance = distance
-        self.restTime = restTime
-        self.timeBeforeNext = timeBeforeNext
-        self.supersetGroupID = supersetGroupID
+        self.order = order
+        self.targetSets = targetSets
+        self.targetReps = targetReps
+        self.targetWeight = targetWeight
+        self.restSeconds = restSeconds
+        self.notes = notes
     }
 }

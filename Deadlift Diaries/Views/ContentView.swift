@@ -31,17 +31,17 @@ struct ContentView: View {
     }
 }
 
-@MainActor
-extension ModelContainer {
-    static func preview(with objects: [any PersistentModel]) -> ModelContainer {
-        let config = ModelConfiguration(isStoredInMemoryOnly: true)
-        let container = try! ModelContainer(for: Exercise.self, PerformedExercise.self, PerformedSet.self, ScheduledWorkout.self, TrainingBlock.self, WorkoutExercise.self, WorkoutSession.self, WorkoutTemplate.self, configurations: config)
-        
-        objects.forEach { container.mainContext.insert($0) }
-        
-        return container
-    }
-}
+//@MainActor
+//extension ModelContainer {
+//    static func preview(with objects: [any PersistentModel]) -> ModelContainer {
+//        let config = ModelConfiguration(isStoredInMemoryOnly: true)
+//        let container = try! ModelContainer(for: Exercise.self, PerformedExercise.self, PerformedSet.self, ScheduledWorkout.self, TrainingBlock.self, WorkoutExercise.self, WorkoutSchedule.self, WorkoutSession.self, WorkoutTemplate.self, configurations: config)
+//        
+//        objects.forEach { container.mainContext.insert($0) }
+//        
+//        return container
+//    }
+//}
 
 //#Preview {
 //    @MainActor func makePreview() -> some View {

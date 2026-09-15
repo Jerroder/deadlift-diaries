@@ -3,34 +3,30 @@
 import SwiftData
 import SwiftUI
 
-enum WorkoutStatus: Codable {
-    case planned
-    case completed
-    case skipped
-}
-
 @Model
 final class ScheduledWorkout {
-    var id: UUID = UUID()
-
-    var date: Date = Date()
-
-    var workout: WorkoutTemplate?
-
-    var trainingBlock: TrainingBlock?
-
-    var notes: String = ""
-
-    var status: WorkoutStatus = WorkoutStatus.planned
-
+    @Attribute(.unique)
+    var id: UUID
+    
+    var scheduledDate: Date
+    
+    var notes: String?
+    
+    var createdAt: Date
+    
+    // The template to use
+    var workoutTemplate: WorkoutTemplate?
+    
+    // If this scheduled workout has been started/completed
+    var session: WorkoutSession?
+    
     init(
-        date: Date,
-        workout: WorkoutTemplate? = nil,
-        trainingBlock: TrainingBlock? = nil
+        scheduledDate: Date,
+        workoutTemplate: WorkoutTemplate
     ) {
         self.id = UUID()
-        self.date = date
-        self.workout = workout
-        self.trainingBlock = trainingBlock
+        self.scheduledDate = scheduledDate
+        self.workoutTemplate = workoutTemplate
+        self.createdAt = Date()
     }
 }
