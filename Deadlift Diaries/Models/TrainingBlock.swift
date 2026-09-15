@@ -13,7 +13,7 @@ final class TrainingBlock {
     var name: String = ""
     var startDate: Date = Date()
     var endDate: Date?
-    
+
     var orderIndex: Int = 0
 
     var notes: String = ""

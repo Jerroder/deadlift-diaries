@@ -12,11 +12,11 @@ func isMetricSystem() -> Bool {
     switch locale.measurementSystem {
     case .metric:
         return true
-        
+
     case .us: fallthrough
     case .uk:
         return false
-        
+
     default:
         return false
     }

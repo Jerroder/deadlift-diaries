@@ -10,7 +10,7 @@ import SwiftUI
 struct TextFieldToolbarDone: ViewModifier {
     @Binding var isKeyboardShowing: Bool
     var focusedField: FocusState<FocusableField?>.Binding
-    
+
     func body(content: Content) -> some View {
         if #available(iOS 26.0, *) {
             content
@@ -51,7 +51,7 @@ struct TextFieldToolbarDoneWithChevrons: ViewModifier {
     @Binding var isKeyboardShowing: Bool
     @Binding var isSupersetToggleOn: Bool
     var focusedField: FocusState<FocusableField?>.Binding
-    
+
     func body(content: Content) -> some View {
         if #available(iOS 26.0, *) {
             content
@@ -74,7 +74,7 @@ struct TextFieldToolbarDoneWithChevrons: ViewModifier {
                                     .padding()
                             }
                             .disabled(focusedField.wrappedValue == .exerciseName ? true : false)
-                            
+
                             Button(action: {
                                 switch focusedField.wrappedValue {
                                 case .exerciseName:
@@ -96,9 +96,9 @@ struct TextFieldToolbarDoneWithChevrons: ViewModifier {
                             } else {
                                 return false
                             }}())
-                            
+
                             Spacer()
-                            
+
                             Button {
                                 focusedField.wrappedValue = nil
                             } label: {
@@ -134,7 +134,7 @@ extension View {
             TextFieldToolbarDone(isKeyboardShowing: isKeyboardShowing, focusedField: focusedField)
         )
     }
-    
+
     func withTextFieldToolbarDoneWithChevrons(isKeyboardShowing: Binding<Bool>, isSupersetToggleOn: Binding<Bool>, focusedField: FocusState<FocusableField?>.Binding) -> some View {
         self.modifier(
             TextFieldToolbarDoneWithChevrons(isKeyboardShowing: isKeyboardShowing, isSupersetToggleOn: isSupersetToggleOn, focusedField: focusedField)

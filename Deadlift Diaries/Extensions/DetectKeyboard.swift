@@ -11,7 +11,7 @@ struct DetectKeyboard: ViewModifier {
     @Binding var isKeyboardShowing: Bool
     @State private var bottomInsetWithoutKeyboard: CGFloat?
     @State private var bottomInsetWithKeyboard: CGFloat?
-    
+
     private var isKeyboardDetected: Bool {
         if let bottomInsetWithoutKeyboard, let bottomInsetWithKeyboard {
             bottomInsetWithoutKeyboard != bottomInsetWithKeyboard
@@ -19,7 +19,7 @@ struct DetectKeyboard: ViewModifier {
             false
         }
     }
-    
+
     func body(content: Content) -> some View {
         ZStack {
             Color.clear

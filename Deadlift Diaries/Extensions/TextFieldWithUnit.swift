@@ -13,7 +13,7 @@ import SwiftUI
 private struct SetWidthAccordingToTextDouble: ViewModifier {
     let value: Double
     @State private var textWidth: CGFloat = 0
-    
+
     func body(content: Content) -> some View {
         content
             .frame(width: textWidth)
@@ -26,7 +26,7 @@ private struct SetWidthAccordingToTextDouble: ViewModifier {
                     } action: { width in
                         self.textWidth = width
                     }
-                
+
             )
     }
 }
@@ -34,7 +34,7 @@ private struct SetWidthAccordingToTextDouble: ViewModifier {
 private struct SetWidthAccordingToTextInt: ViewModifier {
     let value: Int
     @State private var textWidth: CGFloat = 0
-    
+
     func body(content: Content) -> some View {
         content
             .frame(width: textWidth)
@@ -47,7 +47,7 @@ private struct SetWidthAccordingToTextInt: ViewModifier {
                     } action: { width in
                         self.textWidth = width + 7
                     }
-                
+
             )
     }
 }
@@ -56,7 +56,7 @@ private extension View {
     func setWidthAccordingTo(value: Double) -> some View {
         modifier(SetWidthAccordingToTextDouble(value: value))
     }
-    
+
     func setWidthAccordingTo(value: Int) -> some View {
         modifier(SetWidthAccordingToTextInt(value: value))
     }
@@ -65,12 +65,12 @@ private extension View {
 struct TextFieldWithUnitDouble: View {
     @Binding var value: Double
     @Binding var unit: Unit
-    
+
     var body: some View {
         HStack(spacing: 2) {
             TextField("0.0", value: $value, format: .number)
                 .setWidthAccordingTo(value: value)
-            
+
             Text(unit.symbol)
         }
     }
@@ -79,12 +79,12 @@ struct TextFieldWithUnitDouble: View {
 struct TextFieldWithUnitInt: View {
     @Binding var value: Int
     @Binding var unit: Unit
-    
+
     var body: some View {
         HStack(spacing: 2) {
             TextField("0", value: $value, format: .number)
                 .setWidthAccordingTo(value: value)
-            
+
             Text(unit.symbol)
         }
     }

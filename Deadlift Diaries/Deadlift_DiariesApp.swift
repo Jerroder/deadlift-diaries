@@ -11,11 +11,12 @@ import SwiftUI
 @main
 struct Deadlift_DiariesApp: App {
     let container: ModelContainer
-    
+
     init() {
 //        MigrationManager.migrateTimerSettings()
-        
-        let isICouldEnabled = UserDefaults.standard.bool(forKey: "isICouldEnabled")
+
+//        let isICouldEnabled = UserDefaults.standard.bool(forKey: "isICouldEnabled")
+        let isICouldEnabled = false
         do {
             container = try ModelContainer(
                 for: Exercise.self, PerformedExercise.self, PerformedSet.self, ScheduledWorkout.self, TrainingBlock.self, WorkoutExercise.self, WorkoutSession.self, WorkoutTemplate.self,
@@ -23,7 +24,7 @@ struct Deadlift_DiariesApp: App {
                     cloudKitDatabase: isICouldEnabled ? .automatic : .none
                 )
             )
-            
+
 //            MigrationManager.performMigrationIfNeeded(modelContext: container.mainContext)
 //            MigrationManager.migrateTemplatesToMesocycles(modelContext: container.mainContext)
 //            MigrationManager.cleanupDuplicateTemplates(modelContext: container.mainContext)
@@ -31,7 +32,7 @@ struct Deadlift_DiariesApp: App {
             fatalError("Failed to configure ModelContainer: \(error)")
         }
     }
-    
+
     var body: some Scene {
         WindowGroup {
             ContentView()

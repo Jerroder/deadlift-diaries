@@ -14,23 +14,16 @@ import SwiftData
 
 @Model
 final class WorkoutSchedule {
-    @Attribute(.unique)
-    var id: UUID
-    
-    var startDate: Date
+    var id: UUID = UUID()
+
+    var startDate: Date = Date()
     var endDate: Date?
-    
-    var weekday: Int
-    
+
+    var weekday: Int = 0
+
     var workoutTemplate: WorkoutTemplate?
-    
-    init(
-        startDate: Date,
-        endDate: Date? = nil,
-        weekday: Int,
-        workoutTemplate: WorkoutTemplate
-    ) {
-        self.id = UUID()
+
+    init(startDate: Date, endDate: Date? = nil, weekday: Int, workoutTemplate: WorkoutTemplate) {
         self.startDate = startDate
         self.endDate = endDate
         self.weekday = weekday

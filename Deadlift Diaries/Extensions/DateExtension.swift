@@ -10,7 +10,7 @@ import Foundation
 extension Date {
     func formattedRelative() -> String {
         let calendar = Calendar.current
-        
+
         if calendar.isDateInToday(self) {
             return "today".localized(comment: "Today")
         } else if calendar.isDateInTomorrow(self) {

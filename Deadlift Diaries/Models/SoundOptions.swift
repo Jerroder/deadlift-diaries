@@ -23,6 +23,6 @@ enum SoundOptions {
         (1114, "End Record"),
         (1255, "Short Double High"),
         (1257, "Short Double Low"),
-        (1328, "News Flash"),
+        (1328, "News Flash")
     ]
 }

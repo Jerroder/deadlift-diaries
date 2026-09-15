@@ -15,14 +15,14 @@ enum FocusableField: Hashable {
 
 struct ContentView: View {
     @FocusState private var focusedField: FocusableField?
-    
+
     var body: some View {
         TabView {
             CalendarView(focusedField: $focusedField).tabItem {
                 Image(systemName: "calendar")
                 Text("cycles".localized(comment: "Cycles"))
             }
-            
+
             TimerView().tabItem {
                 Image(systemName: "timer")
                 Text("timer".localized(comment: "Timer"))
@@ -31,8 +31,8 @@ struct ContentView: View {
     }
 }
 
-//@MainActor
-//extension ModelContainer {
+// @MainActor
+// extension ModelContainer {
 //    static func preview(with objects: [any PersistentModel]) -> ModelContainer {
 //        let config = ModelConfiguration(isStoredInMemoryOnly: true)
 //        let container = try! ModelContainer(for: Exercise.self, PerformedExercise.self, PerformedSet.self, ScheduledWorkout.self, TrainingBlock.self, WorkoutExercise.self, WorkoutSchedule.self, WorkoutSession.self, WorkoutTemplate.self, configurations: config)
@@ -41,9 +41,9 @@ struct ContentView: View {
 //        
 //        return container
 //    }
-//}
+// }
 
-//#Preview {
+// #Preview {
 //    @MainActor func makePreview() -> some View {
 //        let exercise1 = Exercise(name: "Deadlift", weight: 150, sets: 5, reps: 8, restTime: 120, isTimeBased: false, orderIndex: 1, timeBeforeNext: 75.0, isDistanceBased: false)
 //        let exercise2 = Exercise(name: "Plank", weight: 0, sets: 5, duration: 60, restTime: 60, isTimeBased: true, orderIndex: 2, timeBeforeNext: 150.0, isDistanceBased: false)
@@ -64,4 +64,4 @@ struct ContentView: View {
 //            .modelContainer(container)
 //    }
 //    return makePreview()
-//}
+// }

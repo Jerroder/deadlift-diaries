@@ -21,16 +21,16 @@ struct ProgressBarView: View {
     let isTimeBased: Bool
     let duration: Double
     let isCalledFromTimer: Bool
-    
+
     @Environment(\.scenePhase) var scenePhase
     @State private var isActive: Bool = true
-    
+
     @AppStorage("selectedSoundID") private var selectedSoundID: Int = 1075
     @AppStorage("sendNotification") private var sendNotification: Bool = false
     @AppStorage("autoStartSetAfterRest") private var autoStartSetAfterRest: Bool = false
     @AppStorage("autoStartRestAfterSet") private var autoStartRestAfterSet: Bool = false
     @AppStorage("autoResetTimer") private var autoResetTimer: Bool = false
-    
+
     @State private var isExerciseDone: Bool = false
     @State private var restProgress: CGFloat = 0
     @State private var timer: DispatchSourceTimer?
@@ -40,14 +40,14 @@ struct ProgressBarView: View {
     @State private var isExerciseInterval: Bool = true
     @State private var timerActivity: Activity<TimerWidgetAttributes>?
     @State private var timerEndDate: Date?
-    
+
     // accentColor is 0x5DA79B
     let orange: Color = Color(red: 0xFF/255, green: 0xBC/255, blue: 0x8E/255)
     let yellow: Color = Color(red: 0xFF/255, green: 0xD6/255, blue: 0x8E/255)
     let red: Color = Color(red: 0xF5/255, green: 0x89/255, blue: 0x96/255)
     let blue: Color = Color(red: 0x68/255, green: 0x83/255, blue: 0xAE/255)
     let green: Color = Color(red: 0x8D/255, green: 0xD9/255, blue: 0x79/255)
-    
+
     private var realDuration: Double {
         if isExerciseDone {
             return timeBeforeNextExercise
@@ -69,22 +69,22 @@ struct ProgressBarView: View {
             }
         }
     }
-    
+
     private var nbSet: Int {
         isTimeBased ? totalSets * 2 : totalSets
     }
-    
+
     // MARK: - Main view
-    
+
     var body: some View {
         VStack {
             progressBars()
                 .frame(height: 20)
                 .padding(.horizontal, totalSets > 6 ? 0 : nil)
-            
+
             Text("remaining_x_sec".localized(with: Int(timeRemaining.rounded(.down)), comment: "Remaining: x sec"))
                 .font(.title)
-            
+
             if #available(iOS 26.0, *) {
                 HStack {
                     Spacer()
@@ -155,7 +155,7 @@ struct ProgressBarView: View {
             case .active:
                 isActive = true
                 print("App became active")
-                
+
                 if isTimerRunning, let start = timeStarted {
                     let now = Date.now.timeIntervalSince1970 * 1000
                     let totalElapsed = (now - start) / 1000
@@ -178,9 +178,9 @@ struct ProgressBarView: View {
             }
         }
     }
-    
+
     // MARK: - ViewBuilder functions
-    
+
     @ViewBuilder
     private func progressBars() -> some View {
         GeometryReader { geometry in
@@ -192,7 +192,7 @@ struct ProgressBarView: View {
                     return geometry.size.width / CGFloat(2 * self.totalSets) // Scale to fit when not scrolling
                 }
             }()
-            
+
             if needsScrolling {
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: 4) {
@@ -449,9 +449,9 @@ struct ProgressBarView: View {
             }
         }
     }
-    
+
     // MARK: - Helper Functions
-    
+
     private func resetValues(index: Int, isExerciseInterval: Bool) {
         timer?.cancel()
         timer = nil
@@ -465,26 +465,26 @@ struct ProgressBarView: View {
         timeStarted = nil
         elapsed = 0.0
         endBackgroundTask()
-        
+
         endLiveActivity()
     }
-    
+
     private func toggleTimer() {
         isTimerRunning.toggle()
         updateLiveActivity()
-        
+
         if isTimerRunning {
             startTimer()
         } else {
             stopTimer()
         }
     }
-    
+
     private func startTimer() {
         backgroundTask = UIApplication.shared.beginBackgroundTask { [self] in
             self.endBackgroundTask()
         }
-        
+
         timeStarted = Date.now.timeIntervalSince1970 * 1000
         timeRemaining = max(0, realDuration - self.elapsed)
         timerEndDate = Date().addingTimeInterval(timeRemaining)
@@ -492,13 +492,13 @@ struct ProgressBarView: View {
         if sendNotification {
             scheduleNotification()
         }
-        
+
         if timerActivity != nil {
             updateLiveActivity()
         } else {
             startLiveActivity()
         }
-        
+
         let queue: DispatchQueue = DispatchQueue(label: "com.jerroder.deadliftdiaries.timer", qos: .userInitiated)
         timer = DispatchSource.makeTimerSource(queue: queue)
         timer?.schedule(deadline: .now(), repeating: .seconds(1))
@@ -510,14 +510,14 @@ struct ProgressBarView: View {
                 let remaining: Double = max(0, realDuration - totalElapsed)
                 timeRemaining = remaining
                 restProgress = 1 - (CGFloat(timeRemaining.rounded(.down)) / CGFloat(realDuration.rounded(.up)))
-                
+
                 if timeRemaining <= 0 {
                     toggleTimer()
-                    
+
                     if isTimeBased {
                         isExerciseInterval.toggle()
                     }
-                    
+
                     if currentSet < nbSet {
                         currentSet += 1
                         timeRemaining = realDuration
@@ -525,7 +525,7 @@ struct ProgressBarView: View {
                         self.elapsed = 0.0
                         timerEndDate = nil
                     }
-                    
+
                     if currentSet == nbSet && isExerciseDone {
                         currentSet += 1
                         if autoResetTimer && isCalledFromTimer {
@@ -534,13 +534,13 @@ struct ProgressBarView: View {
                             endLiveActivity()
                         }
                     }
-                    
+
                     if currentSet == nbSet {
                         isExerciseDone = true
                         timeRemaining = timeBeforeNextExercise
                         timerEndDate = nil
                     }
-                    
+
                     if isTimeBased && !isExerciseDone {
                         if (isExerciseInterval && autoStartSetAfterRest) || (!isExerciseInterval && autoStartRestAfterSet) {
                             toggleTimer()
@@ -555,7 +555,7 @@ struct ProgressBarView: View {
         }
         timer?.resume()
     }
-    
+
     private func stopTimer() {
         let now: Double = Date.now.timeIntervalSince1970 * 1000
         if let timeStarted = timeStarted {
@@ -569,14 +569,14 @@ struct ProgressBarView: View {
         cancelPendingNotifications()
         endBackgroundTask()
     }
-    
+
     private func endBackgroundTask() {
         if backgroundTask != .invalid {
             UIApplication.shared.endBackgroundTask(backgroundTask)
             backgroundTask = .invalid
         }
     }
-    
+
     private func playSystemSound() {
         let audioSession: AVAudioSession = AVAudioSession.sharedInstance()
         do {
@@ -585,12 +585,12 @@ struct ProgressBarView: View {
         } catch {
             print("Failed to set audio session category: \(error)")
         }
-        
+
         if selectedSoundID != 0 {
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
                 AudioServicesPlaySystemSound(UInt32(selectedSoundID))
             }
-            
+
             let duration: Double = selectedSoundID == 1328 ? 2.0 : 1.0
             DispatchQueue.main.asyncAfter(deadline: .now() + duration) {
                 do {
@@ -607,20 +607,20 @@ struct ProgressBarView: View {
             }
         }
     }
-    
+
     private func scheduleNotification() {
         let content = UNMutableNotificationContent()
         content.title = "timer_is_up".localized(comment: "The timer is up")
         content.body = isExerciseInterval ? "exercise_is_over".localized(comment: "Exercise is over") : "rest_is_over".localized(comment: "Rest is over")
         content.sound = UNNotificationSound.default
-        
+
         let trigger = UNTimeIntervalNotificationTrigger(timeInterval: timeRemaining, repeats: false)
         let request = UNNotificationRequest(
             identifier: UUID().uuidString,
             content: content,
             trigger: trigger
         )
-        
+
         UNUserNotificationCenter.current().add(request) { error in
             if let error = error {
                 print("Error scheduling notification: \(error.localizedDescription)")
@@ -629,30 +629,30 @@ struct ProgressBarView: View {
             }
         }
     }
-    
+
     private func cancelPendingNotifications() {
         UNUserNotificationCenter.current().removeAllPendingNotificationRequests()
     }
-    
+
     // MARK: - Live Activity Functions
-    
+
     private func startLiveActivity() {
         guard ActivityAuthorizationInfo().areActivitiesEnabled else {
             print("Live Activities are not enabled")
             return
         }
-        
+
         let attributes = TimerWidgetAttributes(
             timerType: isExerciseDone ? "beforeNext" : (isExerciseInterval ? "exercise" : "rest")
         )
-        
+
         let isInRestPeriod: Bool
         if isTimeBased {
             isInRestPeriod = !isExerciseInterval
         } else {
             isInRestPeriod = true
         }
-        
+
         let endTime = Date().addingTimeInterval(timeRemaining)
         let contentState = TimerWidgetAttributes.ContentState(
             timeRemaining: timeRemaining,
@@ -664,7 +664,7 @@ struct ProgressBarView: View {
             startTime: Date(),
             endTime: endTime
         )
-        
+
         do {
             timerActivity = try Activity.request(
                 attributes: attributes,
@@ -675,19 +675,19 @@ struct ProgressBarView: View {
             print("Error starting Live Activity: \(error.localizedDescription)")
         }
     }
-    
+
     private func updateLiveActivity() {
         guard let activity = timerActivity else {
             return
         }
-        
+
         let isInRestPeriod: Bool
         if isTimeBased {
             isInRestPeriod = !isExerciseInterval
         } else {
             isInRestPeriod = true
         }
-        
+
         let endTime = Date().addingTimeInterval(timeRemaining)
         let contentState = TimerWidgetAttributes.ContentState(
             timeRemaining: timeRemaining,
@@ -699,7 +699,7 @@ struct ProgressBarView: View {
             startTime: Date(),
             endTime: endTime
         )
-        
+
         Task {
             await activity.update(
                 ActivityContent(
@@ -709,12 +709,12 @@ struct ProgressBarView: View {
             )
         }
     }
-    
+
     private func endLiveActivity() {
         guard let activity = timerActivity else {
             return
         }
-        
+
         let finalState = TimerWidgetAttributes.ContentState(
             timeRemaining: 0,
             totalDuration: realDuration,
@@ -725,7 +725,7 @@ struct ProgressBarView: View {
             startTime: nil,
             endTime: Date()
         )
-        
+
         Task {
             await activity.end(
                 ActivityContent(state: finalState, staleDate: nil),

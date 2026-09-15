@@ -15,24 +15,24 @@ struct TimerView: View {
     @AppStorage("restDuration") private var restDuration: Double = 60.0
     @AppStorage("timeBeforeNext") private var timeBeforeNext: Double = 120.0
     @AppStorage("elapsed") private var elapsed: Double = 0.0
-    
+
     @State private var isTimerRunning: Bool = false
     @State private var showingSoundPickerSheet: Bool = false
     @State private var showingRestPicker: Bool = false
     @State private var showingDurationPicker: Bool = false
     @State private var showingTimeBeforeNextPicker: Bool = false
-    
+
     var body: some View {
         NavigationStack {
             Form {
                 Stepper("total_sets_x".localized(with: totalSets, comment: "Total Sets: x"), value: $totalSets, in: 1...20)
-                    .onChange(of: totalSets) { oldValue, newValue in
+                    .onChange(of: totalSets) { _, newValue in
                         if currentSet > newValue {
                             currentSet = newValue
                         }
                     }
                     .disabled(isTimerRunning)
-                
+
                 HStack {
                     Button(action: {
                         withAnimation {
@@ -57,7 +57,7 @@ struct TimerView: View {
                     }
                     .buttonStyle(.plain)
                     .disabled(isTimerRunning)
-                    
+
                     if #available(iOS 26.0, *) {
                         Grid(horizontalSpacing: 8, verticalSpacing: 8) {
                             GridRow {
@@ -92,9 +92,9 @@ struct TimerView: View {
                         .buttonStyle(.bordered)
                     }
                 }
-                
+
                 if showingRestPicker {
-                    Picker("rest_duration".localized(comment:"Rest duration"), selection: $restDuration) {
+                    Picker("rest_duration".localized(comment: "Rest duration"), selection: $restDuration) {
                         ForEach(Array(stride(from: 5.0, through: 300.0, by: 5.0)), id: \.self) { duration in
                             Text("\(Int(duration)) seconds".localized(comment: "(xxx) seconds")).tag(duration)
                         }
@@ -102,7 +102,7 @@ struct TimerView: View {
                     .pickerStyle(.wheel)
                     .disabled(isTimerRunning)
                 }
-                
+
                 if isTimeBased {
                     Button(action: {
                         withAnimation {
@@ -112,7 +112,7 @@ struct TimerView: View {
                         }
                     }) {
                         HStack {
-                            Text("exercise_duration".localized(comment:"Exercise duration"))
+                            Text("exercise_duration".localized(comment: "Exercise duration"))
                             Text(" \(Int(duration))s")
                                 .font(.subheadline)
                                 .foregroundColor(Color(UIColor.secondaryLabel))
@@ -125,9 +125,9 @@ struct TimerView: View {
                     }
                     .buttonStyle(.plain)
                     .disabled(isTimerRunning)
-                    
+
                     if showingDurationPicker {
-                        Picker("exercise_duration".localized(comment:"Exercise duration"), selection: $duration) {
+                        Picker("exercise_duration".localized(comment: "Exercise duration"), selection: $duration) {
                             ForEach(Array(stride(from: 5.0, through: 300.0, by: 5.0)), id: \.self) { duration in
                                 Text("\(Int(duration)) seconds".localized(comment: "(xxx) seconds")).tag(duration)
                             }
@@ -136,7 +136,7 @@ struct TimerView: View {
                         .disabled(isTimerRunning)
                     }
                 }
-                
+
                 Button(action: {
                     withAnimation {
                         showingTimeBeforeNextPicker.toggle()
@@ -145,7 +145,7 @@ struct TimerView: View {
                     }
                 }) {
                     HStack {
-                        Text("time_before_next".localized(comment:"Time before next exercise"))
+                        Text("time_before_next".localized(comment: "Time before next exercise"))
                         Text(" \(Int(timeBeforeNext))s")
                             .font(.subheadline)
                             .foregroundColor(Color(UIColor.secondaryLabel))
@@ -158,9 +158,9 @@ struct TimerView: View {
                 }
                 .buttonStyle(.plain)
                 .disabled(isTimerRunning)
-                
+
                 if showingTimeBeforeNextPicker {
-                    Picker("time_before_next".localized(comment:"Time before next exercise"), selection: $timeBeforeNext) {
+                    Picker("time_before_next".localized(comment: "Time before next exercise"), selection: $timeBeforeNext) {
                         ForEach(Array(stride(from: 5.0, through: 300.0, by: 5.0)), id: \.self) { duration in
                             Text("\(Int(duration)) seconds".localized(comment: "(xxx) seconds")).tag(duration)
                         }
@@ -168,7 +168,7 @@ struct TimerView: View {
                     .pickerStyle(.wheel)
                     .disabled(isTimerRunning)
                 }
-                
+
                 ProgressBarView(
                     totalSets: totalSets,
                     currentSet: $currentSet,

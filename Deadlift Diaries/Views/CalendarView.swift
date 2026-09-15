@@ -6,125 +6,165 @@
 import SwiftData
 import SwiftUI
 
+struct ScheduledWorkoutCard: View {
+    let scheduledWorkout: ScheduledWorkout
+
+    private var workoutTemplate: WorkoutTemplate? {
+        scheduledWorkout.workoutTemplate
+    }
+
+    var body: some View {
+        Button {
+            // Open workout details later.
+        } label: {
+            HStack(spacing: 14) {
+                // MARK: - Icon
+
+                ZStack {
+                    Circle()
+                        .fill(Color.accentColor.opacity(0.12))
+                        .frame(width: 46, height: 46)
+
+                    Image(systemName: "figure.strengthtraining.traditional")
+                        .font(.title3)
+                        .foregroundStyle(Color.accentColor)
+                }
+
+                // MARK: - Details
+
+                VStack(alignment: .leading, spacing: 4) {
+                    if let workoutTemplate {
+                        Text(workoutTemplate.name)
+                            .font(.headline)
+                            .foregroundStyle(.primary)
+                            .lineLimit(1)
+
+                        if let notes = workoutTemplate.notes,
+                           !notes.isEmpty {
+                            Text(notes)
+                                .font(.subheadline)
+                                .foregroundStyle(.secondary)
+                                .lineLimit(2)
+                        } else {
+                            Text("Workout")
+                                .font(.subheadline)
+                                .foregroundStyle(.secondary)
+                        }
+                    } else {
+                        Text("Workout")
+                            .font(.headline)
+                            .foregroundStyle(.primary)
+
+                        Text("Template unavailable")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+
+                Spacer(minLength: 8)
+
+                Image(systemName: "chevron.right")
+                    .font(.caption)
+                    .fontWeight(.semibold)
+                    .foregroundStyle(.tertiary)
+            }
+            .padding(14)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background {
+                RoundedRectangle(cornerRadius: 16)
+                    .fill(Color(uiColor: .secondarySystemBackground))
+            }
+            .overlay {
+                RoundedRectangle(cornerRadius: 16)
+                    .stroke(
+                        Color.primary.opacity(0.06),
+                        lineWidth: 1
+                    )
+            }
+        }
+        .buttonStyle(.plain)
+    }
+}
+
 struct AddWorkoutView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var modelContext
-    
+
     // MARK: - Workout
-    
+
     @State private var name = ""
     @State private var notes = ""
-    
+
     // MARK: - Schedule
-    
+
     @State private var startDate = Date()
     @State private var numberOfWeeks = 1
-    
+
     private var weekday: Int {
-        Calendar.current.component(
-            .weekday,
-            from: startDate
-        )
+        Calendar.current.component(.weekday, from: startDate)
     }
-    
+
     var body: some View {
         NavigationStack {
             Form {
                 // MARK: - Workout
-                
+
                 Section {
-                    TextField(
-                        "Workout Name",
-                        text: $name
-                    )
-                    
-                    TextField(
-                        "Notes",
-                        text: $notes,
-                        axis: .vertical
-                    )
+                    TextField("Workout Name", text: $name)
+
+                    TextField("Notes", text: $notes, axis: .vertical)
                     .lineLimit(3...6)
                 } header: {
                     Text("Workout")
                 }
-                
+
                 // MARK: - Schedule
-                
+
                 Section {
-                    DatePicker(
-                        "Start Date",
-                        selection: $startDate,
-                        displayedComponents: .date
-                    )
-                    
-                    Stepper(
-                        value: $numberOfWeeks,
-                        in: 1...52
-                    ) {
+                    DatePicker("Start Date", selection: $startDate, displayedComponents: .date)
+
+                    Stepper(value: $numberOfWeeks, in: 1...52) {
                         HStack {
                             Text("Duration")
-                            
+
                             Spacer()
-                            
-                            Text(
-                                "\(numberOfWeeks) " +
-                                "\(numberOfWeeks == 1 ? "week" : "weeks")"
-                            )
+
+                            Text("\(numberOfWeeks) " + "\(numberOfWeeks == 1 ? "week" : "weeks")")
                             .foregroundStyle(.secondary)
                         }
                     }
-                    
+
                     HStack {
                         Text("Repeats")
-                        
+
                         Spacer()
-                        
-                        Text(
-                            startDate.formatted(
-                                .dateTime.weekday(.wide)
-                            )
-                        )
+
+                        Text(startDate.formatted(.dateTime.weekday(.wide)))
                         .foregroundStyle(.secondary)
                     }
-                    
+
                     if let endDate = calculatedEndDate {
                         HStack {
                             Text("Ends")
-                            
+
                             Spacer()
-                            
-                            Text(
-                                endDate.formatted(
-                                    .dateTime
-                                        .month(.abbreviated)
-                                        .day()
-                                        .year()
-                                )
-                            )
+
+                            Text(endDate.formatted(.dateTime.month(.abbreviated).day().year()))
                             .foregroundStyle(.secondary)
                         }
                     }
                 } header: {
                     Text("Schedule")
                 } footer: {
-                    Text(
-                        "The workout will repeat every " +
-                        "\(startDate.formatted(.dateTime.weekday(.wide))) " +
-                        "for \(numberOfWeeks) " +
-                        "\(numberOfWeeks == 1 ? "week" : "weeks")."
-                    )
+                    Text("The workout will repeat every " + "\(startDate.formatted(.dateTime.weekday(.wide))) " +
+                         "for \(numberOfWeeks) " + "\(numberOfWeeks == 1 ? "week" : "weeks").")
                 }
-                
+
                 // MARK: - Exercises
-                
+
                 Section {
-                    Button {
+                    Button("Add Exercise", systemImage: "plus") {
                         // Exercise logic will be added later.
-                    } label: {
-                        Label(
-                            "Add Exercise",
-                            systemImage: "plus"
-                        )
                     }
                 } header: {
                     Text("Exercises")
@@ -138,112 +178,88 @@ struct AddWorkoutView: View {
                         dismiss()
                     }
                 }
-                
+
                 ToolbarItem(placement: .confirmationAction) {
                     Button("", systemImage: "checkmark") {
                         saveWorkout()
                     }
                     .disabled(
                         name
-                            .trimmingCharacters(
-                                in: .whitespacesAndNewlines
-                            )
+                            .trimmingCharacters(in: .whitespacesAndNewlines)
                             .isEmpty
                     )
                 }
             }
         }
     }
-    
+
     // MARK: - Computed Properties
-    
+
     private var calculatedEndDate: Date? {
-        guard numberOfWeeks > 0 else {
-            return nil
-        }
-        
         return Calendar.current.date(
             byAdding: .weekOfYear,
             value: numberOfWeeks - 1,
             to: startDate
         )
     }
-    
+
     // MARK: - Save
-    
+
     private func saveWorkout() {
         let trimmedName = name.trimmingCharacters(
             in: .whitespacesAndNewlines
         )
-        
+
         guard !trimmedName.isEmpty else {
             return
         }
-        
+
         let trimmedNotes = notes.trimmingCharacters(
             in: .whitespacesAndNewlines
         )
-        
+
         let calendar = Calendar.current
-        
-        // The final occurrence is numberOfWeeks - 1
-        // weeks after the start date.
+
         guard let endDate = calendar.date(
-            byAdding: .weekOfYear,
-            value: numberOfWeeks - 1,
+            byAdding: .day,
+            value: (numberOfWeeks - 1) * 7,
             to: startDate
         ) else {
             return
         }
-        
-        // 1. Create the reusable workout template.
-        
+
         let workoutTemplate = WorkoutTemplate(
             name: trimmedName,
-            notes: trimmedNotes.isEmpty
-            ? nil
-            : trimmedNotes
+            notes: trimmedNotes.isEmpty ? nil : trimmedNotes
         )
-        
-        // 2. Create the recurring schedule.
-        
+
         let schedule = WorkoutSchedule(
             startDate: startDate,
             endDate: endDate,
             weekday: weekday,
             workoutTemplate: workoutTemplate
         )
-        
-        // 3. Create each scheduled occurrence.
-        
+
         var scheduledDate = startDate
-        
+
         for _ in 0..<numberOfWeeks {
             let scheduledWorkout = ScheduledWorkout(
                 scheduledDate: scheduledDate,
                 workoutTemplate: workoutTemplate
             )
-            
+
             modelContext.insert(scheduledWorkout)
-            
-            guard let nextDate = calendar.date(
-                byAdding: .weekOfYear,
-                value: 1,
+
+            scheduledDate = calendar.date(
+                byAdding: .day,
+                value: 7,
                 to: scheduledDate
-            ) else {
-                break
-            }
-            
-            scheduledDate = nextDate
+            )!
         }
-        
-        // 4. Insert the template and schedule.
-        
+
         modelContext.insert(workoutTemplate)
         modelContext.insert(schedule)
-        
-        // 5. Save everything.
-        
+
         do {
             try modelContext.save()
             dismiss()
@@ -263,7 +279,7 @@ struct CalendarView: View {
 
     @State private var displayedMonth: Date = Date()
     @State private var selectedDate: Date = Date()
-    
+
     @State private var showAddWorkoutSheet: Bool = false
 
     private var calendar: Calendar {
@@ -296,10 +312,8 @@ struct CalendarView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button {
+                    Button("Today") {
                         goToToday()
-                    } label: {
-                        Text("Today")
                     }
                 }
             }
@@ -342,20 +356,11 @@ struct CalendarView: View {
 
     private var calendarGrid: some View {
         VStack(spacing: 8) {
-            
+
             weekdayHeader
-            
-            LazyVGrid(
-                columns: Array(
-                    repeating: GridItem(.flexible(), spacing: 4),
-                    count: 7
-                ),
-                spacing: 8
-            ) {
-                ForEach(
-                    Array(monthDays.enumerated()),
-                    id: \.offset
-                ) { _, date in
+
+            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 4), count: 7), spacing: 8) {
+                ForEach(Array(monthDays.enumerated()), id: \.offset) { _, date in
                     if let date {
                         dayCell(date)
                     } else {
@@ -368,12 +373,7 @@ struct CalendarView: View {
     }
 
     private var weekdayHeader: some View {
-        LazyVGrid(
-            columns: Array(
-                repeating: GridItem(.flexible()),
-                count: 7
-            )
-        ) {
+        LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 7)) {
             ForEach(weekdaySymbols, id: \.self) { day in
                 Text(day)
                     .font(.caption)
@@ -390,50 +390,52 @@ struct CalendarView: View {
             date,
             inSameDayAs: selectedDate
         )
-        
+
         let isToday = calendar.isDateInToday(date)
-        
+
+        let isCurrentMonth = calendar.isDate(
+            date,
+            equalTo: displayedMonth,
+            toGranularity: .month
+        )
+
         let workouts = workouts(on: date)
-        
+
         return Button {
             withAnimation(.easeInOut(duration: 0.15)) {
                 selectedDate = date
+
+                // Optional: automatically move to that month
+                if !isCurrentMonth {
+                    displayedMonth = date
+                }
             }
         } label: {
             VStack(spacing: 4) {
-                Text(date.formatted(.dateTime.day()))
-                    .font(.body)
-                    .fontWeight(
-                        isToday || isSelected
-                        ? .semibold
-                        : .regular
-                    )
-                    .foregroundStyle(
-                        isSelected
-                        ? Color.white
-                        : .primary
-                    )
-                    .frame(width: 42, height: 42)
-                    .background {
-                        if isSelected {
-                            Circle()
-                                .fill(Color.accentColor)
-                        } else if isToday {
-                            Circle()
-                                .stroke(
-                                    Color.accentColor,
-                                    lineWidth: 2
-                                )
-                        }
-                    }
-                
-                HStack(spacing: 3) {
-                    ForEach(
-                        workouts.prefix(3),
-                        id: \.id
-                    ) { workout in
+                Text(
+                    date.formatted(.dateTime.day())
+                )
+                .font(.body)
+                .fontWeight(isToday || isSelected ? .semibold : .regular)
+                .foregroundStyle(isSelected ? Color.white : isCurrentMonth ? Color.primary : Color.secondary.opacity(0.5))
+                .frame(width: 42, height: 42)
+                .background {
+                    if isSelected {
                         Circle()
-                            .fill(Color.red)
+                            .fill(Color.accentColor)
+                    } else if isToday {
+                        Circle()
+                            .stroke(
+                                Color.accentColor,
+                                lineWidth: 2
+                            )
+                    }
+                }
+
+                HStack(spacing: 3) {
+                    ForEach(workouts.prefix(3), id: \.id) { _ in
+                        Circle()
+                            .fill(Color.accentColor)
                             .frame(width: 5, height: 5)
                     }
                 }
@@ -452,19 +454,11 @@ struct CalendarView: View {
 
             HStack {
                 VStack(alignment: .leading, spacing: 3) {
-                    Text(
-                        selectedDate.formatted(
-                            .dateTime.weekday(.wide)
-                        )
-                    )
+                    Text(selectedDate.formatted(.dateTime.weekday(.wide)))
                     .font(.title3)
                     .fontWeight(.semibold)
 
-                    Text(
-                        selectedDate.formatted(
-                            .dateTime.month(.wide).day().year()
-                        )
-                    )
+                    Text(selectedDate.formatted(.dateTime.month(.wide).day().year()))
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
                 }
@@ -472,7 +466,7 @@ struct CalendarView: View {
                 Spacer()
 
                 Button {
-                    // Add workout action
+                    showAddWorkoutSheet = true
                 } label: {
                     Image(systemName: "plus")
                         .font(.headline)
@@ -493,10 +487,9 @@ struct CalendarView: View {
                 } else {
                     VStack(spacing: 12) {
                         ForEach(workouts) { scheduledWorkout in
-//                            ScheduledWorkoutCard(
-//                                scheduledWorkout: scheduledWorkout
-//                            )
-                            Text(scheduledWorkout.notes ?? "empty")
+                            ScheduledWorkoutCard(
+                                scheduledWorkout: scheduledWorkout
+                            )
                         }
                     }
                     .padding(.horizontal)
@@ -522,13 +515,8 @@ struct CalendarView: View {
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
 
-            Button {
+            Button("Add Workout", systemImage: "plus") {
                 showAddWorkoutSheet = true
-            } label: {
-                Label(
-                    "Add Workout",
-                    systemImage: "plus"
-                )
             }
             .buttonStyle(.bordered)
 
@@ -540,40 +528,32 @@ struct CalendarView: View {
     // MARK: - Date Helpers
 
     private var monthDays: [Date?] {
-        guard let monthInterval = calendar.dateInterval(
-            of: .month,
-            for: displayedMonth
-        ) else {
+        guard let monthInterval = calendar.dateInterval(of: .month, for: displayedMonth) else {
             return []
         }
 
-        let firstWeekday = calendar.component(
-            .weekday,
-            from: monthInterval.start
-        )
+        let monthStart = monthInterval.start
 
-        let daysInMonth = calendar.range(
-            of: .day,
-            in: .month,
-            for: displayedMonth
-        )?.count ?? 0
+        // Number of blank cells before the first day of the month.
+        let firstWeekday = calendar.component(.weekday, from: monthStart)
 
-        // Calendar.current's weekday starts at Sunday = 1.
-        // We convert this to the number of empty cells before day 1.
         let leadingEmptyDays = (firstWeekday - calendar.firstWeekday + 7) % 7
+
+        let daysInMonth = calendar.range(of: .day, in: .month, for: displayedMonth)?.count ?? 0
+
+        // Total number of cells needed to complete the final week.
+        let totalDays = leadingEmptyDays + daysInMonth
+        let trailingDays = (7 - (totalDays % 7)) % 7
+
+        let totalCells = totalDays + trailingDays
 
         var dates: [Date?] = []
 
-        for _ in 0..<leadingEmptyDays {
-            dates.append(nil)
-        }
+        // Generate the actual dates surrounding the month.
+        for offset in 0..<totalCells {
+            let dayOffset = offset - leadingEmptyDays
 
-        for day in 1...daysInMonth {
-            if let date = calendar.date(
-                bySetting: .day,
-                value: day,
-                of: displayedMonth
-            ) {
+            if let date = calendar.date(byAdding: .day, value: dayOffset, to: monthStart) {
                 dates.append(date)
             }
         }
@@ -584,30 +564,23 @@ struct CalendarView: View {
     var weekdaySymbols: [String] {
         let symbols = calendar.shortWeekdaySymbols
         let startIndex = calendar.firstWeekday - 1
-        
+
         return Array(symbols[startIndex...]) + Array(symbols[..<startIndex])
     }
 
     private func workouts(on date: Date) -> [ScheduledWorkout] {
         scheduledWorkouts.filter {
-            calendar.isDate(
-                $0.scheduledDate,
-                inSameDayAs: date
-            )
+            calendar.isDate($0.scheduledDate, inSameDayAs: date)
         }
     }
 
     // MARK: - Navigation
 
     private func changeMonth(by value: Int) {
-        guard let newMonth = calendar.date(
-            byAdding: .month,
-            value: value,
-            to: displayedMonth
-        ) else {
+        guard let newMonth = calendar.date(byAdding: .month, value: value, to: displayedMonth) else {
             return
         }
-        
+
         withAnimation(.easeInOut(duration: 0.2)) {
             displayedMonth = newMonth
         }
@@ -625,9 +598,7 @@ struct CalendarView: View {
 
 private extension Color {
     init(hex: String) {
-        let hex = hex.trimmingCharacters(
-            in: CharacterSet.alphanumerics.inverted
-        )
+        let hex = hex.trimmingCharacters(in: CharacterSet.alphanumerics.inverted)
 
         var int: UInt64 = 0
         Scanner(string: hex).scanHexInt64(&int)

@@ -11,11 +11,9 @@ final class WorkoutSession {
     var scheduledWorkout: ScheduledWorkout?
 
     @Relationship(deleteRule: .cascade)
-    var exercises: [PerformedExercise] = []
+    var exercises: [PerformedExercise]? = []
 
-    init(
-        scheduledWorkout: ScheduledWorkout? = nil
-    ) {
+    init(scheduledWorkout: ScheduledWorkout? = nil) {
         self.id = UUID()
         self.scheduledWorkout = scheduledWorkout
     }
