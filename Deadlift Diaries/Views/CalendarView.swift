@@ -156,12 +156,6 @@ struct CreateExerciseView: View {
             .navigationTitle("New Exercise")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("", systemImage: "xmark") {
-                        dismiss()
-                    }
-                }
-                
                 ToolbarItem(placement: .confirmationAction) {
                     Button("", systemImage: "checkmark") {
                         createExercise()
@@ -224,9 +218,6 @@ struct AddExerciseView: View {
     @State private var reps = 8
     @State private var restSeconds = 150
     @State private var weight: Double?
-    
-    @State private var showCreateExercise = false
-    @State private var newExerciseName = ""
     
     private var filteredExercises: [Exercise] {
         let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -298,9 +289,12 @@ struct AddExerciseView: View {
                             }
                         }
                         
-                        Button("Create New Exercise", systemImage: "plus") {
-                            newExerciseName = searchText
-                            showCreateExercise = true
+                        NavigationLink {
+                            CreateExerciseView(initialName: searchText) { exercise in
+                                selectedExercise = exercise
+                            }
+                        } label: {
+                            Label("Create New Exercise", systemImage: "plus")
                         }
                     }
                 }
@@ -384,11 +378,6 @@ struct AddExerciseView: View {
                     }
                     .tint(.accentColor)
                     .disabled(selectedExercise == nil)
-                }
-            }
-            .sheet(isPresented: $showCreateExercise) {
-                CreateExerciseView(initialName: newExerciseName) { exercise in
-                    selectedExercise = exercise
                 }
             }
         }
@@ -513,13 +502,6 @@ struct CreateWorkoutTemplateView: View {
             .navigationTitle("New Template")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("", systemImage: "xmark") {
-                        dismiss()
-                    }
-                }
-                
                 ToolbarItem(placement: .confirmationAction) {
                     Button("", systemImage: "checkmark") {
                         createTemplate()
@@ -583,8 +565,6 @@ struct AddWorkoutView: View {
     
     @State private var searchText: String = ""
     @State private var selectedTemplate: WorkoutTemplate?
-    
-    @State private var showCreateTemplate = false
     
     // MARK: - Schedule
     
@@ -670,8 +650,12 @@ struct AddWorkoutView: View {
                             }
                         }
                         
-                        Button("Create New Template", systemImage: "plus") {
-                            showCreateTemplate = true
+                        NavigationLink {
+                            CreateWorkoutTemplateView { template in
+                                selectedTemplate = template
+                            }
+                        } label: {
+                            Label("Create New Template", systemImage: "plus")
                         }
                     }
                 }
@@ -737,11 +721,6 @@ struct AddWorkoutView: View {
                     }
                     .disabled(selectedTemplate == nil)
                 }
-            }
-        }
-        .sheet(isPresented: $showCreateTemplate) {
-            CreateWorkoutTemplateView { template in
-                selectedTemplate = template
             }
         }
     }
