@@ -14,11 +14,9 @@ enum FocusableField: Hashable {
 }
 
 struct ContentView: View {
-    @FocusState private var focusedField: FocusableField?
-
     var body: some View {
         TabView {
-            CalendarView(focusedField: $focusedField).tabItem {
+            CalendarView().tabItem {
                 Image(systemName: "calendar")
                 Text("cycles".localized(comment: "Cycles"))
             }
