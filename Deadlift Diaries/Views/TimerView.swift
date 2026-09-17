@@ -17,7 +17,7 @@ struct TimerView: View {
     @AppStorage("elapsed") private var elapsed: Double = 0.0
 
     @State private var isTimerRunning: Bool = false
-    @State private var showingSoundPickerSheet: Bool = false
+    @State private var showingSettingsSheet: Bool = false
     @State private var showingRestPicker: Bool = false
     @State private var showingDurationPicker: Bool = false
     @State private var showingTimeBeforeNextPicker: Bool = false
@@ -182,17 +182,14 @@ struct TimerView: View {
                 )
             }
             .navigationTitle("timer".localized(comment: "Timer"))
-//            .sheet(isPresented: $showingSoundPickerSheet) {
-//                SettingsSheet(
-//                    isPresented: $showingSoundPickerSheet,
-//                    mesocycles: nil
-//                )
-//            }
+            .sheet(isPresented: $showingSettingsSheet) {
+                SettingsSheet()
+            }
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     Menu {
                         Button(action: {
-                            showingSoundPickerSheet = true
+                            showingSettingsSheet = true
                         }) {
                             Label("settings".localized(comment: "Settings"), systemImage: "gear")
                         }

@@ -762,7 +762,6 @@ struct AddWorkoutView: View {
     }
 }
 
-
 struct CalendarView: View {
     @Environment(\.modelContext) private var modelContext
 
@@ -775,11 +774,16 @@ struct CalendarView: View {
     @State private var selectedDate: Date = Date()
 
     @State private var showAddWorkoutSheet: Bool = false
+    @State private var showingSettingsSheet: Bool = false
 
     private var calendar: Calendar {
         var calendar = Calendar.current
         calendar.firstWeekday = true ? 2 : 1 // change true to false to set Sunday as first day of the week
         return calendar
+    }
+    
+    private var selectedDayWorkouts: [ScheduledWorkout] {
+        workouts(on: selectedDate)
     }
 
     var body: some View {
@@ -805,15 +809,32 @@ struct CalendarView: View {
             .navigationTitle("Calendar")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    Menu {
+                        Button(action: {
+                            showingSettingsSheet = true
+                        }) {
+                            Label("settings".localized(comment: "Settings"), systemImage: "gear")
+                        }
+                    } label: {
+                        Image(systemName: "ellipsis")
+                    }
+                }
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("Today") {
                         goToToday()
                     }
+                    .tint(
+                        calendar.isDateInToday(selectedDate) ? nil : .accentColor
+                    )
                 }
             }
         }
         .sheet(isPresented: $showAddWorkoutSheet) {
             AddWorkoutView(startDate: selectedDate)
+        }
+        .sheet(isPresented: $showingSettingsSheet) {
+            SettingsSheet()
         }
     }
 
@@ -935,8 +956,7 @@ struct CalendarView: View {
 
     private var selectedDayView: some View {
         VStack(alignment: .leading, spacing: 0) {
-
-            HStack {
+            HStack(alignment: .top) {
                 VStack(alignment: .leading, spacing: 3) {
                     Text(selectedDate.formatted(.dateTime.weekday(.wide)))
                     .font(.title3)
@@ -949,15 +969,17 @@ struct CalendarView: View {
 
                 Spacer()
 
-                Button {
-                    showAddWorkoutSheet = true
-                } label: {
-                    Image(systemName: "plus")
-                        .font(.headline)
-                        .frame(width: 36, height: 36)
+                if !selectedDayWorkouts.isEmpty {
+                    Button {
+                        showAddWorkoutSheet = true
+                    } label: {
+                        Image(systemName: "plus")
+                            .font(.headline)
+                            .frame(width: 36, height: 36)
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .clipShape(Circle())
                 }
-                .buttonStyle(.borderedProminent)
-                .clipShape(Circle())
             }
             .padding(.horizontal)
             .padding(.top, 14)
