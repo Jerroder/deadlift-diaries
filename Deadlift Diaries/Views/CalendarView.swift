@@ -8,81 +8,442 @@ import SwiftUI
 
 struct ScheduledWorkoutCard: View {
     let scheduledWorkout: ScheduledWorkout
-
+    
     private var workoutTemplate: WorkoutTemplate? {
         scheduledWorkout.workoutTemplate
     }
-
+    
     var body: some View {
-        Button {
-            // Open workout details later.
-        } label: {
-            HStack(spacing: 14) {
-                // MARK: - Icon
-
-                ZStack {
-                    Circle()
-                        .fill(Color.accentColor.opacity(0.12))
-                        .frame(width: 46, height: 46)
-
-                    Image(systemName: "figure.strengthtraining.traditional")
-                        .font(.title3)
-                        .foregroundStyle(Color.accentColor)
-                }
-
-                // MARK: - Details
-
-                VStack(alignment: .leading, spacing: 4) {
-                    if let workoutTemplate {
+        VStack(alignment: .leading, spacing: 8) {
+            // MARK: - Workout
+            
+            if let workoutTemplate {
+                HStack(spacing: 12) {
+                    VStack(alignment: .leading, spacing: 3) {
                         Text(workoutTemplate.name)
                             .font(.headline)
                             .foregroundStyle(.primary)
-                            .lineLimit(1)
-
-                        if let notes = workoutTemplate.notes,
-                           !notes.isEmpty {
+                        
+                        if let notes = workoutTemplate.notes, !notes.isEmpty {
                             Text(notes)
                                 .font(.subheadline)
                                 .foregroundStyle(.secondary)
                                 .lineLimit(2)
-                        } else {
-                            Text("Workout")
-                                .font(.subheadline)
-                                .foregroundStyle(.secondary)
                         }
-                    } else {
+                    }
+                }
+                
+                // MARK: - Exercises
+                
+                if let exercises = workoutTemplate.exercises,
+                   !exercises.isEmpty {
+                    VStack(alignment: .leading, spacing: 0) {
+                        ForEach(exercises.sorted(by: { $0.order < $1.order })) { workoutExercise in
+                            WorkoutExerciseRow(workoutExercise: workoutExercise)
+                        }
+                    }
+                    .padding(.leading, 14)
+                }
+            } else {
+                HStack(spacing: 12) {
+                    Image(systemName: "exclamationmark.circle")
+                        .foregroundStyle(.secondary)
+                    
+                    VStack(alignment: .leading, spacing: 3) {
                         Text("Workout")
                             .font(.headline)
-                            .foregroundStyle(.primary)
-
+                        
                         Text("Template unavailable")
                             .font(.subheadline)
                             .foregroundStyle(.secondary)
                     }
                 }
-
-                Spacer(minLength: 8)
-
-                Image(systemName: "chevron.right")
-                    .font(.caption)
-                    .fontWeight(.semibold)
-                    .foregroundStyle(.tertiary)
-            }
-            .padding(14)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background {
-                RoundedRectangle(cornerRadius: 16)
-                    .fill(Color(uiColor: .secondarySystemBackground))
-            }
-            .overlay {
-                RoundedRectangle(cornerRadius: 16)
-                    .stroke(
-                        Color.primary.opacity(0.06),
-                        lineWidth: 1
-                    )
             }
         }
-        .buttonStyle(.plain)
+        .padding(16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background {
+            RoundedRectangle(cornerRadius: 16)
+                .fill(Color(uiColor: .secondarySystemBackground))
+        }
+        .overlay {
+            RoundedRectangle(cornerRadius: 16)
+                .stroke(Color.primary.opacity(0.06), lineWidth: 1)
+        }
+    }
+    
+    struct WorkoutExerciseRow: View {
+        let workoutExercise: WorkoutExercise
+        
+        private var exerciseName: String {
+            workoutExercise.exercise?.name ?? "Unknown Exercise"
+        }
+        
+        var body: some View {
+            HStack(alignment: .top, spacing: 16) {
+                Rectangle()
+                    .fill(Color.secondary.opacity(0.25))
+                    .frame(width: 1)
+                
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(exerciseName)
+                        .font(.body)
+                        .fontWeight(.medium)
+                        .foregroundStyle(.primary)
+                    
+                    Text(targetDescription)
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                }
+                .padding(.vertical, 6)
+                
+                Spacer()
+            }
+        }
+        
+        private var targetDescription: String {
+            if let weight = workoutExercise.targetWeight {
+                return "\(workoutExercise.targetSets) x \(workoutExercise.targetReps) @ \(weight.formatted()) kg"
+            }
+            
+            return "\(workoutExercise.targetSets) x \(workoutExercise.targetReps)"
+        }
+    }
+}
+
+struct CreateExerciseView: View {
+    @Environment(\.dismiss) private var dismiss
+    @Environment(\.modelContext) private var modelContext
+    
+    let initialName: String
+    let onCreate: (Exercise) -> Void
+    
+    @State private var name: String
+    @State private var isTimeBased = false
+    @State private var isDistanceBased = false
+    @State private var notes = ""
+    
+    init(initialName: String = "", onCreate: @escaping (Exercise) -> Void) {
+        self.initialName = initialName
+        self.onCreate = onCreate
+        _name = State(initialValue: initialName)
+    }
+    
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section("Exercise") {
+                    TextField("Name", text: $name)
+                    
+                    Toggle("Time based", isOn: $isTimeBased)
+                        .onChange(of: isTimeBased) { _, value in
+                            if value {
+                                isDistanceBased = false
+                            }
+                        }
+                    
+                    Toggle("Distance based", isOn: $isDistanceBased)
+                        .onChange(of: isDistanceBased) { _, value in
+                            if value {
+                                isTimeBased = false
+                            }
+                        }
+                    
+                    TextField("Notes", text: $notes, axis: .vertical)
+                        .lineLimit(3...6)
+                }
+            }
+            .navigationTitle("New Exercise")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("", systemImage: "xmark") {
+                        dismiss()
+                    }
+                }
+                
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("", systemImage: "checkmark") {
+                        createExercise()
+                    }
+                    .tint(.accentColor)
+                    .disabled(
+                        name
+                            .trimmingCharacters(in: .whitespacesAndNewlines)
+                            .isEmpty
+                    )
+                }
+            }
+        }
+    }
+    
+    private func createExercise() {
+        let trimmedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        
+        guard !trimmedName.isEmpty else {
+            return
+        }
+        
+        let exercise = Exercise(
+            name: trimmedName,
+            isTimeBased: isTimeBased,
+            isDistanceBased: isDistanceBased,
+            notes: notes.trimmingCharacters(
+                in: .whitespacesAndNewlines
+            )
+        )
+        
+        modelContext.insert(exercise)
+        
+        do {
+            try modelContext.save()
+            onCreate(exercise)
+            dismiss()
+        } catch {
+            print("Failed to save exercise: \(error)")
+        }
+    }
+}
+
+
+struct AddExerciseView: View {
+    @Environment(\.dismiss) private var dismiss
+    @Environment(\.modelContext) private var modelContext
+    
+    let order: Int
+    let onAdd: (WorkoutExercise) -> Void
+    
+    @Query(sort: \Exercise.name)
+    private var exercises: [Exercise]
+    
+    @State private var searchText = ""
+    
+    @State private var selectedExercise: Exercise?
+    
+    @State private var sets = 3
+    @State private var reps = 8
+    @State private var restSeconds = 150
+    @State private var weight: Double?
+    
+    @State private var showCreateExercise = false
+    @State private var newExerciseName = ""
+    
+    private var filteredExercises: [Exercise] {
+        let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
+        
+        guard !query.isEmpty else {
+            return exercises
+        }
+        
+        return exercises.filter {
+            $0.name.localizedCaseInsensitiveContains(query)
+        }
+    }
+    
+    var body: some View {
+        NavigationStack {
+            Form {
+                // MARK: - Exercise
+                
+                Section("Exercise") {
+                    if let selectedExercise {
+                        HStack {
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text(selectedExercise.name)
+                                    .font(.headline)
+                                
+                                if selectedExercise.isTimeBased {
+                                    Text("Time based")
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                } else if selectedExercise.isDistanceBased {
+                                    Text("Distance based")
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                }
+                            }
+                            
+                            Spacer()
+                            
+                            Button("Change") {
+                                self.selectedExercise = nil
+                            }
+                        }
+                    } else {
+                        TextField("Search exercises", text: $searchText)
+                        
+                        if !filteredExercises.isEmpty {
+                            ForEach(filteredExercises) { exercise in
+                                Button {
+                                    selectedExercise = exercise
+                                    searchText = ""
+                                } label: {
+                                    HStack {
+                                        Text(exercise.name)
+                                            .foregroundStyle(.primary)
+                                        
+                                        Spacer()
+                                        
+                                        if exercise.isTimeBased {
+                                            Text("Time")
+                                                .font(.caption)
+                                                .foregroundStyle(.secondary)
+                                        } else if exercise.isDistanceBased {
+                                            Text("Distance")
+                                                .font(.caption)
+                                                .foregroundStyle(.secondary)
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        
+                        Button("Create New Exercise", systemImage: "plus") {
+                            newExerciseName = searchText
+                            showCreateExercise = true
+                        }
+                    }
+                }
+                
+                // MARK: - Targets
+                
+                if let selectedExercise {
+                    Section("Target") {
+                        Stepper(value: $sets, in: 1...20) {
+                            HStack {
+                                Text("Sets")
+                                Spacer()
+                                Text("\(sets)")
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
+                        
+                        if selectedExercise.isTimeBased {
+                            Stepper(value: $reps, in: 1...3600) {
+                                HStack {
+                                    Text("Duration")
+                                    Spacer()
+                                    Text(formattedDuration(reps))
+                                        .foregroundStyle(.secondary)
+                                }
+                            }
+                        } else if selectedExercise.isDistanceBased {
+                            Text("Distance target can be added here.")
+                                .foregroundStyle(.secondary)
+                        } else {
+                            Stepper(value: $reps, in: 1...100) {
+                                HStack {
+                                    Text("Reps")
+                                    Spacer()
+                                    Text("\(reps)")
+                                        .foregroundStyle(.secondary)
+                                }
+                            }
+                        }
+                        
+                        HStack {
+                            Text("Weight")
+                            
+                            Spacer()
+                            
+                            TextField("Optional", value: $weight, format: .number)
+                            .keyboardType(.decimalPad)
+                            .multilineTextAlignment(.trailing)
+                            
+                            Text("kg")
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                    
+                    // MARK: - Rest
+                    
+                    Section("Rest") {
+                        Stepper(value: $restSeconds, in: 0...600, step: 15) {
+                            HStack {
+                                Text("Rest")
+                                Spacer()
+                                Text(formattedRest(restSeconds))
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
+                    }
+                }
+            }
+            .navigationTitle("Add Exercise")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("", systemImage: "xmark") {
+                        dismiss()
+                    }
+                }
+                
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("", systemImage: "checkmark") {
+                        addExercise()
+                    }
+                    .tint(.accentColor)
+                    .disabled(selectedExercise == nil)
+                }
+            }
+            .sheet(isPresented: $showCreateExercise) {
+                CreateExerciseView(initialName: newExerciseName) { exercise in
+                    selectedExercise = exercise
+                }
+            }
+        }
+    }
+    
+    // MARK: - Add
+    
+    private func addExercise() {
+        guard let exercise = selectedExercise else {
+            return
+        }
+        
+        let workoutExercise = WorkoutExercise(
+            exercise: exercise,
+            order: order,
+            targetSets: sets,
+            targetReps: reps,
+            targetWeight: weight,
+            restSeconds: restSeconds
+        )
+        
+        onAdd(workoutExercise)
+        dismiss()
+    }
+    
+    // MARK: - Formatting
+    
+    private func formattedRest(_ seconds: Int) -> String {
+        if seconds < 60 {
+            return "\(seconds)s"
+        }
+        
+        let minutes = seconds / 60
+        let remaining = seconds % 60
+        
+        if remaining == 0 {
+            return "\(minutes)m"
+        }
+        
+        return "\(minutes)m \(remaining)s"
+    }
+    
+    private func formattedDuration(_ seconds: Int) -> String {
+        if seconds < 60 {
+            return "\(seconds)s"
+        }
+        
+        let minutes = seconds / 60
+        let remaining = seconds % 60
+        
+        if remaining == 0 {
+            return "\(minutes)m"
+        }
+        
+        return "\(minutes)m \(remaining)s"
     }
 }
 
@@ -92,16 +453,23 @@ struct AddWorkoutView: View {
 
     // MARK: - Workout
 
-    @State private var name = ""
-    @State private var notes = ""
+    @State private var name: String = ""
+    @State private var notes: String = ""
 
     // MARK: - Schedule
 
-    @State private var startDate = Date()
-    @State private var numberOfWeeks = 1
+    @State private var startDate: Date
+    @State private var numberOfWeeks: Int = 1
+    @State private var workoutExercises: [WorkoutExercise] = []
+    
+    @State private var showAddExerciseSheet: Bool = false
 
     private var weekday: Int {
         Calendar.current.component(.weekday, from: startDate)
+    }
+    
+    init(startDate: Date = Date()) {
+        _startDate = State(initialValue: startDate)
     }
 
     var body: some View {
@@ -161,10 +529,34 @@ struct AddWorkoutView: View {
                 }
 
                 // MARK: - Exercises
-
+                
                 Section {
+                    ForEach(workoutExercises, id: \.id) { workoutExercise in
+                        HStack {
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text(workoutExercise.exercise?.name ?? "Unknown Exercise")
+                                
+                                Text(
+                                    "\(workoutExercise.targetSets) × \(workoutExercise.targetReps)"
+                                )
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                            }
+                            
+                            Spacer()
+                        }
+                    }
+                    .onDelete { offsets in
+                        workoutExercises.remove(atOffsets: offsets)
+                        
+                        // Re-number exercises after deletion
+                        for (index, exercise) in workoutExercises.enumerated() {
+                            exercise.order = index
+                        }
+                    }
+                    
                     Button("Add Exercise", systemImage: "plus") {
-                        // Exercise logic will be added later.
+                        showAddExerciseSheet = true
                     }
                 } header: {
                     Text("Exercises")
@@ -189,6 +581,13 @@ struct AddWorkoutView: View {
                             .isEmpty
                     )
                 }
+            }
+        }
+        .sheet(isPresented: $showAddExerciseSheet) {
+            AddExerciseView(
+                order: workoutExercises.count
+            ) { workoutExercise in
+                workoutExercises.append(workoutExercise)
             }
         }
     }
@@ -232,6 +631,13 @@ struct AddWorkoutView: View {
             name: trimmedName,
             notes: trimmedNotes.isEmpty ? nil : trimmedNotes
         )
+        
+        for (index, workoutExercise) in workoutExercises.enumerated() {
+            workoutExercise.order = index
+            workoutExercise.workoutTemplate = workoutTemplate
+            
+            modelContext.insert(workoutExercise)
+        }
 
         let schedule = WorkoutSchedule(
             startDate: startDate,
@@ -319,7 +725,7 @@ struct CalendarView: View {
             }
         }
         .sheet(isPresented: $showAddWorkoutSheet) {
-            AddWorkoutView()
+            AddWorkoutView(startDate: selectedDate)
         }
     }
 
@@ -425,10 +831,7 @@ struct CalendarView: View {
                             .fill(Color.accentColor)
                     } else if isToday {
                         Circle()
-                            .stroke(
-                                Color.accentColor,
-                                lineWidth: 2
-                            )
+                            .stroke(Color.accentColor, lineWidth: 2)
                     }
                 }
 
