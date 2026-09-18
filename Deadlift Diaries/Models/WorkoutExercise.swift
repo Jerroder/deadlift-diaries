@@ -28,18 +28,8 @@ final class WorkoutExercise {
     // The workout template containing this exercise
     var workoutTemplate: WorkoutTemplate?
 
-    @Relationship(inverse: \PerformedExercise.workoutExercise)
-    var performedExercises: [PerformedExercise]? = []
-
-    init(
-        exercise: Exercise,
-        order: Int,
-        targetSets: Int,
-        targetReps: Int,
-        targetWeight: Double? = nil,
-        restSeconds: Int? = nil,
-        notes: String? = nil
-    ) {
+    init(exercise: Exercise, order: Int, targetSets: Int, targetReps: Int,
+         targetWeight: Double? = nil, restSeconds: Int? = nil, notes: String? = nil) {
         self.exercise = exercise
         self.order = order
         self.targetSets = targetSets

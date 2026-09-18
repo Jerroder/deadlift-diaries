@@ -14,51 +14,54 @@ struct ScheduledWorkoutCard: View {
     }
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            // MARK: - Workout
-            
-            if let workoutTemplate {
-                HStack(spacing: 12) {
-                    VStack(alignment: .leading, spacing: 3) {
-                        Text(workoutTemplate.name)
-                            .font(.headline)
-                            .foregroundStyle(.primary)
+        HStack {
+            VStack(alignment: .leading, spacing: 8) {
+                if let workoutTemplate {
+                    HStack(spacing: 12) {
+                        VStack(alignment: .leading, spacing: 3) {
+                            Text(workoutTemplate.name)
+                                .font(.headline)
+                                .foregroundStyle(.primary)
+                            
+                            if let notes = workoutTemplate.notes, !notes.isEmpty {
+                                Text(notes)
+                                    .font(.subheadline)
+                                    .foregroundStyle(.secondary)
+                                    .lineLimit(2)
+                            }
+                        }
+                    }
+                    
+                    if let exercises = workoutTemplate.exercises, !exercises.isEmpty {
+                        VStack(alignment: .leading, spacing: 0) {
+                            ForEach(exercises.sorted(by: { $0.order < $1.order })) { workoutExercise in
+                                WorkoutExerciseRow(workoutExercise: workoutExercise)
+                            }
+                        }
+                        .padding(.leading, 14)
+                    }
+                } else {
+                    HStack(spacing: 12) {
+                        Image(systemName: "exclamationmark.circle")
+                            .foregroundStyle(.secondary)
                         
-                        if let notes = workoutTemplate.notes, !notes.isEmpty {
-                            Text(notes)
+                        VStack(alignment: .leading, spacing: 3) {
+                            Text("Workout")
+                                .font(.headline)
+                            
+                            Text("Template unavailable")
                                 .font(.subheadline)
                                 .foregroundStyle(.secondary)
-                                .lineLimit(2)
                         }
-                    }
-                }
-                
-                // MARK: - Exercises
-                
-                if let exercises = workoutTemplate.exercises,
-                   !exercises.isEmpty {
-                    VStack(alignment: .leading, spacing: 0) {
-                        ForEach(exercises.sorted(by: { $0.order < $1.order })) { workoutExercise in
-                            WorkoutExerciseRow(workoutExercise: workoutExercise)
-                        }
-                    }
-                    .padding(.leading, 14)
-                }
-            } else {
-                HStack(spacing: 12) {
-                    Image(systemName: "exclamationmark.circle")
-                        .foregroundStyle(.secondary)
-                    
-                    VStack(alignment: .leading, spacing: 3) {
-                        Text("Workout")
-                            .font(.headline)
-                        
-                        Text("Template unavailable")
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
                     }
                 }
             }
+            
+            Spacer()
+            
+            Image(systemName: "chevron.right")
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundStyle(.tertiary)
         }
         .padding(16)
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -198,7 +201,6 @@ struct CreateExerciseView: View {
         }
     }
 }
-
 
 struct AddExerciseView: View {
     @Environment(\.dismiss) private var dismiss
@@ -993,9 +995,12 @@ struct CalendarView: View {
                 } else {
                     VStack(spacing: 12) {
                         ForEach(workouts) { scheduledWorkout in
-                            ScheduledWorkoutCard(
-                                scheduledWorkout: scheduledWorkout
-                            )
+                            NavigationLink {
+                                ExerciseView(scheduledWorkout: scheduledWorkout)
+                            } label: {
+                                ScheduledWorkoutCard(scheduledWorkout: scheduledWorkout)
+                            }
+                            .buttonStyle(.plain)
                         }
                     }
                     .padding(.horizontal)
