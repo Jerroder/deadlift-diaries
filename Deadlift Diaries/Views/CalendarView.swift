@@ -14,64 +14,46 @@ struct ScheduledWorkoutCard: View {
     }
     
     var body: some View {
-        HStack {
-            VStack(alignment: .leading, spacing: 8) {
-                if let workoutTemplate {
-                    HStack(spacing: 12) {
-                        VStack(alignment: .leading, spacing: 3) {
-                            Text(workoutTemplate.name)
-                                .font(.headline)
-                                .foregroundStyle(.primary)
-                            
-                            if let notes = workoutTemplate.notes, !notes.isEmpty {
-                                Text(notes)
-                                    .font(.subheadline)
-                                    .foregroundStyle(.secondary)
-                                    .lineLimit(2)
-                            }
-                        }
-                    }
-                    
-                    if let exercises = workoutTemplate.exercises, !exercises.isEmpty {
-                        VStack(alignment: .leading, spacing: 0) {
-                            ForEach(exercises.sorted(by: { $0.order < $1.order })) { workoutExercise in
-                                WorkoutExerciseRow(workoutExercise: workoutExercise)
-                            }
-                        }
-                        .padding(.leading, 14)
-                    }
-                } else {
-                    HStack(spacing: 12) {
-                        Image(systemName: "exclamationmark.circle")
-                            .foregroundStyle(.secondary)
+        VStack(alignment: .leading, spacing: 8) {
+            if let workoutTemplate {
+                HStack(spacing: 12) {
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text(workoutTemplate.name)
+                            .font(.headline)
+                            .foregroundStyle(.primary)
                         
-                        VStack(alignment: .leading, spacing: 3) {
-                            Text("Workout")
-                                .font(.headline)
-                            
-                            Text("Template unavailable")
+                        if let notes = workoutTemplate.notes, !notes.isEmpty {
+                            Text(notes)
                                 .font(.subheadline)
                                 .foregroundStyle(.secondary)
+                                .lineLimit(2)
                         }
                     }
                 }
+                
+                if let exercises = workoutTemplate.exercises, !exercises.isEmpty {
+                    VStack(alignment: .leading, spacing: 0) {
+                        ForEach(exercises.sorted(by: { $0.order < $1.order })) { workoutExercise in
+                            WorkoutExerciseRow(workoutExercise: workoutExercise)
+                        }
+                    }
+                    .padding(.leading, 14)
+                }
+            } else {
+                HStack(spacing: 12) {
+                    Image(systemName: "exclamationmark.circle")
+                        .foregroundStyle(.secondary)
+                    
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text("Workout")
+                            .font(.headline)
+                        
+                        Text("Template unavailable")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                    }
+                }
             }
-            
-            Spacer()
-            
-            Image(systemName: "chevron.right")
-                .font(.system(size: 14, weight: .semibold))
-                .foregroundStyle(.tertiary)
-        }
-        .padding(16)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background {
-            RoundedRectangle(cornerRadius: 16)
-                .fill(Color(uiColor: .secondarySystemBackground))
-        }
-        .overlay {
-            RoundedRectangle(cornerRadius: 16)
-                .stroke(Color.primary.opacity(0.06), lineWidth: 1)
         }
     }
     
@@ -961,16 +943,16 @@ struct CalendarView: View {
             HStack(alignment: .top) {
                 VStack(alignment: .leading, spacing: 3) {
                     Text(selectedDate.formatted(.dateTime.weekday(.wide)))
-                    .font(.title3)
-                    .fontWeight(.semibold)
-
+                        .font(.title3)
+                        .fontWeight(.semibold)
+                    
                     Text(selectedDate.formatted(.dateTime.month(.wide).day().year()))
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
                 }
-
+                
                 Spacer()
-
+                
                 if !selectedDayWorkouts.isEmpty {
                     Button {
                         showAddWorkoutSheet = true
@@ -986,29 +968,37 @@ struct CalendarView: View {
             .padding(.horizontal)
             .padding(.top, 14)
             .padding(.bottom, 12)
-
-            ScrollView {
-                let workouts = workouts(on: selectedDate)
-
-                if workouts.isEmpty {
-                    emptyDayView
-                } else {
-                    VStack(spacing: 12) {
-                        ForEach(workouts) { scheduledWorkout in
-                            NavigationLink {
-                                ExerciseView(scheduledWorkout: scheduledWorkout)
-                            } label: {
-                                ScheduledWorkoutCard(scheduledWorkout: scheduledWorkout)
-                            }
-                            .buttonStyle(.plain)
+            
+            let workouts = workouts(on: selectedDate)
+            
+            if workouts.isEmpty {
+                emptyDayView
+            } else {
+                List {
+                    ForEach(workouts) { scheduledWorkout in
+                        NavigationLink {
+                            ExerciseView(scheduledWorkout: scheduledWorkout)
+                        } label: {
+                            ScheduledWorkoutCard(scheduledWorkout: scheduledWorkout)
                         }
+                        .listRowSeparator(.hidden)
+                        .listRowBackground(RoundedRectangle(cornerRadius: 16)
+                            .fill(Color(uiColor: .secondarySystemBackground)))
                     }
-                    .padding(.horizontal)
-                    .padding(.bottom)
+                    .onDelete { offsets in
+                        deleteWorkouts(at: offsets, from: workouts)
+                    }
                 }
+                .listStyle(.plain)
             }
         }
         .frame(maxHeight: .infinity)
+    }
+    
+    private func deleteWorkouts(at offsets: IndexSet, from workouts: [ScheduledWorkout]) {
+        for index in offsets {
+            modelContext.delete(workouts[index])
+        }
     }
 
     private var emptyDayView: some View {

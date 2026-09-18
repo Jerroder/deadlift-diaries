@@ -25,7 +25,7 @@ struct RestBox: View {
         }
         .frame(width: 20, height: 20)
     }
-}   
+}
 
 struct SetProgressView: View {
     @Bindable var exercise: PerformedExercise
@@ -51,15 +51,12 @@ struct SetProgressView: View {
                 ForEach(Array(sets.enumerated()), id: \.element.id) { index, _ in
                     
                     RoundedRectangle(cornerRadius: 4)
-                        .fill(
-                            index <= completedSetIndex
-                            ? Color.accentColor
-                            : Color.accentColor.opacity(0.3)
-                        )
+                        .fill(index <= completedSetIndex ? Color.accentColor : Color.accentColor.opacity(0.3))
                         .frame(width: 20, height: 20)
                     
                     if index < sets.count - 1 {
-                        RestBox(progress: index == completedSetIndex ? restProgress : (index <= completedRestIndex ? 1 : 0))
+                        RestBox(progress: index == completedSetIndex
+                                ? restProgress : (index <= completedRestIndex ? 1 : 0))
                     }
                 }
             }
