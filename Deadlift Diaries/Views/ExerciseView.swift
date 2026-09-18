@@ -31,9 +31,7 @@ struct ExerciseCard: View {
             )
             .foregroundStyle(.secondary)
             
-            ForEach(exercise.sets ?? []) { set in
-                SetRow(set: set)
-            }
+            SetProgressView(exercise: exercise)
         }
         .padding(.vertical)
     }
@@ -96,6 +94,7 @@ struct ExerciseView: View {
         for (index, exercise) in exercises.enumerated() {
             let performedExercise = PerformedExercise(from: exercise, orderIndex: index)
             
+            performedExercise.sourceExercise = exercise
             performedExercise.workoutSession = session
             session.exercises?.append(performedExercise)
         }

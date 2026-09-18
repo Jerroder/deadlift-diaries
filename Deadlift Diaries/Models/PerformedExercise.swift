@@ -22,6 +22,9 @@ final class PerformedExercise {
     @Relationship(inverse: \WorkoutSession.exercises)
     var workoutSession: WorkoutSession?
     
+    @Relationship
+    var sourceExercise: WorkoutExercise?
+    
     init(from workoutExercise: WorkoutExercise, orderIndex: Int) {
         self.exerciseName = workoutExercise.exercise?.name ?? "Unknown"
         self.targetSets = workoutExercise.targetSets

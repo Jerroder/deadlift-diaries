@@ -2,7 +2,7 @@
     Bench Press
 
 WorkoutExercise
-    Bench Press, 3 × 8 @ 80kg, 2:30 rest, position 1 in Upper A
+    Bench Press, 3 x 8 @ 80kg, 2:30 rest, position 1 in Upper A
 */
 
 import SwiftData
@@ -27,6 +27,9 @@ final class WorkoutExercise {
 
     // The workout template containing this exercise
     var workoutTemplate: WorkoutTemplate?
+    
+    @Relationship(inverse: \PerformedExercise.sourceExercise)
+    var performedExercises: [PerformedExercise]? = []
 
     init(exercise: Exercise, order: Int, targetSets: Int, targetReps: Int,
          targetWeight: Double? = nil, restSeconds: Int? = nil, notes: String? = nil) {
