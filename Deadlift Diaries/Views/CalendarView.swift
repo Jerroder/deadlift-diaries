@@ -766,6 +766,12 @@ struct CalendarView: View {
         return calendar
     }
     
+    private func workouts(on date: Date) -> [ScheduledWorkout] {
+        scheduledWorkouts.filter {
+            calendar.isDate($0.scheduledDate, inSameDayAs: date)
+        }
+    }
+    
     private var selectedDayWorkouts: [ScheduledWorkout] {
         workouts(on: selectedDate)
     }
@@ -999,6 +1005,7 @@ struct CalendarView: View {
         for index in offsets {
             modelContext.delete(workouts[index])
         }
+        try? modelContext.save()
     }
 
     private var emptyDayView: some View {
@@ -1067,12 +1074,6 @@ struct CalendarView: View {
         let startIndex = calendar.firstWeekday - 1
 
         return Array(symbols[startIndex...]) + Array(symbols[..<startIndex])
-    }
-
-    private func workouts(on date: Date) -> [ScheduledWorkout] {
-        scheduledWorkouts.filter {
-            calendar.isDate($0.scheduledDate, inSameDayAs: date)
-        }
     }
 
     // MARK: - Navigation

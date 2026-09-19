@@ -40,13 +40,32 @@ struct ExerciseCard: View {
 struct WorkoutSessionView: View {
     @Bindable var session: WorkoutSession
     
+    @Environment(\.modelContext) private var modelContext
+
+    
     var body: some View {
         List {
-            ForEach(session.exercises?.sorted { $0.orderIndex < $1.orderIndex } ?? []) { exercise in
+            ForEach(sortedExercises) { exercise in
                 ExerciseCard(exercise: exercise)
             }
+            .onDelete(perform: deleteExercise)
         }
         .navigationTitle("Workout")
+    }
+    
+    private var sortedExercises: [PerformedExercise] {
+        session.exercises?.sorted { $0.orderIndex < $1.orderIndex } ?? []
+    }
+    
+    private func deleteExercise(at offsets: IndexSet) {
+        let exercises = session.exercises?.sorted { $0.orderIndex < $1.orderIndex } ?? []
+        
+        for index in offsets {
+            let exercise = exercises[index]
+            modelContext.delete(exercise)
+        }
+        
+        try? modelContext.save()
     }
 }
 
@@ -71,8 +90,10 @@ struct ExerciseView: View {
     }
     
     private func startWorkout() {
-        // Prevent creating duplicates when SwiftUI redraws
-        guard workoutSession == nil else {
+        guard workoutSession == nil else { return }
+        
+        if let existingSession = scheduledWorkout.session {
+            workoutSession = existingSession
             return
         }
         
@@ -85,7 +106,10 @@ struct ExerciseView: View {
         createPerformedExercises(from: template, session: session)
         
         modelContext.insert(session)
+        
+        scheduledWorkout.session = session
         workoutSession = session
+        try? modelContext.save()
     }
     
     private func createPerformedExercises(from template: WorkoutTemplate, session: WorkoutSession) {
