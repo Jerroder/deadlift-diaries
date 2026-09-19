@@ -8,19 +8,37 @@
 import SwiftUI
 
 struct RestBox: View {
-    let progress: Double
+    let restDuration: Double
+    let startDate: Date?
+    let isActive: Bool
+    let isCompleted: Bool
     
     private let restColor = Color(red: 0xFF / 255, green: 0xBC / 255, blue: 0x8E / 255)
     
     var body: some View {
-        GeometryReader { geo in
-            ZStack(alignment: .leading) {
-                RoundedRectangle(cornerRadius: 4)
-                    .fill(restColor.opacity(0.3))
+        TimelineView(.animation) { context in
+            GeometryReader { geo in
+                let progress: Double = {
+                    if isCompleted {
+                        return 1
+                    }
+                    
+                    guard isActive, let startDate else {
+                        return 0
+                    }
+                    
+                    let elapsed = context.date.timeIntervalSince(startDate)
+                    return min(max(elapsed / restDuration, 0), 1)
+                }()
                 
-                RoundedRectangle(cornerRadius: 4)
-                    .fill(restColor)
-                    .frame(width: geo.size.width * progress)
+                ZStack(alignment: .leading) {
+                    RoundedRectangle(cornerRadius: 4)
+                        .fill(restColor.opacity(0.3))
+                    
+                    RoundedRectangle(cornerRadius: 4)
+                        .fill(restColor)
+                        .frame(width: geo.size.width * progress)
+                }
             }
         }
         .frame(width: 20, height: 20)
@@ -33,11 +51,10 @@ struct SetProgressView: View {
     @State private var completedSetIndex = 0
     @State private var isResting = false
     @State private var restSeconds = 60
-    @State private var timer: Timer?
-    @State private var restProgress: Double = 0
     @State private var completedRestIndex = -1
     
-    private let restColor = Color(red: 0xFF / 255, green: 0xBC / 255, blue: 0x8E / 255)
+    @State private var restStartDate: Date?
+    @State private var restTask: Task<Void, Never>?
     
     private var restDuration: Int {
         exercise.sourceExercise?.restSeconds ?? 60
@@ -55,8 +72,10 @@ struct SetProgressView: View {
                         .frame(width: 20, height: 20)
                     
                     if index < sets.count - 1 {
-                        RestBox(progress: index == completedSetIndex
-                                ? restProgress : (index <= completedRestIndex ? 1 : 0))
+                        RestBox(restDuration: Double(restDuration), startDate: restStartDate,
+                                isActive: index == completedSetIndex && isResting,
+                                isCompleted: index <= completedRestIndex
+                        )
                     }
                 }
             }
@@ -75,11 +94,11 @@ struct SetProgressView: View {
             }
         }
         .onAppear {
-            // First set is already completed
             completeCurrentSet()
         }
         .onDisappear {
-            timer?.invalidate()
+            restTask?.cancel()
+            restTask = nil
         }
     }
     
@@ -93,35 +112,45 @@ struct SetProgressView: View {
     }
     
     private func startRest() {
+        restTask?.cancel()
+        
         isResting = true
-        restSeconds = exercise.sourceExercise?.restSeconds ?? 60
-        restProgress = 0
+        restSeconds = restDuration
+        restStartDate = Date()
         
-        timer?.invalidate()
+        let duration = restDuration
+        let clock = ContinuousClock()
+        let start = clock.now
         
-        let totalRest = Double(restDuration)
-        
-        timer = Timer.scheduledTimer(withTimeInterval: 0.05, repeats: true) { _ in
-            if restProgress < 1 {
-                restProgress += 0.05 / totalRest
-                restSeconds = Int((1 - restProgress) * totalRest)
-            } else {
-                finishRest()
+        restTask = Task { @MainActor in
+            while !Task.isCancelled {
+                let elapsed = start.duration(to: clock.now)
+                
+                let elapsedSeconds = Double(elapsed.components.seconds) +
+                Double(elapsed.components.attoseconds) / 1_000_000_000_000_000_000
+                
+                restSeconds = max(0, Int(ceil(Double(duration) - elapsedSeconds)))
+                
+                if elapsedSeconds >= Double(duration) {
+                    finishRest()
+                    break
+                }
+                
+                try? await clock.sleep(for: .milliseconds(250))
             }
         }
     }
     
     private func finishRest() {
-        timer?.invalidate()
-        timer = nil
+        restTask?.cancel()
+        restTask = nil
         
-        restProgress = 0
         isResting = false
+        restStartDate = nil
         
-        withAnimation(.spring(response: 0.35, dampingFraction: 0.6)) {
-            completedRestIndex = completedSetIndex
-            completedSetIndex += 1
-            completeCurrentSet()
-        }
+        completedRestIndex = completedSetIndex
+        completedSetIndex += 1
+        
+        completeCurrentSet()
     }
 }
