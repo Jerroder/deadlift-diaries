@@ -41,14 +41,13 @@ struct RestBox: View {
                 }
             }
         }
-        .frame(width: 20, height: 20)
     }
 }
 
 struct SetProgressView: View {
     @Bindable var exercise: PerformedExercise
     
-    @State private var completedSetIndex = 0
+    @State private var currentSetIndex = 0
     @State private var isResting = false
     @State private var restSeconds = 60
     @State private var completedRestIndex = -1
@@ -64,21 +63,36 @@ struct SetProgressView: View {
         let sets = exercise.sets ?? []
         
         VStack(spacing: 12) {
-            HStack(spacing: 6) {
-                ForEach(Array(sets.enumerated()), id: \.element.id) { index, _ in
-                    
-                    RoundedRectangle(cornerRadius: 4)
-                        .fill(index <= completedSetIndex ? Color.accentColor : Color.accentColor.opacity(0.3))
-                        .frame(width: 20, height: 20)
-                    
-                    if index < sets.count - 1 {
-                        RestBox(restDuration: Double(restDuration), startDate: restStartDate,
-                                isActive: index == completedSetIndex && isResting,
+            GeometryReader { geo in
+                let segmentCount = sets.count * 2 - 1
+                let spacing: CGFloat = 6
+                let totalSpacing = CGFloat(segmentCount - 1) * spacing
+                let segmentWidth = (geo.size.width - totalSpacing) / CGFloat(segmentCount)
+                
+                HStack(spacing: spacing) {
+                    ForEach(Array(sets.enumerated()), id: \.element.id) { index, _ in
+                        Button {
+                            skipToSet(index)
+                        } label: {
+                            RoundedRectangle(cornerRadius: 4)
+                                .fill(index <= currentSetIndex ? Color.accentColor : Color.accentColor.opacity(0.3))
+                                .frame(width: segmentWidth, height: 20)
+                        }
+                        .buttonStyle(.plain)
+                        
+                        if index < sets.count - 1 {
+                            RestBox(
+                                restDuration: Double(restDuration),
+                                startDate: restStartDate,
+                                isActive: index == currentSetIndex && isResting,
                                 isCompleted: index <= completedRestIndex
-                        )
+                            )
+                            .frame(width: segmentWidth, height: 20)
+                        }
                     }
                 }
             }
+            .frame(height: 20)
             
             if isResting {
                 Text("Rest \(restSeconds)s")
@@ -86,7 +100,7 @@ struct SetProgressView: View {
                 Button("Skip rest") {
                     finishRest()
                 }
-            } else if completedSetIndex < sets.count - 1 {
+            } else if currentSetIndex < sets.count - 1 {
                 Button("Start rest") {
                     startRest()
                 }
@@ -102,13 +116,34 @@ struct SetProgressView: View {
         }
     }
     
-    private func completeCurrentSet() {
+    private func skipToSet(_ index: Int) {
         guard let sets = exercise.sets,
-              completedSetIndex < sets.count else {
+              sets.indices.contains(index) else {
             return
         }
         
-        sets[completedSetIndex].completed = true
+        restTask?.cancel()
+        restTask = nil
+        
+        withTransaction(Transaction(animation: nil)) {
+            isResting = false
+            restStartDate = nil
+            currentSetIndex = index
+            
+            for i in sets.indices {
+                sets[i].completed = i <= index
+            }
+            
+            completedRestIndex = index - 1
+        }
+    }
+    
+    private func completeCurrentSet() {
+        guard let sets = exercise.sets, currentSetIndex < sets.count else {
+            return
+        }
+        
+        sets[currentSetIndex].completed = true
     }
     
     private func startRest() {
@@ -148,8 +183,8 @@ struct SetProgressView: View {
         isResting = false
         restStartDate = nil
         
-        completedRestIndex = completedSetIndex
-        completedSetIndex += 1
+        completedRestIndex = currentSetIndex
+        currentSetIndex += 1
         
         completeCurrentSet()
     }
