@@ -9,26 +9,29 @@ import SwiftUI
 
 struct RestBox: View {
     let restDuration: Double
-    let startDate: Date?
+    let remaining: Duration
     let isActive: Bool
     let isCompleted: Bool
     
     private let restColor = Color(red: 0xFF / 255, green: 0xBC / 255, blue: 0x8E / 255)
     
     var body: some View {
-        TimelineView(.animation) { context in
+        TimelineView(.animation) { _ in
             GeometryReader { geo in
                 let progress: Double = {
                     if isCompleted {
                         return 1
                     }
                     
-                    guard isActive, let startDate else {
+                    guard isActive else {
                         return 0
                     }
                     
-                    let elapsed = context.date.timeIntervalSince(startDate)
-                    return min(max(elapsed / restDuration, 0), 1)
+                    let components = remaining.components
+                    let remainingSeconds = Double(components.seconds) +
+                    Double(components.attoseconds) / 1_000_000_000_000_000_000
+                    
+                    return min(max(1 - remainingSeconds / restDuration, 0), 1)
                 }()
                 
                 ZStack(alignment: .leading) {
@@ -49,10 +52,12 @@ struct SetProgressView: View {
     
     @State private var currentSetIndex: Int = 0
     @State private var isResting: Bool = false
-    @State private var restSeconds: Int = 60
     
     @State private var restStartDate: Date?
     @State private var restTask: Task<Void, Never>?
+    
+    @State private var isPaused = false
+    @State private var restRemaining: Duration = .zero
     
     private var sets: [PerformedSet] {
         (exercise.sets ?? []).sorted { $0.setNumber < $1.setNumber }
@@ -64,6 +69,23 @@ struct SetProgressView: View {
     
     private var completedRestIndex: Int {
         sets.firstIndex(where: { !$0.completed }) ?? sets.count
+    }
+    
+    private var restSeconds: Int {
+        Int(restRemaining.components.seconds)
+    }
+    
+    private var restTimeString: String {
+        let totalSeconds = max(0, restSeconds)
+        
+        if totalSeconds < 60 {
+            return "\(totalSeconds)s"
+        }
+        
+        let minutes = totalSeconds / 60
+        let seconds = totalSeconds % 60
+        
+        return String(format: "%02d:%02d", minutes, seconds)
     }
     
     var body: some View {
@@ -88,7 +110,7 @@ struct SetProgressView: View {
                         if index < sets.count - 1 {
                             RestBox(
                                 restDuration: Double(restDuration),
-                                startDate: restStartDate,
+                                remaining: restRemaining,
                                 isActive: index == currentSetIndex && isResting,
                                 isCompleted: index < completedRestIndex - 1
                             )
@@ -101,13 +123,22 @@ struct SetProgressView: View {
             
             if #available(iOS 26.0, *) {
                 if isResting {
-                    Text("Rest \(restSeconds)s")
+                    Text("Rest \(restTimeString)")
                     
-                    Button("Skip rest") {
-                        finishRest()
+                    Button(isPaused ? "Resume" : "Pause") {
+                        if isPaused { // Resume
+                            isPaused = false
+                            runRestTimer()
+                        } else { // Pause
+                            isPaused = true
+                            restTask?.cancel()
+                            restTask = nil
+                        }
                     }
-                    .buttonStyle(.glass)
+                    .buttonStyle(.glassProminent)
                 } else if completedRestIndex < sets.count {
+                    Text("")
+                    
                     Button("Start rest") {
                         startRest()
                     }
@@ -115,12 +146,22 @@ struct SetProgressView: View {
                 }
             } else {
                 if isResting {
-                    Text("Rest \(restSeconds)s")
+                    Text("Rest \(restTimeString)")
                     
-                    Button("Skip rest") {
-                        finishRest()
+                    Button(isPaused ? "Resume" : "Pause") {
+                        if isPaused { // Resume
+                            isPaused = false
+                            runRestTimer()
+                        } else { // Pause
+                            isPaused = true
+                            restTask?.cancel()
+                            restTask = nil
+                        }
                     }
+                    .buttonStyle(.borderedProminent)
                 } else if completedRestIndex < sets.count {
+                    Text("")
+                    
                     Button("Start rest") {
                         startRest()
                     }
@@ -130,6 +171,7 @@ struct SetProgressView: View {
         }
         .onAppear {
             completeCurrentSet()
+            currentSetIndex = completedRestIndex - 1
         }
         .onDisappear {
             restTask?.cancel()
@@ -168,28 +210,37 @@ struct SetProgressView: View {
         restTask?.cancel()
         
         isResting = true
-        restSeconds = restDuration
-        restStartDate = Date()
+        isPaused = false
         
-        let duration = restDuration
+        restRemaining = .seconds(restDuration)
+        
+        runRestTimer()
+    }
+    
+    private func runRestTimer() {
         let clock = ContinuousClock()
-        let start = clock.now
+        let deadline = clock.now.advanced(by: restRemaining)
         
         restTask = Task { @MainActor in
             while !Task.isCancelled {
-                let elapsed = start.duration(to: clock.now)
+                let now = clock.now
+                let newRemaining = deadline - now
                 
-                let elapsedSeconds = Double(elapsed.components.seconds) +
-                Double(elapsed.components.attoseconds) / 1_000_000_000_000_000_000
-                
-                restSeconds = max(0, Int(ceil(Double(duration) - elapsedSeconds)))
-                
-                if elapsedSeconds >= Double(duration) {
+                if newRemaining <= .zero {
+                    restRemaining = .zero
                     finishRest()
                     break
                 }
                 
-                try? await clock.sleep(for: .milliseconds(250))
+                restRemaining = newRemaining
+                
+                do {
+                    try await clock.sleep(
+                        until: now.advanced(by: .milliseconds(100))
+                    )
+                } catch {
+                    break
+                }
             }
         }
     }
@@ -202,7 +253,6 @@ struct SetProgressView: View {
         restStartDate = nil
         
         currentSetIndex += 1
-        
         completeCurrentSet()
     }
 }
