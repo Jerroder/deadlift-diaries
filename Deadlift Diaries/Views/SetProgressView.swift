@@ -47,16 +47,19 @@ struct RestBox: View {
 struct SetProgressView: View {
     @Bindable var exercise: PerformedExercise
     
-    @State private var currentSetIndex = 0
-    @State private var isResting = false
-    @State private var restSeconds = 60
-    @State private var completedRestIndex = -1
+    @State private var currentSetIndex: Int = 0
+    @State private var isResting: Bool = false
+    @State private var restSeconds: Int = 60
     
     @State private var restStartDate: Date?
     @State private var restTask: Task<Void, Never>?
     
     private var restDuration: Int {
         exercise.sourceExercise?.restSeconds ?? 60
+    }
+    
+    private var completedRestIndex: Int {
+        exercise.sets?.firstIndex(where: { !$0.completed }) ?? exercise.sets?.count ?? 0
     }
     
     var body: some View {
@@ -75,7 +78,7 @@ struct SetProgressView: View {
                             skipToSet(index)
                         } label: {
                             RoundedRectangle(cornerRadius: 4)
-                                .fill(index <= currentSetIndex ? Color.accentColor : Color.accentColor.opacity(0.3))
+                                .fill(exercise.sets?[index].completed ?? false ? Color.accentColor : Color.accentColor.opacity(0.3))
                                 .frame(width: segmentWidth, height: 20)
                         }
                         .buttonStyle(.plain)
@@ -85,7 +88,7 @@ struct SetProgressView: View {
                                 restDuration: Double(restDuration),
                                 startDate: restStartDate,
                                 isActive: index == currentSetIndex && isResting,
-                                isCompleted: index <= completedRestIndex
+                                isCompleted: index < completedRestIndex - 1
                             )
                             .frame(width: segmentWidth, height: 20)
                         }
@@ -94,17 +97,33 @@ struct SetProgressView: View {
             }
             .frame(height: 20)
             
-            if isResting {
-                Text("Rest \(restSeconds)s")
-                
-                Button("Skip rest") {
-                    finishRest()
+            if #available(iOS 26.0, *) {
+                if isResting {
+                    Text("Rest \(restSeconds)s")
+                    
+                    Button("Skip rest") {
+                        finishRest()
+                    }
+                    .buttonStyle(.glass)
+                } else if completedRestIndex < sets.count {
+                    Button("Start rest") {
+                        startRest()
+                    }
+                    .buttonStyle(.glassProminent)
                 }
-            } else if currentSetIndex < sets.count - 1 {
-                Button("Start rest") {
-                    startRest()
+            } else {
+                if isResting {
+                    Text("Rest \(restSeconds)s")
+                    
+                    Button("Skip rest") {
+                        finishRest()
+                    }
+                } else if completedRestIndex < sets.count {
+                    Button("Start rest") {
+                        startRest()
+                    }
+                    .buttonStyle(.borderedProminent)
                 }
-                .buttonStyle(.borderedProminent)
             }
         }
         .onAppear {
@@ -133,8 +152,6 @@ struct SetProgressView: View {
             for i in sets.indices {
                 sets[i].completed = i <= index
             }
-            
-            completedRestIndex = index - 1
         }
     }
     
@@ -183,7 +200,6 @@ struct SetProgressView: View {
         isResting = false
         restStartDate = nil
         
-        completedRestIndex = currentSetIndex
         currentSetIndex += 1
         
         completeCurrentSet()
