@@ -54,17 +54,19 @@ struct SetProgressView: View {
     @State private var restStartDate: Date?
     @State private var restTask: Task<Void, Never>?
     
+    private var sets: [PerformedSet] {
+        (exercise.sets ?? []).sorted { $0.setNumber < $1.setNumber }
+    }
+    
     private var restDuration: Int {
         exercise.sourceExercise?.restSeconds ?? 60
     }
     
     private var completedRestIndex: Int {
-        exercise.sets?.firstIndex(where: { !$0.completed }) ?? exercise.sets?.count ?? 0
+        sets.firstIndex(where: { !$0.completed }) ?? sets.count
     }
     
     var body: some View {
-        let sets = exercise.sets ?? []
-        
         VStack(spacing: 12) {
             GeometryReader { geo in
                 let segmentCount = sets.count * 2 - 1
@@ -73,12 +75,12 @@ struct SetProgressView: View {
                 let segmentWidth = (geo.size.width - totalSpacing) / CGFloat(segmentCount)
                 
                 HStack(spacing: spacing) {
-                    ForEach(Array(sets.enumerated()), id: \.element.id) { index, _ in
+                    ForEach(Array(sets.enumerated()), id: \.element.id) { index, set in
                         Button {
                             skipToSet(index)
                         } label: {
                             RoundedRectangle(cornerRadius: 4)
-                                .fill(exercise.sets?[index].completed ?? false ? Color.accentColor : Color.accentColor.opacity(0.3))
+                                .fill(set.completed ? Color.accentColor : Color.accentColor.opacity(0.3))
                                 .frame(width: segmentWidth, height: 20)
                         }
                         .buttonStyle(.plain)
@@ -136,8 +138,7 @@ struct SetProgressView: View {
     }
     
     private func skipToSet(_ index: Int) {
-        guard let sets = exercise.sets,
-              sets.indices.contains(index) else {
+        guard sets.indices.contains(index) else {
             return
         }
         
@@ -149,14 +150,14 @@ struct SetProgressView: View {
             restStartDate = nil
             currentSetIndex = index
             
-            for i in sets.indices {
-                sets[i].completed = i <= index
+            for (i, set) in sets.enumerated() {
+                set.completed = i <= index
             }
         }
     }
     
     private func completeCurrentSet() {
-        guard let sets = exercise.sets, currentSetIndex < sets.count else {
+        guard sets.indices.contains(currentSetIndex) else {
             return
         }
         

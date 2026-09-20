@@ -41,7 +41,10 @@ struct WorkoutSessionView: View {
     @Bindable var session: WorkoutSession
     
     @Environment(\.modelContext) private var modelContext
-
+    
+    private var sortedExercises: [PerformedExercise] {
+        (session.exercises ?? []).sorted { $0.orderIndex < $1.orderIndex }
+    }
     
     var body: some View {
         List {
@@ -49,12 +52,14 @@ struct WorkoutSessionView: View {
                 ExerciseCard(exercise: exercise)
             }
             .onDelete(perform: deleteExercise)
+            .onMove(perform: moveExercise)
         }
         .navigationTitle("Workout")
-    }
-    
-    private var sortedExercises: [PerformedExercise] {
-        session.exercises?.sorted { $0.orderIndex < $1.orderIndex } ?? []
+        .toolbar{
+            ToolbarItemGroup(placement: .navigationBarTrailing) {
+                EditButton()
+            }
+        }
     }
     
     private func deleteExercise(at offsets: IndexSet) {
@@ -63,6 +68,18 @@ struct WorkoutSessionView: View {
         for index in offsets {
             let exercise = exercises[index]
             modelContext.delete(exercise)
+        }
+        
+        try? modelContext.save()
+    }
+    
+    private func moveExercise(from source: IndexSet, to destination: Int) {
+        var exercises = sortedExercises
+        
+        exercises.move(fromOffsets: source, toOffset: destination)
+        
+        for (index, exercise) in exercises.enumerated() {
+            exercise.orderIndex = index
         }
         
         try? modelContext.save()
