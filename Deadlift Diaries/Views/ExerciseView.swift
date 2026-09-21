@@ -24,36 +24,47 @@ struct ExerciseCard: View {
     
     @Environment(\.editMode) private var editMode
     
+    private let weightUnit: Unit = isMetricSystem() ? Unit(symbol: "kg") : Unit(symbol: "lbs")
+    
     var body: some View {
         if editMode?.wrappedValue.isEditing == true {
-            VStack(alignment: .leading, spacing: 12) {
-                Text(exercise.exerciseName)
-                    .font(.headline)
-                
-                Text("\(exercise.targetSets) x \(exercise.targetReps)" +
-                     (exercise.targetWeight != nil ? " @ \(exercise.targetWeight!) kg" : "")
-                )
-                .foregroundStyle(.secondary)
-            }
-            .frame(maxWidth: .infinity, alignment: .topLeading)
-            .padding(.vertical)
+            exerciseDetails()
         } else {
-            VStack(alignment: .leading, spacing: 12) {
-                Text(exercise.exerciseName)
-                    .font(.headline)
-                
-                Text("\(exercise.targetSets) x \(exercise.targetReps)" +
-                     (exercise.targetWeight != nil ? " @ \(exercise.targetWeight!) kg" : "")
-                )
-                .foregroundStyle(.secondary)
-            }
-            .frame(maxWidth: .infinity, alignment: .topLeading)
-            .padding(.vertical)
+            exerciseDetails()
             
             if isExpanded {
                 SetProgressView(exercise: exercise)
             }
         }
+    }
+    
+    @ViewBuilder
+    private func exerciseDetails() -> some View {
+        VStack(alignment: .leading) {
+            Text(exercise.exerciseName)
+                .font(.headline)
+            
+            if let weight = exercise.targetWeight, weight != 0 {
+                Text("weight_x".localized(with: weight, weightUnit.symbol, comment: "Weight: x kg"))
+                    .font(.subheadline)
+                    .foregroundColor(Color(UIColor.secondaryLabel))
+            }
+            
+            Text("sets_x".localized(with: exercise.targetSets, comment: "Sets: x"))
+                .font(.subheadline)
+                .foregroundColor(Color(UIColor.secondaryLabel))
+            
+            Text("reps_x".localized(with: exercise.targetReps, comment: "Reps: x"))
+                .font(.subheadline)
+                .foregroundColor(Color(UIColor.secondaryLabel))
+            
+            if let rest = exercise.sourceExercise?.restSeconds {
+                Text("rest_x_sec".localized(with: rest, comment: "Rest: x sec"))
+                    .font(.subheadline)
+                    .foregroundColor(Color(UIColor.secondaryLabel))
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .topLeading)
     }
 }
 

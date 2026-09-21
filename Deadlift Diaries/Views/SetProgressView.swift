@@ -137,49 +137,11 @@ struct SetProgressView: View {
                 .font(.title)
             
             if #available(iOS 26.0, *) {
-                if isResting {
-                    Button(isPaused ? "Resume" : "Pause") {
-                        if isPaused { // Resume
-                            isPaused = false
-                            runRestTimer()
-                        } else { // Pause
-                            isPaused = true
-                            restTask?.cancel()
-                            restTask = nil
-                            cancelPendingNotifications()
-                            updateLiveActivity()
-                        }
-                    }
+                restButton()
                     .buttonStyle(.glassProminent)
-                } else {
-                    Button("Start rest") {
-                        startRest()
-                    }
-                    .buttonStyle(.glassProminent)
-                    .disabled(completedRestIndex >= sets.count)
-                }
             } else {
-                if isResting {
-                    Button(isPaused ? "Resume" : "Pause") {
-                        if isPaused { // Resume
-                            isPaused = false
-                            runRestTimer()
-                        } else { // Pause
-                            isPaused = true
-                            restTask?.cancel()
-                            restTask = nil
-                            cancelPendingNotifications()
-                            updateLiveActivity()
-                        }
-                    }
+                restButton()
                     .buttonStyle(.borderedProminent)
-                } else {
-                    Button("Start rest") {
-                        startRest()
-                    }
-                    .buttonStyle(.borderedProminent)
-                    .disabled(completedRestIndex >= sets.count)
-                }
             }
         }
         .onAppear {
@@ -192,6 +154,29 @@ struct SetProgressView: View {
         .onDisappear {
             restTask?.cancel()
             restTask = nil
+        }
+    }
+    
+    @ViewBuilder
+    private func restButton() -> some View {
+        if isResting {
+            Button(isPaused ? "Resume" : "Pause") {
+                if isPaused { // Resume
+                    isPaused = false
+                    runRestTimer()
+                } else { // Pause
+                    isPaused = true
+                    restTask?.cancel()
+                    restTask = nil
+                    cancelPendingNotifications()
+                    updateLiveActivity()
+                }
+            }
+        } else {
+            Button("Start rest") {
+                startRest()
+            }
+            .disabled(completedRestIndex >= sets.count)
         }
     }
     
