@@ -1,6 +1,31 @@
 import SwiftUI
 import SwiftData
 
+enum WorkoutSessionRow: Identifiable {
+    case exercise(PerformedExercise)
+    case superset(first: PerformedExercise, second: PerformedExercise)
+    
+    var id: UUID {
+        switch self {
+        case .exercise(let exercise):
+            return exercise.id
+            
+        case .superset(let first, _):
+            return first.supersetID ?? first.id
+        }
+    }
+    
+    var orderIndex: Int {
+        switch self {
+        case .exercise(let exercise):
+            return exercise.orderIndex
+            
+        case .superset(let first, _):
+            return first.orderIndex
+        }
+    }
+}
+
 struct SetRow: View {
     @Bindable var set: PerformedSet
     
@@ -21,6 +46,7 @@ struct SetRow: View {
 struct ExerciseCard: View {
     @Bindable var exercise: PerformedExercise
     let isExpanded: Bool
+    let alignment: HorizontalAlignment
     
     @Environment(\.editMode) private var editMode
     
@@ -40,7 +66,7 @@ struct ExerciseCard: View {
     
     @ViewBuilder
     private func exerciseDetails() -> some View {
-        VStack(alignment: .leading) {
+        VStack(alignment: alignment) {
             Text(exercise.exerciseName)
                 .font(.headline)
             
@@ -64,9 +90,64 @@ struct ExerciseCard: View {
                     .foregroundColor(Color(UIColor.secondaryLabel))
             }
         }
-        .frame(maxWidth: .infinity, alignment: .topLeading)
+        .frame(maxWidth: .infinity, alignment: alignment == .leading ? .leading : .trailing)
     }
 }
+
+struct SupersetCard: View {
+    let first: PerformedExercise
+    let second: PerformedExercise
+    
+    @Binding var expandedExerciseID: UUID?
+    
+    @Environment(\.editMode) private var editMode
+    
+    private var isExpanded: Bool {
+        expandedExerciseID == first.id ||
+        expandedExerciseID == second.id
+    }
+    
+    var body: some View {
+        if editMode?.wrappedValue.isEditing == true {
+            exerciseDetails()
+        } else {
+            exerciseDetails()
+            
+            if isExpanded {
+                SetProgressView(exercise: first)
+            }
+        }
+    }
+    
+    @ViewBuilder
+    private func exerciseDetails() -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(alignment: .top, spacing: 16) {
+                ExerciseCard(exercise: first, isExpanded: false, alignment: .leading)
+                .frame(maxWidth: .infinity, alignment: .topLeading)
+                
+                ExerciseCard(exercise: second, isExpanded: false, alignment: .trailing)
+                .frame(maxWidth: .infinity, alignment: .topTrailing)
+            }
+            .contentShape(Rectangle())
+        }
+        .contentShape(Rectangle())
+        .onTapGesture {
+            toggleExpansion()
+        }
+    }
+    
+    private func toggleExpansion() {
+        withAnimation {
+            if isExpanded {
+                expandedExerciseID = nil
+            } else {
+                expandedExerciseID = first.id
+            }
+        }
+    }
+}
+
 
 struct WorkoutSessionView: View {
     @Bindable var session: WorkoutSession
@@ -75,23 +156,67 @@ struct WorkoutSessionView: View {
     
     @State private var expandedExerciseID: UUID?
     
-    private var sortedExercises: [PerformedExercise] {
-        (session.exercises ?? []).sorted { $0.orderIndex < $1.orderIndex }
+    private var workoutRows: [WorkoutSessionRow] {
+        let exercises = (session.exercises ?? [])
+            .sorted {
+                if $0.orderIndex != $1.orderIndex {
+                    return $0.orderIndex < $1.orderIndex
+                }
+                
+                return ($0.supersetPosition?.rawValue ?? 0) < ($1.supersetPosition?.rawValue ?? 0)
+            }
+        
+        var rows: [WorkoutSessionRow] = []
+        var index = 0
+        
+        while index < exercises.count {
+            let exercise = exercises[index]
+            
+            guard let supersetID = exercise.supersetID else {
+                rows.append(.exercise(exercise))
+                index += 1
+                continue
+            }
+            
+            let supersetExercises = exercises.filter {
+                $0.supersetID == supersetID
+            }
+            
+            if let first = supersetExercises.first(where: { $0.supersetPosition == .first }),
+               let second = supersetExercises.first(where: { $0.supersetPosition == .second }) {
+                rows.append(.superset(first: first, second: second))
+                
+                index += supersetExercises.count
+            } else { // Defensive fallback for malformed/incomplete data.
+                rows.append(.exercise(exercise))
+                index += 1
+            }
+        }
+        
+        return rows
     }
     
     var body: some View {
         List {
-            ForEach(sortedExercises) { exercise in
-                ExerciseCard(exercise: exercise, isExpanded: expandedExerciseID == exercise.id)
+            ForEach(workoutRows) { row in
+                switch row {
+                case .exercise(let exercise):
+                    ExerciseCard(exercise: exercise,
+                                 isExpanded: expandedExerciseID == exercise.id, alignment: .leading)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .contentShape(Rectangle())
                     .listRowSeparator(.hidden)
                     .onTapGesture {
                         toggleExercise(exercise)
                     }
+                    
+                case .superset(let first, let second):
+                    SupersetCard(first: first, second: second, expandedExerciseID: $expandedExerciseID)
+                        .listRowSeparator(.hidden)
+                }
             }
-            .onDelete(perform: deleteExercise)
-            .onMove(perform: moveExercise)
+            .onDelete(perform: deleteRow)
+            .onMove(perform: moveRow)
         }
         .navigationTitle("Workout")
         .listStyle(.plain)
@@ -112,24 +237,37 @@ struct WorkoutSessionView: View {
         }
     }
     
-    private func deleteExercise(at offsets: IndexSet) {
-        let exercises = session.exercises?.sorted { $0.orderIndex < $1.orderIndex } ?? []
-        
+    private func deleteRow(at offsets: IndexSet) {
         for index in offsets {
-            let exercise = exercises[index]
-            modelContext.delete(exercise)
+            let row = workoutRows[index]
+            
+            switch row {
+            case .exercise(let exercise):
+                modelContext.delete(exercise)
+                
+            case .superset(let first, let second):
+                modelContext.delete(first)
+                modelContext.delete(second)
+            }
         }
         
         try? modelContext.save()
     }
     
-    private func moveExercise(from source: IndexSet, to destination: Int) {
-        var exercises = sortedExercises
+    private func moveRow(from source: IndexSet, to destination: Int) {
+        var rows = workoutRows
         
-        exercises.move(fromOffsets: source, toOffset: destination)
+        rows.move(fromOffsets: source, toOffset: destination)
         
-        for (index, exercise) in exercises.enumerated() {
-            exercise.orderIndex = index
+        for (index, row) in rows.enumerated() {
+            switch row {
+            case .exercise(let exercise):
+                exercise.orderIndex = index
+                
+            case .superset(let first, let second):
+                first.orderIndex = index
+                second.orderIndex = index
+            }
         }
         
         try? modelContext.save()
@@ -180,10 +318,16 @@ struct ExerciseView: View {
     }
     
     private func createPerformedExercises(from template: WorkoutTemplate, session: WorkoutSession) {
-        let exercises = template.exercises?.sorted { $0.order < $1.order } ?? []
+        let exercises = template.exercises?.sorted {
+            if $0.order != $1.order {
+                return $0.order < $1.order
+            }
+            
+            return ($0.supersetPosition?.rawValue ?? 0) < ($1.supersetPosition?.rawValue ?? 0)
+        } ?? []
         
-        for (index, exercise) in exercises.enumerated() {
-            let performedExercise = PerformedExercise(from: exercise, orderIndex: index)
+        for exercise in exercises {
+            let performedExercise = PerformedExercise(from: exercise, orderIndex: exercise.order)
             
             performedExercise.sourceExercise = exercise
             performedExercise.workoutSession = session

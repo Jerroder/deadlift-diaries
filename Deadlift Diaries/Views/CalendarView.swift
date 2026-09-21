@@ -6,6 +6,11 @@
 import SwiftData
 import SwiftUI
 
+enum AddExerciseMode {
+    case normal(order: Int)
+    case superset(with: WorkoutExercise)
+}
+
 struct ScheduledWorkoutCard: View {
     let scheduledWorkout: ScheduledWorkout
     
@@ -188,7 +193,7 @@ struct AddExerciseView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var modelContext
     
-    let order: Int
+    let mode: AddExerciseMode
     let onAdd: (WorkoutExercise) -> Void
     
     @Query(sort: \Exercise.name)
@@ -212,6 +217,15 @@ struct AddExerciseView: View {
         
         return exercises.filter {
             $0.name.localizedCaseInsensitiveContains(query)
+        }
+    }
+    
+    private var isNormalMode: Bool {
+        switch mode {
+        case .normal:
+            return true
+        case .superset:
+            return false
         }
     }
     
@@ -287,12 +301,14 @@ struct AddExerciseView: View {
                 
                 if let selectedExercise {
                     Section("Target") {
-                        Stepper(value: $sets, in: 1...20) {
-                            HStack {
-                                Text("Sets")
-                                Spacer()
-                                Text("\(sets)")
-                                    .foregroundStyle(.secondary)
+                        if isNormalMode {
+                            Stepper(value: $sets, in: 1...20) {
+                                HStack {
+                                    Text("Sets")
+                                    Spacer()
+                                    Text("\(sets)")
+                                        .foregroundStyle(.secondary)
+                                }
                             }
                         }
                         
@@ -325,29 +341,29 @@ struct AddExerciseView: View {
                             Spacer()
                             
                             TextField("Optional", value: $weight, format: .number)
-                            .keyboardType(.decimalPad)
-                            .multilineTextAlignment(.trailing)
+                                .keyboardType(.decimalPad)
+                                .multilineTextAlignment(.trailing)
                             
                             Text("kg")
                                 .foregroundStyle(.secondary)
                         }
                     }
                     
-                    // MARK: - Rest
-                    
-                    Section("Rest") {
-                        Stepper(value: $restSeconds, in: 0...600, step: 15) {
-                            HStack {
-                                Text("Rest")
-                                Spacer()
-                                Text(formattedRest(restSeconds))
-                                    .foregroundStyle(.secondary)
+                    if isNormalMode {
+                        Section("Rest") {
+                            Stepper(value: $restSeconds, in: 0...600, step: 15) {
+                                HStack {
+                                    Text("Rest")
+                                    Spacer()
+                                    Text(formattedRest(restSeconds))
+                                        .foregroundStyle(.secondary)
+                                }
                             }
                         }
                     }
                 }
             }
-            .navigationTitle("Add Exercise")
+            .navigationTitle(isNormalMode ? "Add Exercise" : "Add Superset Exercise")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
@@ -374,16 +390,32 @@ struct AddExerciseView: View {
             return
         }
         
-        let workoutExercise = WorkoutExercise(
-            exercise: exercise,
-            order: order,
-            targetSets: sets,
-            targetReps: reps,
-            targetWeight: weight,
-            restSeconds: restSeconds
-        )
+        switch mode {
+        case .normal(let order):
+            let workoutExercise = WorkoutExercise(
+                exercise: exercise,
+                order: order,
+                targetSets: sets,
+                targetReps: reps,
+                targetWeight: weight,
+                restSeconds: restSeconds
+            )
+            
+            onAdd(workoutExercise)
+            
+        case .superset(let baseExercise):
+            let workoutExercise = WorkoutExercise(
+                exercise: exercise,
+                order: baseExercise.order,
+                targetSets: baseExercise.targetSets,
+                targetReps: reps,
+                targetWeight: weight,
+                restSeconds: baseExercise.restSeconds
+            )
+            
+            onAdd(workoutExercise)
+        }
         
-        onAdd(workoutExercise)
         dismiss()
     }
     
@@ -434,6 +466,8 @@ struct CreateWorkoutTemplateView: View {
     @State private var workoutExercises: [WorkoutExercise] = []
     @State private var showAddExerciseSheet: Bool = false
     
+    @State private var supersetBaseExercise: WorkoutExercise?
+    
     let onCreate: (WorkoutTemplate) -> Void
     
     var body: some View {
@@ -464,6 +498,15 @@ struct CreateWorkoutTemplateView: View {
                             }
                             
                             Spacer()
+                            
+                            if workoutExercise.supersetID == nil {
+                                Button {
+                                    supersetBaseExercise = workoutExercise
+                                } label: {
+                                    Image(systemName: "arrow.left.arrow.right")
+                                }
+                                .buttonStyle(.borderless)
+                            }
                         }
                     }
                     .onDelete { offsets in
@@ -499,10 +542,33 @@ struct CreateWorkoutTemplateView: View {
             }
         }
         .sheet(isPresented: $showAddExerciseSheet) {
-            AddExerciseView(order: workoutExercises.count) { workoutExercise in
+            AddExerciseView(
+                mode: .normal(order: workoutExercises.count)
+            ) { workoutExercise in
                 workoutExercises.append(workoutExercise)
             }
         }
+        .sheet(item: $supersetBaseExercise) { baseExercise in
+            AddExerciseView(
+                mode: .superset(with: baseExercise)
+            ) { workoutExercise in
+                addSupersetExercise(workoutExercise, to: baseExercise)
+            }
+        }
+    }
+    
+    private func addSupersetExercise(_ secondExercise: WorkoutExercise, to firstExercise: WorkoutExercise) {
+        let supersetID = UUID()
+        
+        firstExercise.supersetID = supersetID
+        firstExercise.supersetPosition = .first
+        
+        secondExercise.supersetID = supersetID
+        secondExercise.supersetPosition = .second
+        
+        secondExercise.order = firstExercise.order
+        
+        workoutExercises.append(secondExercise)
     }
     
     // MARK: - Create

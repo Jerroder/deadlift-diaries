@@ -13,6 +13,9 @@ final class PerformedExercise {
     
     var orderIndex: Int = 0
     
+    var supersetID: UUID?
+    var supersetPosition: SupersetPosition?
+    
     @Relationship(inverse: \PerformedSet.performedExercise)
     var sets: [PerformedSet]? = []
     
@@ -25,12 +28,19 @@ final class PerformedExercise {
     @Relationship
     var sourceExercise: WorkoutExercise?
     
+    var isInSuperset: Bool {
+        supersetID != nil
+    }
+    
     init(from workoutExercise: WorkoutExercise, orderIndex: Int) {
         self.exerciseName = workoutExercise.exercise?.name ?? "Unknown"
         self.targetSets = workoutExercise.targetSets
         self.targetReps = workoutExercise.targetReps
         self.targetWeight = workoutExercise.targetWeight
         self.orderIndex = orderIndex
+        
+        self.supersetID = workoutExercise.supersetID
+        self.supersetPosition = workoutExercise.supersetPosition
         
         self.sets = (0..<workoutExercise.targetSets).map { index in
             PerformedSet(setNumber: index + 1, weight: workoutExercise.targetWeight, reps: workoutExercise.targetReps)

@@ -8,11 +8,19 @@ WorkoutExercise
 import SwiftData
 import SwiftUI
 
+enum SupersetPosition: Int, Codable {
+    case first
+    case second
+}
+
 @Model
-final class WorkoutExercise {
+final class WorkoutExercise: Identifiable {
     var id: UUID = UUID()
 
     var order: Int = 0
+    
+    var supersetID: UUID?
+    var supersetPosition: SupersetPosition?
 
     var targetSets: Int = 0
     var targetReps: Int = 0
@@ -30,9 +38,14 @@ final class WorkoutExercise {
     
     @Relationship(inverse: \PerformedExercise.sourceExercise)
     var performedExercises: [PerformedExercise]? = []
+    
+    var isInSuperset: Bool {
+        supersetID != nil
+    }
 
     init(exercise: Exercise, order: Int, targetSets: Int, targetReps: Int,
-         targetWeight: Double? = nil, restSeconds: Int? = nil, notes: String? = nil) {
+         targetWeight: Double? = nil, restSeconds: Int? = nil, notes: String? = nil,
+         supersetID: UUID? = nil, supersetPosition: SupersetPosition? = nil) {
         self.exercise = exercise
         self.order = order
         self.targetSets = targetSets
@@ -40,5 +53,7 @@ final class WorkoutExercise {
         self.targetWeight = targetWeight
         self.restSeconds = restSeconds
         self.notes = notes
+        self.supersetID = supersetID
+        self.supersetPosition = supersetPosition
     }
 }
