@@ -129,6 +129,7 @@ struct SetProgressView: View {
             .frame(height: 20)
             
             Text("Rest \(restTimeString)")
+                .font(.title)
             
             if #available(iOS 26.0, *) {
                 if isResting {

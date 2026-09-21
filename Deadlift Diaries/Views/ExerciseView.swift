@@ -22,21 +22,37 @@ struct ExerciseCard: View {
     @Bindable var exercise: PerformedExercise
     let isExpanded: Bool
     
+    @Environment(\.editMode) private var editMode
+    
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text(exercise.exerciseName)
-                .font(.headline)
+        if editMode?.wrappedValue.isEditing == true {
+            VStack(alignment: .leading, spacing: 12) {
+                Text(exercise.exerciseName)
+                    .font(.headline)
+                
+                Text("\(exercise.targetSets) x \(exercise.targetReps)" +
+                     (exercise.targetWeight != nil ? " @ \(exercise.targetWeight!) kg" : "")
+                )
+                .foregroundStyle(.secondary)
+            }
+            .frame(maxWidth: .infinity, alignment: .topLeading)
+            .padding(.vertical)
+        } else {
+            VStack(alignment: .leading, spacing: 12) {
+                Text(exercise.exerciseName)
+                    .font(.headline)
+                
+                Text("\(exercise.targetSets) x \(exercise.targetReps)" +
+                     (exercise.targetWeight != nil ? " @ \(exercise.targetWeight!) kg" : "")
+                )
+                .foregroundStyle(.secondary)
+            }
+            .frame(maxWidth: .infinity, alignment: .topLeading)
+            .padding(.vertical)
             
-            Text("\(exercise.targetSets) x \(exercise.targetReps)" +
-                 (exercise.targetWeight != nil ? " @ \(exercise.targetWeight!) kg" : "")
-            )
-            .foregroundStyle(.secondary)
-        }
-        .frame(maxWidth: .infinity, alignment: .topLeading)
-        .padding(.vertical)
-        
-        if isExpanded {
-            SetProgressView(exercise: exercise)
+            if isExpanded {
+                SetProgressView(exercise: exercise)
+            }
         }
     }
 }
