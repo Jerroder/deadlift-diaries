@@ -56,8 +56,8 @@ struct SetProgressView: View {
     @State private var restStartDate: Date?
     @State private var restTask: Task<Void, Never>?
     
-    @State private var isPaused = false
-    @State private var restRemaining: Duration = .zero
+    @State private var isPaused: Bool = false
+    @State private var restRemaining: Duration
     
     private var sets: [PerformedSet] {
         (exercise.sets ?? []).sorted { $0.setNumber < $1.setNumber }
@@ -86,6 +86,13 @@ struct SetProgressView: View {
         let seconds = totalSeconds % 60
         
         return String(format: "%02d:%02d", minutes, seconds)
+    }
+    
+    init(exercise: PerformedExercise) {
+        self.exercise = exercise
+        self._restRemaining = State(
+            initialValue: .seconds(exercise.sourceExercise?.restSeconds ?? 60)
+        )
     }
     
     var body: some View {
@@ -121,10 +128,10 @@ struct SetProgressView: View {
             }
             .frame(height: 20)
             
+            Text("Rest \(restTimeString)")
+            
             if #available(iOS 26.0, *) {
                 if isResting {
-                    Text("Rest \(restTimeString)")
-                    
                     Button(isPaused ? "Resume" : "Pause") {
                         if isPaused { // Resume
                             isPaused = false
@@ -137,8 +144,6 @@ struct SetProgressView: View {
                     }
                     .buttonStyle(.glassProminent)
                 } else if completedRestIndex < sets.count {
-                    Text("")
-                    
                     Button("Start rest") {
                         startRest()
                     }
@@ -146,8 +151,6 @@ struct SetProgressView: View {
                 }
             } else {
                 if isResting {
-                    Text("Rest \(restTimeString)")
-                    
                     Button(isPaused ? "Resume" : "Pause") {
                         if isPaused { // Resume
                             isPaused = false
@@ -160,8 +163,6 @@ struct SetProgressView: View {
                     }
                     .buttonStyle(.borderedProminent)
                 } else if completedRestIndex < sets.count {
-                    Text("")
-                    
                     Button("Start rest") {
                         startRest()
                     }
