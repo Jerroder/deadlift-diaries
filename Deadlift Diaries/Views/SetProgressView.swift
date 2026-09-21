@@ -6,6 +6,8 @@
 //
 
 import SwiftUI
+import AVFAudio
+import ActivityKit
 
 struct RestBox: View {
     let restDuration: Double
@@ -52,12 +54,13 @@ struct SetProgressView: View {
     
     @State private var currentSetIndex: Int = 0
     @State private var isResting: Bool = false
-    
+    @State private var isPaused: Bool = false
+    @State private var restRemaining: Duration
     @State private var restStartDate: Date?
     @State private var restTask: Task<Void, Never>?
     
-    @State private var isPaused: Bool = false
-    @State private var restRemaining: Duration
+    @AppStorage("sendNotification") private var sendNotification: Bool = false
+    @AppStorage("selectedSoundID") private var selectedSoundID: Int = 1075
     
     private var sets: [PerformedSet] {
         (exercise.sets ?? []).sorted { $0.setNumber < $1.setNumber }
@@ -128,7 +131,7 @@ struct SetProgressView: View {
             }
             .frame(height: 20)
             
-            Text("Rest \(restTimeString)")
+            Text("remaining_x".localized(with: restTimeString, comment: "Remaining: x"))
                 .font(.title)
             
             if #available(iOS 26.0, *) {
@@ -141,6 +144,7 @@ struct SetProgressView: View {
                             isPaused = true
                             restTask?.cancel()
                             restTask = nil
+                            cancelPendingNotifications()
                         }
                     }
                     .buttonStyle(.glassProminent)
@@ -160,6 +164,7 @@ struct SetProgressView: View {
                             isPaused = true
                             restTask?.cancel()
                             restTask = nil
+                            cancelPendingNotifications()
                         }
                     }
                     .buttonStyle(.borderedProminent)
@@ -188,6 +193,7 @@ struct SetProgressView: View {
         
         restTask?.cancel()
         restTask = nil
+        cancelPendingNotifications()
         
         withTransaction(Transaction(animation: nil)) {
             isResting = false
@@ -210,6 +216,7 @@ struct SetProgressView: View {
     
     private func startRest() {
         restTask?.cancel()
+        cancelPendingNotifications()
         
         isResting = true
         isPaused = false
@@ -220,6 +227,10 @@ struct SetProgressView: View {
     }
     
     private func runRestTimer() {
+        if sendNotification {
+            scheduleNotification()
+        }
+        
         let clock = ContinuousClock()
         let deadline = clock.now.advanced(by: restRemaining)
         
@@ -229,7 +240,6 @@ struct SetProgressView: View {
                 let newRemaining = deadline - now
                 
                 if newRemaining <= .zero {
-                    restRemaining = .zero
                     finishRest()
                     break
                 }
@@ -237,9 +247,7 @@ struct SetProgressView: View {
                 restRemaining = newRemaining
                 
                 do {
-                    try await clock.sleep(
-                        until: now.advanced(by: .milliseconds(100))
-                    )
+                    try await clock.sleep(until: now.advanced(by: .milliseconds(100)))
                 } catch {
                     break
                 }
@@ -251,10 +259,70 @@ struct SetProgressView: View {
         restTask?.cancel()
         restTask = nil
         
+        cancelPendingNotifications()
+        playSystemSound()
+        
+        restRemaining = .seconds(restDuration)
         isResting = false
         restStartDate = nil
         
         currentSetIndex += 1
         completeCurrentSet()
+    }
+    
+    // MARK: - Notification Functions
+    
+    private func scheduleNotification() {
+        let content = UNMutableNotificationContent()
+        content.title = "timer_is_up".localized(comment: "The timer is up")
+        content.body = "rest_is_over".localized(comment: "Rest is over")
+        content.sound = UNNotificationSound.default
+        
+        let trigger = UNTimeIntervalNotificationTrigger(timeInterval: Double(restSeconds), repeats: false)
+        let request = UNNotificationRequest(identifier: UUID().uuidString, content: content, trigger: trigger)
+        
+        UNUserNotificationCenter.current().add(request) { error in
+            if let error = error {
+                print("Error scheduling notification: \(error.localizedDescription)")
+            } else {
+                print("Notification scheduled for \(restRemaining) seconds from now.")
+            }
+        }
+    }
+    
+    private func cancelPendingNotifications() {
+        print("Cancelling next notification.")
+        UNUserNotificationCenter.current().removeAllPendingNotificationRequests()
+    }
+    
+    private func playSystemSound() {
+        let audioSession: AVAudioSession = AVAudioSession.sharedInstance()
+        do {
+            try audioSession.setCategory(.ambient, options: .duckOthers)
+            try audioSession.setActive(true)
+        } catch {
+            print("Failed to set audio session category: \(error)")
+        }
+        
+        if selectedSoundID != 0 {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                AudioServicesPlaySystemSound(UInt32(selectedSoundID))
+            }
+            
+            let duration: Double = selectedSoundID == 1328 ? 2.0 : 1.0
+            DispatchQueue.main.asyncAfter(deadline: .now() + duration) {
+                do {
+                    try audioSession.setActive(false)
+                } catch {
+                    print("Failed to deactivate audio session: \(error)")
+                }
+            }
+        } else {
+            do {
+                try audioSession.setActive(false)
+            } catch {
+                print("Failed to deactivate audio session: \(error)")
+            }
+        }
     }
 }
