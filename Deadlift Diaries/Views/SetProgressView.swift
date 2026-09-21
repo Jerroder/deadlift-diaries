@@ -273,7 +273,6 @@ struct SetProgressView: View {
         
         cancelPendingNotifications()
         playSystemSound()
-        endLiveActivity()
         
         restRemaining = .seconds(restDuration)
         isResting = false
@@ -281,6 +280,10 @@ struct SetProgressView: View {
         
         currentSetIndex += 1
         completeCurrentSet()
+        
+        if completedRestIndex == sets.count {
+            endLiveActivity()
+        }
     }
     
     // MARK: - Notification Functions
