@@ -104,9 +104,9 @@ struct CreateExerciseView: View {
     let onCreate: (Exercise) -> Void
     
     @State private var name: String
-    @State private var isTimeBased = false
-    @State private var isDistanceBased = false
-    @State private var notes = ""
+    @State private var isTimeBased: Bool = false
+    @State private var isDistanceBased: Bool = false
+    @State private var notes: String = ""
     
     init(initialName: String = "", onCreate: @escaping (Exercise) -> Void) {
         self.initialName = initialName
@@ -194,13 +194,13 @@ struct AddExerciseView: View {
     @Query(sort: \Exercise.name)
     private var exercises: [Exercise]
     
-    @State private var searchText = ""
+    @State private var searchText: String = ""
     
     @State private var selectedExercise: Exercise?
     
-    @State private var sets = 3
-    @State private var reps = 8
-    @State private var restSeconds = 150
+    @State private var sets: Int = 3
+    @State private var reps: Int = 8
+    @State private var restSeconds: Int = 150
     @State private var weight: Double?
     
     private var filteredExercises: [Exercise] {
@@ -426,13 +426,13 @@ struct CreateWorkoutTemplateView: View {
     
     // MARK: - Workout
     
-    @State private var name = ""
-    @State private var notes = ""
+    @State private var name: String = ""
+    @State private var notes: String = ""
     
     // MARK: - Exercises
     
     @State private var workoutExercises: [WorkoutExercise] = []
-    @State private var showAddExerciseSheet = false
+    @State private var showAddExerciseSheet: Bool = false
     
     let onCreate: (WorkoutTemplate) -> Void
     

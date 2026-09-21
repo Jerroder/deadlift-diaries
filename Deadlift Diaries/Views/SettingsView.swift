@@ -14,13 +14,13 @@ struct SettingsSheet: View {
     @Environment(\.modelContext) private var modelContext
 //    let mesocycles: [Mesocycle]?
     
-    @State private var showingShareSheet = false
-    @State private var isShowingDocumentPicker = false
+    @State private var showingShareSheet: Bool = false
+    @State private var isShowingDocumentPicker: Bool = false
     
 //    @Query private var allTemplates: [ExerciseTemplate]
 //    @Query private var allHistory: [ExerciseHistory]
     
-    @AppStorage("isICouldEnabled") private var isICouldEnabled = false
+    @AppStorage("isICouldEnabled") private var isICouldEnabled: Bool = false
     @AppStorage("selectedSoundID") private var selectedSoundID: Int = 1075
     @AppStorage("sendNotification") private var sendNotification: Bool = false
     @AppStorage("autoStartSetAfterRest") private var autoStartSetAfterRest: Bool = false
