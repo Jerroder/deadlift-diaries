@@ -20,6 +20,7 @@ struct SetRow: View {
 
 struct ExerciseCard: View {
     @Bindable var exercise: PerformedExercise
+    let isExpanded: Bool
     
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -30,10 +31,13 @@ struct ExerciseCard: View {
                  (exercise.targetWeight != nil ? " @ \(exercise.targetWeight!) kg" : "")
             )
             .foregroundStyle(.secondary)
-            
+        }
+        .frame(maxWidth: .infinity, alignment: .topLeading)
+        .padding(.vertical)
+        
+        if isExpanded {
             SetProgressView(exercise: exercise)
         }
-        .padding(.vertical)
     }
 }
 
@@ -42,6 +46,8 @@ struct WorkoutSessionView: View {
     
     @Environment(\.modelContext) private var modelContext
     
+    @State private var expandedExerciseID: UUID?
+    
     private var sortedExercises: [PerformedExercise] {
         (session.exercises ?? []).sorted { $0.orderIndex < $1.orderIndex }
     }
@@ -49,15 +55,32 @@ struct WorkoutSessionView: View {
     var body: some View {
         List {
             ForEach(sortedExercises) { exercise in
-                ExerciseCard(exercise: exercise)
+                ExerciseCard(exercise: exercise, isExpanded: expandedExerciseID == exercise.id)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .contentShape(Rectangle())
+                    .listRowSeparator(.hidden)
+                    .onTapGesture {
+                        toggleExercise(exercise)
+                    }
             }
             .onDelete(perform: deleteExercise)
             .onMove(perform: moveExercise)
         }
         .navigationTitle("Workout")
+        .listStyle(.plain)
         .toolbar{
             ToolbarItemGroup(placement: .navigationBarTrailing) {
                 EditButton()
+            }
+        }
+    }
+    
+    private func toggleExercise(_ exercise: PerformedExercise) {
+        withAnimation {
+            if expandedExerciseID == exercise.id {
+                expandedExerciseID = nil
+            } else {
+                expandedExerciseID = exercise.id
             }
         }
     }
