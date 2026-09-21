@@ -151,11 +151,12 @@ struct SetProgressView: View {
                         }
                     }
                     .buttonStyle(.glassProminent)
-                } else if completedRestIndex < sets.count {
+                } else {
                     Button("Start rest") {
                         startRest()
                     }
                     .buttonStyle(.glassProminent)
+                    .disabled(completedRestIndex >= sets.count)
                 }
             } else {
                 if isResting {
@@ -172,17 +173,21 @@ struct SetProgressView: View {
                         }
                     }
                     .buttonStyle(.borderedProminent)
-                } else if completedRestIndex < sets.count {
+                } else {
                     Button("Start rest") {
                         startRest()
                     }
                     .buttonStyle(.borderedProminent)
+                    .disabled(completedRestIndex >= sets.count)
                 }
             }
         }
         .onAppear {
             completeCurrentSet()
             currentSetIndex = completedRestIndex - 1
+            if completedRestIndex == sets.count {
+                restRemaining = .seconds(0)
+            }
         }
         .onDisappear {
             restTask?.cancel()
@@ -209,6 +214,10 @@ struct SetProgressView: View {
             for (i, set) in sets.enumerated() {
                 set.completed = i <= index
             }
+        }
+        
+        if completedRestIndex == sets.count {
+            restRemaining = .seconds(0)
         }
     }
     
@@ -283,6 +292,7 @@ struct SetProgressView: View {
         
         if completedRestIndex == sets.count {
             endLiveActivity()
+            restRemaining = .seconds(0)
         }
     }
     
