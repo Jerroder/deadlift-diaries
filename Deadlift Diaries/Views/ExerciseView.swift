@@ -26,23 +26,6 @@ enum WorkoutSessionRow: Identifiable {
     }
 }
 
-struct SetRow: View {
-    @Bindable var set: PerformedSet
-    
-    var body: some View {
-        HStack {
-            Toggle("", isOn: $set.completed)
-                .labelsHidden()
-            
-            TextField("kg", value: $set.weight, format: .number)
-                .keyboardType(.decimalPad)
-            
-            TextField("reps", value: $set.reps, format: .number)
-                .keyboardType(.numberPad)
-        }
-    }
-}
-
 struct ExerciseCard: View {
     @Bindable var exercise: PerformedExercise
     let isExpanded: Bool
