@@ -76,15 +76,17 @@ struct ExerciseCard: View {
                     .foregroundColor(Color(UIColor.secondaryLabel))
             }
             
-            Text("sets_x".localized(with: exercise.targetSets, comment: "Sets: x"))
-                .font(.subheadline)
-                .foregroundColor(Color(UIColor.secondaryLabel))
+            if alignment == .leading { // meaning not the superset
+                Text("sets_x".localized(with: exercise.targetSets, comment: "Sets: x"))
+                    .font(.subheadline)
+                    .foregroundColor(Color(UIColor.secondaryLabel))
+            }
             
             Text("reps_x".localized(with: exercise.targetReps, comment: "Reps: x"))
                 .font(.subheadline)
                 .foregroundColor(Color(UIColor.secondaryLabel))
             
-            if let rest = exercise.sourceExercise?.restSeconds {
+            if let rest = exercise.sourceExercise?.restSeconds, alignment == .leading {
                 Text("rest_x_sec".localized(with: rest, comment: "Rest: x sec"))
                     .font(.subheadline)
                     .foregroundColor(Color(UIColor.secondaryLabel))

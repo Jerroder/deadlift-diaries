@@ -151,10 +151,10 @@ struct SetProgressView: View {
                 restRemaining = .seconds(0)
             }
         }
-        .onDisappear {
-            restTask?.cancel()
-            restTask = nil
-        }
+//        .onDisappear {
+//            restTask?.cancel()
+//            restTask = nil
+//        }
     }
     
     @ViewBuilder
@@ -174,6 +174,7 @@ struct SetProgressView: View {
             }
         } else {
             Button("Start rest") {
+                endLiveActivity()
                 startRest()
             }
             .disabled(completedRestIndex >= sets.count)
@@ -367,11 +368,9 @@ struct SetProgressView: View {
         )
         
         do {
-            timerActivity = try Activity.request(
-                attributes: attributes,
-                content: .init(state: contentState, staleDate: endTime),
-                pushType: nil
-            )
+            timerActivity = try Activity.request(attributes: attributes,
+                                                 content: .init(state: contentState, staleDate: endTime),
+                                                 pushType: nil)
         } catch {
             print("Error starting Live Activity: \(error.localizedDescription)")
         }
@@ -402,12 +401,7 @@ struct SetProgressView: View {
         )
         
         Task {
-            await activity.update(
-                ActivityContent(
-                    state: contentState,
-                    staleDate: endTime
-                )
-            )
+            await activity.update(ActivityContent(state: contentState, staleDate: endTime))
         }
     }
     
@@ -428,10 +422,7 @@ struct SetProgressView: View {
         )
         
         Task {
-            await activity.end(
-                ActivityContent(state: finalState, staleDate: nil),
-                dismissalPolicy: .immediate
-            )
+            await activity.end(ActivityContent(state: finalState, staleDate: nil), dismissalPolicy: .immediate)
             timerActivity = nil
         }
     }
