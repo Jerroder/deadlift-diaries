@@ -11,6 +11,8 @@ import SwiftUI
 @main
 struct Deadlift_DiariesApp: App {
     let container: ModelContainer
+    
+    @State private var restTimer = RestTimerManager.shared
 
     init() {
 //        MigrationManager.migrateTimerSettings()
@@ -36,6 +38,7 @@ struct Deadlift_DiariesApp: App {
     var body: some Scene {
         WindowGroup {
             ContentView()
+                .environment(restTimer)
         }
         .modelContainer(for: [Exercise.self, PerformedExercise.self, PerformedSet.self, ScheduledWorkout.self, TrainingBlock.self, WorkoutExercise.self, WorkoutSchedule.self, WorkoutSession.self, WorkoutTemplate.self])
     }

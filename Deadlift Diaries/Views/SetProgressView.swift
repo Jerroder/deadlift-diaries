@@ -6,8 +6,6 @@
 //
 
 import SwiftUI
-import AVFAudio
-import ActivityKit
 
 struct RestBox: View {
     let restDuration: Double
@@ -53,17 +51,14 @@ struct SetProgressView: View {
     @Bindable var exercise: PerformedExercise
     
     @State private var currentSetIndex: Int = 0
-    @State private var isResting: Bool = false
-    @State private var isPaused: Bool = false
-    @State private var restRemaining: Duration
-    @State private var restStartDate: Date?
-    @State private var restTask: Task<Void, Never>?
     
     @AppStorage("sendNotification") private var sendNotification: Bool = false
     @AppStorage("selectedSoundID") private var selectedSoundID: Int = 1075
     
     private let liveActivityManager = TimerLiveActivityManager.shared
     @State private var restSessionID = UUID()
+    
+    private var restTimer = RestTimerManager.shared
     
     private var sets: [PerformedSet] {
         (exercise.sets ?? []).sorted { $0.setNumber < $1.setNumber }
@@ -78,7 +73,15 @@ struct SetProgressView: View {
     }
     
     private var restSeconds: Int {
-        Int(restRemaining.components.seconds)
+        if completedRestIndex == sets.count {
+            return 0
+        }
+        
+        if isCurrentExerciseResting {
+            return Int(restTimer.remaining.components.seconds)
+        }
+        
+        return restDuration
     }
     
     private var restTimeString: String {
@@ -94,11 +97,8 @@ struct SetProgressView: View {
         return String(format: "%02d:%02d", minutes, seconds)
     }
     
-    init(exercise: PerformedExercise) {
-        self.exercise = exercise
-        self._restRemaining = State(
-            initialValue: .seconds(exercise.sourceExercise?.restSeconds ?? 60)
-        )
+    private var isCurrentExerciseResting: Bool {
+        restTimer.isResting && restTimer.exerciseID == exercise.id
     }
     
     var body: some View {
@@ -123,8 +123,9 @@ struct SetProgressView: View {
                         if index < sets.count - 1 {
                             RestBox(
                                 restDuration: Double(restDuration),
-                                remaining: restRemaining,
-                                isActive: index == currentSetIndex && isResting,
+                                remaining: isCurrentExerciseResting ? restTimer.remaining : .seconds(restSeconds),
+                                isActive: isCurrentExerciseResting &&
+                                index == currentSetIndex,
                                 isCompleted: index < completedRestIndex - 1
                             )
                             .frame(width: segmentWidth, height: 20)
@@ -147,29 +148,18 @@ struct SetProgressView: View {
         }
         .onAppear {
             completeCurrentSet()
-            currentSetIndex = completedRestIndex - 1
-            if completedRestIndex == sets.count {
-                restRemaining = .seconds(0)
-            }
+            currentSetIndex = max(0, completedRestIndex - 1)
         }
-//        .onDisappear {
-//            restTask?.cancel()
-//            restTask = nil
-//        }
     }
     
     @ViewBuilder
     private func restButton() -> some View {
-        if isResting {
-            Button(isPaused ? "Resume" : "Pause") {
-                if isPaused { // Resume
-                    isPaused = false
-                    runRestTimer()
-                } else { // Pause
-                    isPaused = true
-                    restTask?.cancel()
-                    restTask = nil
-                    cancelPendingNotifications()
+        if isCurrentExerciseResting {
+            Button(restTimer.isPaused ? "Resume" : "Pause") {
+                if restTimer.isPaused {
+                    restTimer.resume(sendNotification: sendNotification)
+                } else {
+                    restTimer.pause()
                 }
             }
         } else {
@@ -185,25 +175,14 @@ struct SetProgressView: View {
             return
         }
         
-        restTask?.cancel()
-        restTask = nil
-        
-        cancelPendingNotifications()
-        restRemaining = .seconds(restDuration)
+        restTimer.stop()
         
         withTransaction(Transaction(animation: nil)) {
-            isResting = false
-            restSessionID = UUID()
-            restStartDate = nil
             currentSetIndex = index
             
             for (i, set) in sets.enumerated() {
                 set.completed = i <= index
             }
-        }
-        
-        if completedRestIndex == sets.count {
-            restRemaining = .seconds(0)
         }
     }
     
@@ -216,138 +195,28 @@ struct SetProgressView: View {
     }
     
     private func startRest() {
-        restTask?.cancel()
-        restTask = nil
-        
-        cancelPendingNotifications()
-        
-        restSessionID = UUID()
-        
-        isResting = true
-        isPaused = false
-        restRemaining = .seconds(restDuration)
-        
-        runRestTimer()
-    }
-    
-    private func runRestTimer() {
-        if sendNotification {
-            scheduleNotification()
-        }
-        
-        let sessionID = restSessionID
-        
-        Task {
-            await liveActivityManager.start(
-                sessionID: sessionID,
-                currentSet: currentSetIndex + 1,
-                totalSets: sets.count,
-                restSeconds: restSeconds
-            )
-        }
-        
-        let clock = ContinuousClock()
-        let deadline = clock.now.advanced(by: restRemaining)
-        
-        restTask = Task { @MainActor in
-            while !Task.isCancelled {
-                let now = clock.now
-                let newRemaining = deadline - now
-                
-                if newRemaining <= .zero {
-                    finishRest(sessionID: sessionID)
-                    break
-                }
-                
-                restRemaining = newRemaining
-                
-                do {
-                    try await clock.sleep(
-                        until: now.advanced(by: .milliseconds(100))
-                    )
-                } catch {
-                    break
-                }
-            }
-        }
-    }
-    
-    private func finishRest(sessionID: UUID) {
-        restTask?.cancel()
-        restTask = nil
-        
-        cancelPendingNotifications()
-        playSystemSound()
-        
-        restRemaining = .seconds(restDuration)
-        isResting = false
-        restStartDate = nil
-        
-        currentSetIndex += 1
-        completeCurrentSet()
-        
-        if completedRestIndex == sets.count {
-            Task {
-                await liveActivityManager.end(sessionID: sessionID)
+        restTimer.onFinish = { finishedExerciseID, finishedSetIndex in
+            guard finishedExerciseID == exercise.id else {
+                return
             }
             
-            restRemaining = .seconds(0)
-        }
-    }
-    
-    // MARK: - Notification Functions
-    
-    private func scheduleNotification() {
-        let content = UNMutableNotificationContent()
-        content.title = "timer_is_up".localized(comment: "The timer is up")
-        content.body = "rest_is_over".localized(comment: "Rest is over")
-        content.sound = UNNotificationSound.default
-        
-        let trigger = UNTimeIntervalNotificationTrigger(timeInterval: Double(restSeconds), repeats: false)
-        let request = UNNotificationRequest(identifier: UUID().uuidString, content: content, trigger: trigger)
-        
-        UNUserNotificationCenter.current().add(request) { error in
-            if let error = error {
-                print("Error scheduling notification: \(error.localizedDescription)")
-            } else {
-                print("Notification scheduled for \(restRemaining) seconds from now.")
-            }
-        }
-    }
-    
-    private func cancelPendingNotifications() {
-        print("Cancelling next notification.")
-        UNUserNotificationCenter.current().removeAllPendingNotificationRequests()
-    }
-    
-    private func playSystemSound() {
-        let audioSession: AVAudioSession = AVAudioSession.sharedInstance()
-        do {
-            try audioSession.setCategory(.ambient, options: .duckOthers)
-            try audioSession.setActive(true)
-        } catch {
-            print("Failed to set audio session category: \(error)")
-        }
-        
-        if selectedSoundID != 0 {
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                AudioServicesPlaySystemSound(UInt32(selectedSoundID))
+            let nextSetIndex = finishedSetIndex + 1
+            
+            guard sets.indices.contains(nextSetIndex) else {
+                return
             }
             
-            let duration: Double = selectedSoundID == 1328 ? 2.0 : 1.0
-            DispatchQueue.main.asyncAfter(deadline: .now() + duration) {
-                do {
-                    try audioSession.setActive(false)
-                } catch {
-                    print("Failed to deactivate audio session: \(error)")
-                }
-            }
-        } else {
-            do {
-                try audioSession.setActive(false)
-            } catch {
-                print("Failed to deactivate audio session: \(error)")
-            }
+            sets[nextSetIndex].completed = true
+            currentSetIndex = nextSetIndex
         }
+        
+        restTimer.start(
+            exerciseID: exercise.id,
+            setIndex: currentSetIndex,
+            totalSets: sets.count,
+            duration: .seconds(restDuration),
+            selectedSoundID: selectedSoundID,
+            sendNotification: sendNotification
+        )
     }
 }
