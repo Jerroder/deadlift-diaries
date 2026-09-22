@@ -62,7 +62,8 @@ struct SetProgressView: View {
     @AppStorage("sendNotification") private var sendNotification: Bool = false
     @AppStorage("selectedSoundID") private var selectedSoundID: Int = 1075
     
-    @State private var timerActivity: Activity<TimerWidgetAttributes>?
+    private let liveActivityManager = TimerLiveActivityManager.shared
+    @State private var restSessionID = UUID()
     
     private var sets: [PerformedSet] {
         (exercise.sets ?? []).sorted { $0.setNumber < $1.setNumber }
@@ -169,12 +170,10 @@ struct SetProgressView: View {
                     restTask?.cancel()
                     restTask = nil
                     cancelPendingNotifications()
-                    updateLiveActivity()
                 }
             }
         } else {
             Button("Start rest") {
-                endLiveActivity()
                 startRest()
             }
             .disabled(completedRestIndex >= sets.count)
@@ -188,12 +187,13 @@ struct SetProgressView: View {
         
         restTask?.cancel()
         restTask = nil
+        
         cancelPendingNotifications()
-        endLiveActivity()
         restRemaining = .seconds(restDuration)
         
         withTransaction(Transaction(animation: nil)) {
             isResting = false
+            restSessionID = UUID()
             restStartDate = nil
             currentSetIndex = index
             
@@ -217,11 +217,14 @@ struct SetProgressView: View {
     
     private func startRest() {
         restTask?.cancel()
+        restTask = nil
+        
         cancelPendingNotifications()
+        
+        restSessionID = UUID()
         
         isResting = true
         isPaused = false
-        
         restRemaining = .seconds(restDuration)
         
         runRestTimer()
@@ -232,10 +235,15 @@ struct SetProgressView: View {
             scheduleNotification()
         }
         
-        if timerActivity != nil {
-            updateLiveActivity()
-        } else {
-            startLiveActivity()
+        let sessionID = restSessionID
+        
+        Task {
+            await liveActivityManager.start(
+                sessionID: sessionID,
+                currentSet: currentSetIndex + 1,
+                totalSets: sets.count,
+                restSeconds: restSeconds
+            )
         }
         
         let clock = ContinuousClock()
@@ -247,14 +255,16 @@ struct SetProgressView: View {
                 let newRemaining = deadline - now
                 
                 if newRemaining <= .zero {
-                    finishRest()
+                    finishRest(sessionID: sessionID)
                     break
                 }
                 
                 restRemaining = newRemaining
                 
                 do {
-                    try await clock.sleep(until: now.advanced(by: .milliseconds(100)))
+                    try await clock.sleep(
+                        until: now.advanced(by: .milliseconds(100))
+                    )
                 } catch {
                     break
                 }
@@ -262,7 +272,7 @@ struct SetProgressView: View {
         }
     }
     
-    private func finishRest() {
+    private func finishRest(sessionID: UUID) {
         restTask?.cancel()
         restTask = nil
         
@@ -277,7 +287,10 @@ struct SetProgressView: View {
         completeCurrentSet()
         
         if completedRestIndex == sets.count {
-            endLiveActivity()
+            Task {
+                await liveActivityManager.end(sessionID: sessionID)
+            }
+            
             restRemaining = .seconds(0)
         }
     }
@@ -335,95 +348,6 @@ struct SetProgressView: View {
             } catch {
                 print("Failed to deactivate audio session: \(error)")
             }
-        }
-    }
-    
-    // MARK: - Live Activity Functions
-    
-    private func startLiveActivity() {
-        guard ActivityAuthorizationInfo().areActivitiesEnabled else {
-            print("Live Activities are not enabled")
-            return
-        }
-        
-        let attributes = TimerWidgetAttributes(timerType: "rest")
-        
-//        let isInRestPeriod: Bool
-//        if isTimeBased {
-//            isInRestPeriod = !isExerciseInterval
-//        } else {
-//            isInRestPeriod = true
-//        }
-        
-        let endTime = Date().addingTimeInterval(TimeInterval(restSeconds))
-        let contentState = TimerWidgetAttributes.ContentState(
-            timeRemaining: TimeInterval(restSeconds),
-            totalDuration: TimeInterval(restDuration),
-            currentSet: currentSetIndex + 1,
-            totalSets: sets.count,
-            isResting: isResting,
-            isRunning: true,
-            startTime: Date(),
-            endTime: endTime
-        )
-        
-        do {
-            timerActivity = try Activity.request(attributes: attributes,
-                                                 content: .init(state: contentState, staleDate: endTime),
-                                                 pushType: nil)
-        } catch {
-            print("Error starting Live Activity: \(error.localizedDescription)")
-        }
-    }
-    
-    private func updateLiveActivity() {
-        guard let activity = timerActivity else {
-            return
-        }
-        
-//        let isInRestPeriod: Bool
-//        if isTimeBased {
-//            isInRestPeriod = !isExerciseInterval
-//        } else {
-//            isInRestPeriod = true
-//        }
-        
-        let endTime = Date().addingTimeInterval(TimeInterval(restSeconds))
-        let contentState = TimerWidgetAttributes.ContentState(
-            timeRemaining: TimeInterval(restSeconds),
-            totalDuration: TimeInterval(restDuration),
-            currentSet: currentSetIndex + 1,
-            totalSets: sets.count,
-            isResting: isResting,
-            isRunning: !isPaused,
-            startTime: Date(),
-            endTime: endTime
-        )
-        
-        Task {
-            await activity.update(ActivityContent(state: contentState, staleDate: endTime))
-        }
-    }
-    
-    private func endLiveActivity() {
-        guard let activity = timerActivity else {
-            return
-        }
-        
-        let finalState = TimerWidgetAttributes.ContentState(
-            timeRemaining: 0,
-            totalDuration: TimeInterval(restDuration),
-            currentSet: currentSetIndex + 1,
-            totalSets: sets.count,
-            isResting: isResting,
-            isRunning: false,
-            startTime: nil,
-            endTime: Date()
-        )
-        
-        Task {
-            await activity.end(ActivityContent(state: finalState, staleDate: nil), dismissalPolicy: .immediate)
-            timerActivity = nil
         }
     }
 }
