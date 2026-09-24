@@ -41,6 +41,11 @@ final class RestTimerManager {
     
     private var totalDuration: Duration = .zero
     private var selectedSoundID: Int = 1075
+    private var hasPlayedFinishSound = false
+    
+    private var soundLeadTime: Duration {
+        .seconds(selectedSoundID == 1328 ? 2 : 1)
+    }
     
     private var timerActivity: Activity<TimerWidgetAttributes>?
     
@@ -71,6 +76,7 @@ final class RestTimerManager {
         self.totalDuration = duration
         self.remaining = duration
         self.selectedSoundID = selectedSoundID
+        self.hasPlayedFinishSound = false
         
         isActive = true
         isPaused = false
@@ -162,6 +168,11 @@ final class RestTimerManager {
                 
                 remaining = newRemaining
                 
+                if !hasPlayedFinishSound, newRemaining <= soundLeadTime {
+                    hasPlayedFinishSound = true
+                    playSystemSound()
+                }
+                
                 do {
                     try await clock.sleep(
                         until: now.advanced(by: .milliseconds(100))
@@ -192,7 +203,11 @@ final class RestTimerManager {
         timerTask = nil
         
         cancelPendingNotifications()
-        playSystemSound()
+        
+        if !hasPlayedFinishSound {
+            hasPlayedFinishSound = true
+            playSystemSound()
+        }
         
         isActive = false
         isPaused = false
