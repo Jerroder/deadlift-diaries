@@ -33,7 +33,14 @@ struct ExerciseCard: View {
     
     @Environment(\.editMode) private var editMode
     
+    @State private var showHistory = false
+    
     private let weightUnit: Unit = isMetricSystem() ? Unit(symbol: "kg") : Unit(symbol: "lbs")
+    
+    // The Exercise this session's exercise came from. Used to show its progress history.
+    private var linkedExercise: Exercise? {
+        exercise.sourceExercise?.exercise
+    }
     
     var body: some View {
         if editMode?.wrappedValue.isEditing == true {
@@ -50,8 +57,33 @@ struct ExerciseCard: View {
     @ViewBuilder
     private func exerciseDetails() -> some View {
         VStack(alignment: alignment) {
-            Text(exercise.exerciseName)
-                .font(.headline)
+            HStack(spacing: 6) {
+                Text(exercise.exerciseName)
+                    .font(.headline)
+                
+                if let linkedExercise, editMode?.wrappedValue.isEditing != true {
+                    Button {
+                        showHistory = true
+                    } label: {
+                        Image(systemName: "chart.line.uptrend.xyaxis")
+                            .font(.caption)
+                            .foregroundColor(.accentColor)
+                    }
+                    .buttonStyle(.plain)
+                    .sheet(isPresented: $showHistory) {
+                        NavigationStack {
+                            ExerciseHistoryView(exercise: linkedExercise)
+                                .toolbar {
+                                    ToolbarItem(placement: .confirmationAction) {
+                                        Button("", systemImage: "checkmark") {
+                                            showHistory = false
+                                        }
+                                    }
+                                }
+                        }
+                    }
+                }
+            }
             
             if let weight = exercise.targetWeight, weight != 0 {
                 Text("weight_x".localized(with: weight, weightUnit.symbol, comment: "Weight: x kg"))
