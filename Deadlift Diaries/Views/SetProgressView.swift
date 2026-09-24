@@ -335,7 +335,18 @@ struct SetProgressView: View {
     
     private func toggleBeforeNext() {
         workoutTimer.stop()
-        exercise.beforeNextCompleted.toggle()
+        
+        withTransaction(Transaction(animation: nil)) {
+            if let lastIndex = sets.indices.last {
+                currentSetIndex = lastIndex
+            }
+            
+            for set in sets {
+                set.completed = true
+            }
+            
+            exercise.beforeNextCompleted.toggle()
+        }
     }
     
     private func completeCurrentSet() {
