@@ -14,6 +14,7 @@ import UserNotifications
 enum TimerPhase {
     case workingSet
     case rest
+    case beforeNextExercise
 }
 
 @MainActor
@@ -45,6 +46,22 @@ final class RestTimerManager {
     
     private var soundLeadTime: Duration {
         .seconds(selectedSoundID == 1328 ? 2 : 1)
+    }
+    
+    // The "before next exercise" countdown looks and behaves like a rest period.
+    private var isRestLike: Bool {
+        phase == .rest || phase == .beforeNextExercise
+    }
+    
+    private var timerType: String {
+        switch phase {
+        case .rest:
+            return "rest"
+        case .workingSet:
+            return "exercise"
+        case .beforeNextExercise:
+            return "beforeNext"
+        }
     }
     
     private var timerActivity: Activity<TimerWidgetAttributes>?
@@ -231,9 +248,23 @@ final class RestTimerManager {
         content.title = "timer_is_up".localized(
             comment: "The timer is up"
         )
-        content.body = (phase == .rest ? "rest_is_over" : "exercise_is_over").localized(
-            comment: phase == .rest ? "Rest is over" : "Exercise is over"
-        )
+        
+        let bodyKey: String
+        let bodyComment: String
+        
+        switch phase {
+        case .rest:
+            bodyKey = "rest_is_over"
+            bodyComment = "Rest is over"
+        case .workingSet:
+            bodyKey = "exercise_is_over"
+            bodyComment = "Exercise is over"
+        case .beforeNextExercise:
+            bodyKey = "next_exercise_starting"
+            bodyComment = "The next exercise is starting"
+        }
+        
+        content.body = bodyKey.localized(comment: bodyComment)
         content.sound = .default
         
         let seconds = max(
@@ -322,7 +353,7 @@ final class RestTimerManager {
         }
         
         let attributes = TimerWidgetAttributes(
-            timerType: phase == .rest ? "rest" : "exercise"
+            timerType: timerType
         )
         
         let now = Date()
@@ -335,7 +366,7 @@ final class RestTimerManager {
             totalDuration: duration,
             currentSet: currentSetIndex + 1,
             totalSets: totalSets,
-            isResting: phase == .rest,
+            isResting: isRestLike,
             isRunning: true,
             startTime: now,
             endTime: endTime
@@ -372,7 +403,7 @@ final class RestTimerManager {
             totalDuration: durationAsTimeInterval(totalDuration),
             currentSet: currentSetIndex + 1,
             totalSets: totalSets,
-            isResting: phase == .rest,
+            isResting: isRestLike,
             isRunning: !isPaused,
             startTime: isPaused ? nil : now,
             endTime: endTime

@@ -30,6 +30,7 @@ struct ExerciseCard: View {
     @Bindable var exercise: PerformedExercise
     let isExpanded: Bool
     let alignment: HorizontalAlignment
+    let isLastExercise: Bool
     
     @Environment(\.editMode) private var editMode
     
@@ -49,7 +50,7 @@ struct ExerciseCard: View {
             exerciseDetails()
             
             if isExpanded {
-                SetProgressView(exercise: exercise)
+                SetProgressView(exercise: exercise, isLastExercise: isLastExercise)
                     .contentShape(Rectangle())
                     .onTapGesture { }
             }
@@ -116,6 +117,7 @@ struct ExerciseCard: View {
 struct SupersetCard: View {
     let first: PerformedExercise
     let second: PerformedExercise
+    let isLastExercise: Bool
     
     @Binding var expandedExerciseID: UUID?
     
@@ -133,7 +135,7 @@ struct SupersetCard: View {
             exerciseDetails()
             
             if isExpanded {
-                SetProgressView(exercise: first)
+                SetProgressView(exercise: first, isLastExercise: isLastExercise)
                     .contentShape(Rectangle())
                     .onTapGesture { }
             }
@@ -144,10 +146,10 @@ struct SupersetCard: View {
     private func exerciseDetails() -> some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(alignment: .top, spacing: 16) {
-                ExerciseCard(exercise: first, isExpanded: false, alignment: .leading)
+                ExerciseCard(exercise: first, isExpanded: false, alignment: .leading, isLastExercise: isLastExercise)
                 .frame(maxWidth: .infinity, alignment: .topLeading)
                 
-                ExerciseCard(exercise: second, isExpanded: false, alignment: .trailing)
+                ExerciseCard(exercise: second, isExpanded: false, alignment: .trailing, isLastExercise: isLastExercise)
                 .frame(maxWidth: .infinity, alignment: .topTrailing)
             }
             .contentShape(Rectangle())
@@ -220,10 +222,13 @@ struct WorkoutSessionView: View {
     var body: some View {
         List {
             ForEach(workoutRows) { row in
+                let isLastExercise = row.id == workoutRows.last?.id
+                
                 switch row {
                 case .exercise(let exercise):
                     ExerciseCard(exercise: exercise,
-                                 isExpanded: expandedExerciseID == exercise.id, alignment: .leading)
+                                 isExpanded: expandedExerciseID == exercise.id, alignment: .leading,
+                                 isLastExercise: isLastExercise)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .contentShape(Rectangle())
                     .listRowSeparator(.hidden)
@@ -232,7 +237,8 @@ struct WorkoutSessionView: View {
                     }
                     
                 case .superset(let first, let second):
-                    SupersetCard(first: first, second: second, expandedExerciseID: $expandedExerciseID)
+                    SupersetCard(first: first, second: second, isLastExercise: isLastExercise,
+                                 expandedExerciseID: $expandedExerciseID)
                         .listRowSeparator(.hidden)
                 }
             }

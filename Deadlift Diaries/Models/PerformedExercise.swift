@@ -22,6 +22,8 @@ final class PerformedExercise {
     // Total time spent on this exercise
     var elapsed: Double = 0
     
+    var beforeNextCompleted: Bool = false
+    
     @Relationship(inverse: \WorkoutSession.exercises)
     var workoutSession: WorkoutSession?
     

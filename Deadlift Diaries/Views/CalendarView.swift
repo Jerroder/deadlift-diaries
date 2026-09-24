@@ -206,6 +206,7 @@ struct AddExerciseView: View {
     @State private var sets: Int = 3
     @State private var reps: Int = 8
     @State private var restSeconds: Int = 150
+    @State private var timeBeforeNext: Int = 0
     @State private var weight: Double?
     
     private var filteredExercises: [Exercise] {
@@ -360,6 +361,17 @@ struct AddExerciseView: View {
                                 }
                             }
                         }
+                        
+                        Section("Before Next Exercise") {
+                            Stepper(value: $timeBeforeNext, in: 0...600, step: 15) {
+                                HStack {
+                                    Text("Countdown")
+                                    Spacer()
+                                    Text(timeBeforeNext == 0 ? "None" : formattedRest(timeBeforeNext))
+                                        .foregroundStyle(.secondary)
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -398,7 +410,8 @@ struct AddExerciseView: View {
                 targetSets: sets,
                 targetReps: reps,
                 targetWeight: weight,
-                restSeconds: restSeconds
+                restSeconds: restSeconds,
+                timeBeforeNext: timeBeforeNext > 0 ? timeBeforeNext : nil
             )
             
             onAdd(workoutExercise)
@@ -410,7 +423,8 @@ struct AddExerciseView: View {
                 targetSets: baseExercise.targetSets,
                 targetReps: reps,
                 targetWeight: weight,
-                restSeconds: baseExercise.restSeconds
+                restSeconds: baseExercise.restSeconds,
+                timeBeforeNext: nil
             )
             
             onAdd(workoutExercise)

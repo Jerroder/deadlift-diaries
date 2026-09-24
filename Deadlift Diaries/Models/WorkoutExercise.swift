@@ -28,6 +28,8 @@ final class WorkoutExercise: Identifiable {
     var targetWeight: Double?
     var restSeconds: Int?
 
+    var timeBeforeNext: Int?
+
     var notes: String?
 
     // The global exercise this refers to
@@ -44,7 +46,7 @@ final class WorkoutExercise: Identifiable {
     }
 
     init(exercise: Exercise, order: Int, targetSets: Int, targetReps: Int,
-         targetWeight: Double? = nil, restSeconds: Int? = nil, notes: String? = nil,
+         targetWeight: Double? = nil, restSeconds: Int? = nil, timeBeforeNext: Int? = nil, notes: String? = nil,
          supersetID: UUID? = nil, supersetPosition: SupersetPosition? = nil) {
         self.exercise = exercise
         self.order = order
@@ -52,6 +54,7 @@ final class WorkoutExercise: Identifiable {
         self.targetReps = targetReps
         self.targetWeight = targetWeight
         self.restSeconds = restSeconds
+        self.timeBeforeNext = timeBeforeNext
         self.notes = notes
         self.supersetID = supersetID
         self.supersetPosition = supersetPosition

@@ -48,6 +48,7 @@ struct RestBox: View {
 
 struct SetProgressView: View {
     @Bindable var exercise: PerformedExercise
+    let isLastExercise: Bool
     
     @State private var currentSetIndex: Int = 0
     
@@ -78,6 +79,19 @@ struct SetProgressView: View {
         exercise.sourceExercise?.restSeconds ?? 60
     }
     
+    // The countdown shown after this exercise's sets are done, before the next exercise starts.
+    private var timeBeforeNext: Int? {
+        guard let seconds = exercise.sourceExercise?.timeBeforeNext, seconds > 0 else {
+            return nil
+        }
+        
+        return seconds
+    }
+    
+    private var showsTimeBeforeNext: Bool {
+        !isLastExercise && timeBeforeNext != nil
+    }
+    
     private var completedRestIndex: Int {
         sets.firstIndex(where: { !$0.completed }) ?? sets.count
     }
@@ -98,8 +112,12 @@ struct SetProgressView: View {
         workoutTimer.isActive && workoutTimer.phase == .workingSet && workoutTimer.exerciseID == exercise.id
     }
     
+    private var isCurrentExerciseBeforeNext: Bool {
+        workoutTimer.isActive && workoutTimer.phase == .beforeNextExercise && workoutTimer.exerciseID == exercise.id
+    }
+    
     private var isCurrentExerciseTiming: Bool {
-        isCurrentExerciseResting || isCurrentExerciseSetTiming
+        isCurrentExerciseResting || isCurrentExerciseSetTiming || isCurrentExerciseBeforeNext
     }
     
     private var restSeconds: Int {
@@ -121,6 +139,10 @@ struct SetProgressView: View {
         }
         
         if completedRestIndex >= sets.count {
+            if showsTimeBeforeNext && !exercise.beforeNextCompleted, let timeBeforeNext {
+                return timeBeforeNext
+            }
+            
             return 0
         }
         
@@ -159,7 +181,7 @@ struct SetProgressView: View {
     var body: some View {
         VStack(spacing: 12) {
             GeometryReader { geo in
-                let segmentCount = sets.count * 2 - 1
+                let segmentCount = sets.count * 2 - 1 + (showsTimeBeforeNext ? 1 : 0)
                 let spacing: CGFloat = 6
                 let totalSpacing = CGFloat(segmentCount - 1) * spacing
                 let segmentWidth = (geo.size.width - totalSpacing) / CGFloat(segmentCount)
@@ -207,6 +229,22 @@ struct SetProgressView: View {
                             .allowsHitTesting(!isRestActive)
                         }
                     }
+                    
+                    if showsTimeBeforeNext, let timeBeforeNext {
+                        Button {
+                            toggleBeforeNext()
+                        } label: {
+                            RestBox(
+                                totalDuration: Double(timeBeforeNext),
+                                remaining: isCurrentExerciseBeforeNext ? workoutTimer.remaining : .seconds(timeBeforeNext),
+                                isActive: isCurrentExerciseBeforeNext,
+                                isCompleted: exercise.beforeNextCompleted
+                            )
+                            .frame(width: segmentWidth, height: 20)
+                        }
+                        .buttonStyle(.plain)
+                        .allowsHitTesting(!isCurrentExerciseBeforeNext)
+                    }
                 }
             }
             .frame(height: 20)
@@ -245,6 +283,10 @@ struct SetProgressView: View {
             Button("Start") {
                 startSet()
             }
+        } else if completedRestIndex >= sets.count && showsTimeBeforeNext && !exercise.beforeNextCompleted {
+            Button("Start next exercise timer") {
+                startBeforeNext()
+            }
         } else {
             Button("Start rest") {
                 startRest()
@@ -268,6 +310,8 @@ struct SetProgressView: View {
             for (i, set) in sets.enumerated() {
                 set.completed = i < completedBoundary
             }
+            
+            exercise.beforeNextCompleted = false
         }
     }
     
@@ -284,7 +328,14 @@ struct SetProgressView: View {
             for (i, set) in sets.enumerated() {
                 set.completed = i <= index
             }
+            
+            exercise.beforeNextCompleted = false
         }
+    }
+    
+    private func toggleBeforeNext() {
+        workoutTimer.stop()
+        exercise.beforeNextCompleted.toggle()
     }
     
     private func completeCurrentSet() {
@@ -357,6 +408,30 @@ struct SetProgressView: View {
             setIndex: currentSetIndex,
             totalSets: sets.count,
             duration: .seconds(restDuration),
+            selectedSoundID: selectedSoundID,
+            sendNotification: sendNotification
+        )
+    }
+    
+    private func startBeforeNext() {
+        guard let timeBeforeNext else {
+            return
+        }
+        
+        workoutTimer.onFinish = { finishedExerciseID, _ in
+            guard finishedExerciseID == exercise.id else {
+                return
+            }
+            
+            exercise.beforeNextCompleted = true
+        }
+        
+        workoutTimer.start(
+            phase: .beforeNextExercise,
+            exerciseID: exercise.id,
+            setIndex: 0,
+            totalSets: 1,
+            duration: .seconds(timeBeforeNext),
             selectedSoundID: selectedSoundID,
             sendNotification: sendNotification
         )
