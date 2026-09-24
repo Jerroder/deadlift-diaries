@@ -152,7 +152,7 @@ final class RestTimerManager {
                     return
                 }
                 
-                self.remaining = newRemaining
+                remaining = newRemaining
                 
                 do {
                     try await clock.sleep(

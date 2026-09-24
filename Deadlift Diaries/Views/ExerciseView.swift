@@ -228,15 +228,25 @@ struct WorkoutSessionView: View {
             
             switch row {
             case .exercise(let exercise):
-                modelContext.delete(exercise)
+                deletePerformedExercise(exercise)
                 
             case .superset(let first, let second):
-                modelContext.delete(first)
-                modelContext.delete(second)
+                deletePerformedExercise(first)
+                deletePerformedExercise(second)
             }
         }
         
         try? modelContext.save()
+    }
+    
+    private func deletePerformedExercise(_ exercise: PerformedExercise) {
+        // Also remove the corresponding exercise from the scheduled workout
+        // so it no longer appears in the CalendarView.
+        if let sourceExercise = exercise.sourceExercise {
+            modelContext.delete(sourceExercise)
+        }
+        
+        modelContext.delete(exercise)
     }
     
     private func moveRow(from source: IndexSet, to destination: Int) {
