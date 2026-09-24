@@ -11,6 +11,11 @@ import ActivityKit
 import AVFAudio
 import UserNotifications
 
+enum TimerPhase {
+    case workingSet
+    case rest
+}
+
 @MainActor
 @Observable
 final class RestTimerManager {
@@ -18,22 +23,23 @@ final class RestTimerManager {
     
     // MARK: - Observable state
     
-    private(set) var isResting = false
+    private(set) var isActive = false
     private(set) var isPaused = false
     private(set) var remaining: Duration = .zero
+    private(set) var phase: TimerPhase = .rest
     
     private(set) var currentSetIndex: Int = 0
     private(set) var totalSets: Int = 0
     
-    // Unique identifier for the current rest session.
+    // Unique identifier for the current timer session.
     private(set) var sessionID: UUID?
     private(set) var exerciseID: UUID?
     
     // MARK: - Private state
     
-    private var restTask: Task<Void, Never>?
+    private var timerTask: Task<Void, Never>?
     
-    private var restDuration: Duration = .zero
+    private var totalDuration: Duration = .zero
     private var selectedSoundID: Int = 1075
     
     private var timerActivity: Activity<TimerWidgetAttributes>?
@@ -45,6 +51,7 @@ final class RestTimerManager {
     // MARK: - Start
     
     func start(
+        phase: TimerPhase,
         exerciseID: UUID,
         setIndex: Int,
         totalSets: Int,
@@ -58,13 +65,14 @@ final class RestTimerManager {
         
         self.sessionID = sessionID
         self.exerciseID = exerciseID
+        self.phase = phase
         self.currentSetIndex = setIndex
         self.totalSets = totalSets
-        self.restDuration = duration
+        self.totalDuration = duration
         self.remaining = duration
         self.selectedSoundID = selectedSoundID
         
-        isResting = true
+        isActive = true
         isPaused = false
         
         if sendNotification {
@@ -79,14 +87,14 @@ final class RestTimerManager {
     // MARK: - Pause
     
     func pause() {
-        guard isResting, !isPaused else {
+        guard isActive, !isPaused else {
             return
         }
         
         isPaused = true
         
-        restTask?.cancel()
-        restTask = nil
+        timerTask?.cancel()
+        timerTask = nil
         
         cancelPendingNotifications()
         updateLiveActivity()
@@ -95,7 +103,7 @@ final class RestTimerManager {
     // MARK: - Resume
     
     func resume(sendNotification: Bool) {
-        guard isResting, isPaused else {
+        guard isActive, isPaused else {
             return
         }
         
@@ -116,13 +124,13 @@ final class RestTimerManager {
     // MARK: - Stop
     
     func stop() {
-        restTask?.cancel()
-        restTask = nil
+        timerTask?.cancel()
+        timerTask = nil
         
         cancelPendingNotifications()
         endLiveActivity()
         
-        isResting = false
+        isActive = false
         isPaused = false
         remaining = .zero
         
@@ -133,12 +141,12 @@ final class RestTimerManager {
     // MARK: - Timer
     
     private func runTimer(sessionID: UUID) {
-        restTask?.cancel()
+        timerTask?.cancel()
         
         let clock = ContinuousClock()
         let deadline = clock.now.advanced(by: remaining)
         
-        restTask = Task { @MainActor [weak self] in
+        timerTask = Task { @MainActor [weak self] in
             guard let self else {
                 return
             }
@@ -180,13 +188,13 @@ final class RestTimerManager {
         let isLastSet = currentSetIndex >= totalSets - 1
         let completion = self.onFinish
         
-        restTask?.cancel()
-        restTask = nil
+        timerTask?.cancel()
+        timerTask = nil
         
         cancelPendingNotifications()
         playSystemSound()
         
-        isResting = false
+        isActive = false
         isPaused = false
         remaining = .zero
         
@@ -208,8 +216,8 @@ final class RestTimerManager {
         content.title = "timer_is_up".localized(
             comment: "The timer is up"
         )
-        content.body = "rest_is_over".localized(
-            comment: "Rest is over"
+        content.body = (phase == .rest ? "rest_is_over" : "exercise_is_over").localized(
+            comment: phase == .rest ? "Rest is over" : "Exercise is over"
         )
         content.sound = .default
         
@@ -226,7 +234,7 @@ final class RestTimerManager {
         )
         
         let request = UNNotificationRequest(
-            identifier: "rest-timer",
+            identifier: "workout-timer",
             content: content,
             trigger: trigger
         )
@@ -243,7 +251,7 @@ final class RestTimerManager {
     private func cancelPendingNotifications() {
         UNUserNotificationCenter.current()
             .removePendingNotificationRequests(
-                withIdentifiers: ["rest-timer"]
+                withIdentifiers: ["workout-timer"]
             )
     }
     
@@ -299,7 +307,7 @@ final class RestTimerManager {
         }
         
         let attributes = TimerWidgetAttributes(
-            timerType: "rest"
+            timerType: phase == .rest ? "rest" : "exercise"
         )
         
         let now = Date()
@@ -312,7 +320,7 @@ final class RestTimerManager {
             totalDuration: duration,
             currentSet: currentSetIndex + 1,
             totalSets: totalSets,
-            isResting: true,
+            isResting: phase == .rest,
             isRunning: true,
             startTime: now,
             endTime: endTime
@@ -346,10 +354,10 @@ final class RestTimerManager {
         let state =
         TimerWidgetAttributes.ContentState(
             timeRemaining: duration,
-            totalDuration: durationAsTimeInterval(restDuration),
+            totalDuration: durationAsTimeInterval(totalDuration),
             currentSet: currentSetIndex + 1,
             totalSets: totalSets,
-            isResting: isResting,
+            isResting: phase == .rest,
             isRunning: !isPaused,
             startTime: isPaused ? nil : now,
             endTime: endTime
@@ -373,7 +381,7 @@ final class RestTimerManager {
         let state =
         TimerWidgetAttributes.ContentState(
             timeRemaining: 0,
-            totalDuration: durationAsTimeInterval(restDuration),
+            totalDuration: durationAsTimeInterval(totalDuration),
             currentSet: currentSetIndex + 1,
             totalSets: totalSets,
             isResting: false,
