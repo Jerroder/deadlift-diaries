@@ -252,12 +252,20 @@ struct SetProgressView: View {
             Text("remaining_x".localized(with: displayTimeString, comment: "Remaining: x"))
                 .font(.title)
             
-            if #available(iOS 26.0, *) {
-                actionButton()
-                    .buttonStyle(.glassProminent)
-            } else {
-                actionButton()
-                    .buttonStyle(.borderedProminent)
+            HStack(spacing: 48) {
+                if #available(iOS 26.0, *) {
+                    resetButton()
+                        .buttonStyle(.glass)
+                    
+                    actionButton()
+                        .buttonStyle(.glassProminent)
+                } else {
+                    resetButton()
+                        .buttonStyle(.bordered)
+                    
+                    actionButton()
+                        .buttonStyle(.borderedProminent)
+                }
             }
         }
         .onAppear {
@@ -266,6 +274,13 @@ struct SetProgressView: View {
             }
             
             currentSetIndex = restoredSetIndex
+        }
+    }
+    
+    @ViewBuilder
+    private func resetButton() -> some View {
+        Button("Reset") {
+            resetProgress()
         }
     }
     
@@ -346,6 +361,24 @@ struct SetProgressView: View {
             }
             
             exercise.beforeNextCompleted.toggle()
+        }
+    }
+    
+    private func resetProgress() {
+        workoutTimer.stop()
+        
+        withTransaction(Transaction(animation: nil)) {
+            currentSetIndex = 0
+            
+            for set in sets {
+                set.completed = false
+            }
+            
+            exercise.beforeNextCompleted = false
+            
+            if !isTimeBased {
+                completeCurrentSet()
+            }
         }
     }
     
