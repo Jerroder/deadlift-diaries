@@ -50,6 +50,8 @@ struct ExerciseCard: View {
             
             if isExpanded {
                 SetProgressView(exercise: exercise)
+                    .contentShape(Rectangle())
+                    .onTapGesture { }
             }
         }
     }
@@ -132,6 +134,8 @@ struct SupersetCard: View {
             
             if isExpanded {
                 SetProgressView(exercise: first)
+                    .contentShape(Rectangle())
+                    .onTapGesture { }
             }
         }
     }
