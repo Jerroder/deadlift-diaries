@@ -252,6 +252,7 @@ struct CreateExerciseView: View {
 }
 
 enum ExpandableTimeField: Equatable {
+    case duration
     case rest
     case countdown
 }
@@ -273,8 +274,8 @@ struct AddExerciseView: View {
     @State private var sets: Int = 3
     @State private var reps: Int = 8
     @State private var distance: Int = 0
-    @State private var restSeconds: Int = 150
-    @State private var timeBeforeNext: Int = 15
+    @State private var restSeconds: Int
+    @State private var timeBeforeNext: Int
     @State private var weight: Double?
     
     @State private var expandedTimeField: ExpandableTimeField?
@@ -282,6 +283,22 @@ struct AddExerciseView: View {
     @State private var exerciseToEdit: Exercise?
     
     @FocusState private var focusedField: FocusableField?
+    
+    private static let defaultRestSeconds = 120
+    private static let defaultTimeBeforeNext = 120
+    
+    private static let lastUsedRestSecondsKey = "lastUsedRestSeconds"
+    private static let lastUsedTimeBeforeNextKey = "lastUsedTimeBeforeNext"
+    
+    private static var lastUsedRestSeconds: Int {
+        let value = UserDefaults.standard.integer(forKey: lastUsedRestSecondsKey)
+        return value > 0 ? value : defaultRestSeconds
+    }
+    
+    private static var lastUsedTimeBeforeNext: Int {
+        let value = UserDefaults.standard.integer(forKey: lastUsedTimeBeforeNextKey)
+        return value > 0 ? value : defaultTimeBeforeNext
+    }
     
     init(mode: AddExerciseMode, onAdd: @escaping (WorkoutExercise) -> Void) {
         self.mode = mode
@@ -292,9 +309,12 @@ struct AddExerciseView: View {
             _sets = State(initialValue: workoutExercise.targetSets)
             _reps = State(initialValue: workoutExercise.targetReps)
             _distance = State(initialValue: workoutExercise.targetDistance)
-            _restSeconds = State(initialValue: workoutExercise.restSeconds ?? 150)
-            _timeBeforeNext = State(initialValue: workoutExercise.timeBeforeNext ?? 15)
+            _restSeconds = State(initialValue: workoutExercise.restSeconds ?? Self.lastUsedRestSeconds)
+            _timeBeforeNext = State(initialValue: workoutExercise.timeBeforeNext ?? Self.lastUsedTimeBeforeNext)
             _weight = State(initialValue: workoutExercise.targetWeight)
+        } else {
+            _restSeconds = State(initialValue: Self.lastUsedRestSeconds)
+            _timeBeforeNext = State(initialValue: Self.lastUsedTimeBeforeNext)
         }
     }
     
@@ -378,11 +398,11 @@ struct AddExerciseView: View {
                                         if exercise.isTimeBased {
                                             Text("Time")
                                                 .font(.caption)
-                                                .foregroundStyle(.secondary)
+                                                .foregroundStyle(.primary.opacity(0.7))
                                         } else if exercise.isDistanceBased {
                                             Text("Distance")
                                                 .font(.caption)
-                                                .foregroundStyle(.secondary)
+                                                .foregroundStyle(.primary.opacity(0.7))
                                         }
                                     }
                                 }
@@ -429,13 +449,28 @@ struct AddExerciseView: View {
                         }
                         
                         if selectedExercise.isTimeBased {
-                            Stepper(value: $reps, in: 1...3600) {
+                            Button {
+                                toggleTimeField(.duration)
+                            } label: {
                                 HStack {
-                                    Text("Duration")
+                                    HStack(spacing: 4) {
+                                        Text("Duration")
+                                        Text(formattedDuration(reps))
+                                            .font(.subheadline)
+                                            .foregroundColor(Color(UIColor.secondaryLabel))
+                                        Image(systemName: expandedTimeField == .duration ? "chevron.up" : "chevron.down")
+                                            .font(.caption)
+                                    }
+                                    .fixedSize()
+                                    
                                     Spacer()
-                                    Text(formattedDuration(reps))
-                                        .foregroundStyle(.secondary)
                                 }
+                                .contentShape(Rectangle())
+                            }
+                            .buttonStyle(.plain)
+                            
+                            if expandedTimeField == .duration {
+                                DurationWheelPicker(totalSeconds: $reps)
                             }
                         } else if selectedExercise.isDistanceBased {
                             HStack {
@@ -583,6 +618,7 @@ struct AddExerciseView: View {
                 timeBeforeNext: timeBeforeNext
             )
             
+            persistLastUsedTimings()
             onAdd(workoutExercise)
             
         case .superset(let baseExercise):
@@ -608,10 +644,16 @@ struct AddExerciseView: View {
             workoutExercise.restSeconds = restSeconds
             workoutExercise.timeBeforeNext = timeBeforeNext
             
+            persistLastUsedTimings()
             onAdd(workoutExercise)
         }
         
         dismiss()
+    }
+    
+    private func persistLastUsedTimings() {
+        UserDefaults.standard.set(restSeconds, forKey: Self.lastUsedRestSecondsKey)
+        UserDefaults.standard.set(timeBeforeNext, forKey: Self.lastUsedTimeBeforeNextKey)
     }
     
     // MARK: - Expandable Time Fields
@@ -1019,7 +1061,7 @@ struct CreateWorkoutTemplateView: View {
                                 Spacer()
                                 
                                 Text(selectedTrainingBlock?.name ?? "None")
-                                    .foregroundStyle(.secondary)
+                                    .foregroundStyle(.primary)
                             }
                         }
                     }
@@ -1415,13 +1457,15 @@ struct AddWorkoutView: View {
                                     searchText = ""
                                 } label: {
                                     VStack(alignment: .leading, spacing: 4) {
-                                        HStack(spacing: 4) {
+                                        HStack(alignment: .firstTextBaseline, spacing: 4) {
                                             Text(template.name)
+                                                .font(.headline)
                                                 .foregroundStyle(.primary)
                                             
                                             if let trainingBlock = template.trainingBlock {
                                                 Text("(\(trainingBlock.name))")
-                                                    .foregroundStyle(.secondary)
+                                                    .font(.caption)
+                                                    .foregroundStyle(.primary)
                                             }
                                         }
                                         
@@ -1430,7 +1474,7 @@ struct AddWorkoutView: View {
                                         if !exerciseNames.isEmpty {
                                             Text(exerciseNames)
                                                 .font(.caption)
-                                                .foregroundStyle(.secondary)
+                                                .foregroundStyle(.primary.opacity(0.7))
                                                 .lineLimit(2)
                                         }
                                     }
