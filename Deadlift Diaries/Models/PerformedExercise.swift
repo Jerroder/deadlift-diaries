@@ -58,6 +58,31 @@ final class PerformedExercise {
         }
     }
     
+    init(
+        exerciseName: String,
+        targetSets: Int,
+        targetReps: Int,
+        targetDistance: Int = 0,
+        targetWeight: Double? = nil,
+        orderIndex: Int,
+        supersetID: UUID? = nil,
+        supersetPosition: SupersetPosition? = nil,
+        elapsed: Double = 0,
+        beforeNextCompleted: Bool = false
+    ) {
+        self.exerciseName = exerciseName
+        self.targetSets = targetSets
+        self.targetReps = targetReps
+        self.targetDistance = targetDistance
+        self.targetWeight = targetWeight
+        self.orderIndex = orderIndex
+        self.supersetID = supersetID
+        self.supersetPosition = supersetPosition
+        self.elapsed = elapsed
+        self.beforeNextCompleted = beforeNextCompleted
+        self.sets = []
+    }
+    
     func syncTargets(from workoutExercise: WorkoutExercise, modelContext: ModelContext) {
         let isDistanceBased = workoutExercise.exercise?.isDistanceBased ?? false
         

@@ -27,7 +27,6 @@ private func formattedDuration(_ seconds: Int) -> String {
     return "\(minutes)m \(remaining)s"
 }
 
-// Formats the reps/duration/distance target of a workout exercise, depending on its type.
 private func formattedTargetValue(for workoutExercise: WorkoutExercise) -> String {
     guard let exercise = workoutExercise.exercise else {
         return "\(workoutExercise.targetReps)"
@@ -1475,7 +1474,7 @@ struct AddWorkoutView: View {
                             Spacer()
                             
                             Text("\(numberOfWeeks) \(numberOfWeeks == 1 ? "week" : "weeks")")
-                            .foregroundStyle(.secondary)
+                                .foregroundStyle(.secondary)
                         }
                     }
                     
@@ -1807,17 +1806,17 @@ struct EditScheduledWorkoutView: View {
 
 struct CalendarView: View {
     @Environment(\.modelContext) private var modelContext
-
+    
     @Query(sort: \ScheduledWorkout.scheduledDate)
     private var scheduledWorkouts: [ScheduledWorkout]
-
+    
     @State private var displayedMonth: Date = Date()
     @State private var selectedDate: Date = Date()
-
+    
     @State private var showAddWorkoutSheet: Bool = false
     @State private var showingSettingsSheet: Bool = false
     @State private var workoutToEdit: ScheduledWorkout?
-
+    
     private var calendar: Calendar {
         var calendar = Calendar.current
         calendar.firstWeekday = true ? 2 : 1 // change true to false to set Sunday as first day of the week
@@ -1833,25 +1832,25 @@ struct CalendarView: View {
     private var selectedDayWorkouts: [ScheduledWorkout] {
         workouts(on: selectedDate)
     }
-
+    
     var body: some View {
         NavigationStack {
             VStack(spacing: 0) {
-
+                
                 // MARK: - Month header
-
+                
                 monthHeader
-
+                
                 // MARK: - Calendar
-
+                
                 calendarGrid
                     .padding(.horizontal)
                     .padding(.bottom, 12)
-
+                
                 Divider()
-
+                
                 // MARK: - Selected day
-
+                
                 selectedDayView
             }
             .navigationTitle("Calendar")
@@ -1888,9 +1887,9 @@ struct CalendarView: View {
             EditScheduledWorkoutView(scheduledWorkout: scheduledWorkout)
         }
     }
-
+    
     // MARK: - Month Header
-
+    
     private var monthHeader: some View {
         HStack {
             Button {
@@ -1899,14 +1898,14 @@ struct CalendarView: View {
                 Image(systemName: "chevron.left")
                     .font(.headline)
             }
-
+            
             Spacer()
-
+            
             Text(displayedMonth.formatted(.dateTime.month(.wide).year()))
                 .font(.headline)
-
+            
             Spacer()
-
+            
             Button {
                 changeMonth(by: 1)
             } label: {
@@ -1917,14 +1916,14 @@ struct CalendarView: View {
         .padding(.horizontal)
         .padding(.vertical, 12)
     }
-
+    
     // MARK: - Calendar Grid
-
+    
     private var calendarGrid: some View {
         VStack(spacing: 8) {
-
+            
             weekdayHeader
-
+            
             LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 4), count: 7), spacing: 8) {
                 ForEach(Array(monthDays.enumerated()), id: \.offset) { _, date in
                     if let date {
@@ -1937,7 +1936,7 @@ struct CalendarView: View {
             }
         }
     }
-
+    
     private var weekdayHeader: some View {
         LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 7)) {
             ForEach(weekdaySymbols, id: \.self) { day in
@@ -1948,22 +1947,22 @@ struct CalendarView: View {
             }
         }
     }
-
+    
     // MARK: - Day Cell
-
+    
     private func dayCell(_ date: Date) -> some View {
         let isSelected = calendar.isDate(date, inSameDayAs: selectedDate)
-
+        
         let isToday = calendar.isDateInToday(date)
-
+        
         let isCurrentMonth = calendar.isDate(date, equalTo: displayedMonth, toGranularity: .month)
-
+        
         let workouts = workouts(on: date)
-
+        
         return Button {
             withAnimation(.easeInOut(duration: 0.15)) {
                 selectedDate = date
-
+                
                 // Optional: automatically move to that month
                 if !isCurrentMonth {
                     displayedMonth = date
@@ -1987,7 +1986,7 @@ struct CalendarView: View {
                             .stroke(Color.accentColor, lineWidth: 2)
                     }
                 }
-
+                
                 HStack(spacing: 3) {
                     ForEach(workouts.prefix(3), id: \.id) { _ in
                         Circle()
@@ -2002,9 +2001,9 @@ struct CalendarView: View {
         }
         .buttonStyle(.plain)
     }
-
+    
     // MARK: - Selected Day
-
+    
     private var selectedDayView: some View {
         VStack(alignment: .leading, spacing: 0) {
             HStack(alignment: .top) {
@@ -2077,87 +2076,87 @@ struct CalendarView: View {
         modelContext.delete(scheduledWorkout)
         try? modelContext.save()
     }
-
+    
     private var emptyDayView: some View {
         VStack(spacing: 12) {
             Spacer()
-
+            
             Image(systemName: "figure.run")
                 .font(.system(size: 32))
                 .foregroundStyle(.secondary)
-
+            
             Text("Rest Day")
                 .font(.headline)
-
+            
             Text("No workout scheduled")
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
-
+            
             Button("Add Workout", systemImage: "plus") {
                 showAddWorkoutSheet = true
             }
             .buttonStyle(.bordered)
-
+            
             Spacer()
         }
         .frame(maxWidth: .infinity)
     }
-
+    
     // MARK: - Date Helpers
-
+    
     private var monthDays: [Date?] {
         guard let monthInterval = calendar.dateInterval(of: .month, for: displayedMonth) else {
             return []
         }
-
+        
         let monthStart = monthInterval.start
-
+        
         // Number of blank cells before the first day of the month.
         let firstWeekday = calendar.component(.weekday, from: monthStart)
-
+        
         let leadingEmptyDays = (firstWeekday - calendar.firstWeekday + 7) % 7
-
+        
         let daysInMonth = calendar.range(of: .day, in: .month, for: displayedMonth)?.count ?? 0
-
+        
         // Total number of cells needed to complete the final week.
         let totalDays = leadingEmptyDays + daysInMonth
         let trailingDays = (7 - (totalDays % 7)) % 7
-
+        
         let totalCells = totalDays + trailingDays
-
+        
         var dates: [Date?] = []
-
+        
         // Generate the actual dates surrounding the month.
         for offset in 0..<totalCells {
             let dayOffset = offset - leadingEmptyDays
-
+            
             if let date = calendar.date(byAdding: .day, value: dayOffset, to: monthStart) {
                 dates.append(date)
             }
         }
-
+        
         return dates
     }
-
+    
     var weekdaySymbols: [String] {
         let symbols = calendar.shortWeekdaySymbols
         let startIndex = calendar.firstWeekday - 1
-
+        
         return Array(symbols[startIndex...]) + Array(symbols[..<startIndex])
     }
-
+    
     // MARK: - Navigation
-
+    
     private func changeMonth(by value: Int) {
         guard let newMonth = calendar.date(byAdding: .month, value: value, to: displayedMonth) else {
             return
         }
-
+        
         withAnimation(.easeInOut(duration: 0.2)) {
             displayedMonth = newMonth
         }
     }
-
+    
     private func goToToday() {
         withAnimation(.easeInOut(duration: 0.2)) {
             displayedMonth = Date()
@@ -2171,26 +2170,26 @@ struct CalendarView: View {
 private extension Color {
     init(hex: String) {
         let hex = hex.trimmingCharacters(in: CharacterSet.alphanumerics.inverted)
-
+        
         var int: UInt64 = 0
         Scanner(string: hex).scanHexInt64(&int)
-
+        
         let r: Double
         let g: Double
         let b: Double
-
+        
         switch hex.count {
         case 6:
             r = Double((int >> 16) & 0xFF) / 255
             g = Double((int >> 8) & 0xFF) / 255
             b = Double(int & 0xFF) / 255
-
+            
         default:
             r = 0
             g = 0
             b = 0
         }
-
+        
         self.init(
             red: r,
             green: g,
