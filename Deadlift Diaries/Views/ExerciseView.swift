@@ -189,8 +189,14 @@ struct WorkoutSessionView: View {
     @Bindable var session: WorkoutSession
     
     @Environment(\.modelContext) private var modelContext
+    @Environment(\.editMode) private var editMode
     
     @State private var expandedExerciseID: UUID?
+    @State private var showAddExerciseSheet: Bool = false
+    
+    private var nextExerciseOrder: Int {
+        (session.exercises?.map(\.orderIndex).max() ?? -1) + 1
+    }
     
     private var workoutRows: [WorkoutSessionRow] {
         let exercises = (session.exercises ?? [])
@@ -265,6 +271,58 @@ struct WorkoutSessionView: View {
                 EditButton()
             }
         }
+        .safeAreaInset(edge: .bottom, alignment: .trailing) {
+            if editMode?.wrappedValue.isEditing != true {
+                if #available(iOS 26.0, *) {
+                    Button(action: {
+                        showAddExerciseSheet = true
+                    }) {
+                        Image(systemName: "plus")
+                            .font(.system(size: 22))
+                            .padding([.leading, .trailing], 0)
+                            .padding([.top, .bottom], 6)
+                    }
+                    .padding()
+                    .buttonStyle(.glassProminent)
+                } else {
+                    Button(action: {
+                        showAddExerciseSheet = true
+                    }) {
+                        Image(systemName: "plus")
+                            .font(.system(size: 22))
+                            .padding([.leading, .trailing], 0)
+                            .padding([.top, .bottom], 6)
+                    }
+                    .padding()
+                    .buttonStyle(.borderedProminent)
+                    .clipShape(Circle())
+                }
+            }
+        }
+        .sheet(isPresented: $showAddExerciseSheet) {
+            AddExerciseView(mode: .normal(order: nextExerciseOrder)) { workoutExercise in
+                addExerciseToSession(workoutExercise)
+            }
+        }
+    }
+    
+    // Adds the exercise both to this session and to the underlying workout template,
+    // so it also shows up when the scheduled workout is viewed from the CalendarView.
+    private func addExerciseToSession(_ workoutExercise: WorkoutExercise) {
+        if let template = session.scheduledWorkout?.workoutTemplate {
+            workoutExercise.workoutTemplate = template
+        }
+        
+        modelContext.insert(workoutExercise)
+        
+        let performedExercise = PerformedExercise(from: workoutExercise, orderIndex: workoutExercise.order)
+        performedExercise.sourceExercise = workoutExercise
+        performedExercise.workoutSession = session
+        
+        modelContext.insert(performedExercise)
+        session.exercises?.append(performedExercise)
+        
+        try? modelContext.save()
     }
     
     private func toggleExercise(_ exercise: PerformedExercise) {

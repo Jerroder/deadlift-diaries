@@ -9,6 +9,7 @@ import SwiftUI
 enum AddExerciseMode {
     case normal(order: Int)
     case superset(with: WorkoutExercise)
+    case edit(WorkoutExercise)
 }
 
 private func formattedDuration(_ seconds: Int) -> String {
@@ -137,20 +138,29 @@ struct CreateExerciseView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var modelContext
     
+    let existingExercise: Exercise?
     let initialName: String
     let onCreate: (Exercise) -> Void
     
     @State private var name: String
-    @State private var isTimeBased: Bool = false
-    @State private var isDistanceBased: Bool = false
-    @State private var notes: String = ""
+    @State private var isTimeBased: Bool
+    @State private var isDistanceBased: Bool
+    @State private var notes: String
     
     @FocusState private var focusedField: FocusableField?
     
-    init(initialName: String = "", onCreate: @escaping (Exercise) -> Void) {
+    private var isEditing: Bool {
+        existingExercise != nil
+    }
+    
+    init(existingExercise: Exercise? = nil, initialName: String = "", onCreate: @escaping (Exercise) -> Void) {
+        self.existingExercise = existingExercise
         self.initialName = initialName
         self.onCreate = onCreate
-        _name = State(initialValue: initialName)
+        _name = State(initialValue: existingExercise?.name ?? initialName)
+        _isTimeBased = State(initialValue: existingExercise?.isTimeBased ?? false)
+        _isDistanceBased = State(initialValue: existingExercise?.isDistanceBased ?? false)
+        _notes = State(initialValue: existingExercise?.notes ?? "")
     }
     
     var body: some View {
@@ -183,9 +193,19 @@ struct CreateExerciseView: View {
                 fields: [.exerciseName, .notes],
                 focusedField: $focusedField
             )
-            .navigationTitle("New Exercise")
+            .navigationTitle(isEditing ? "Edit Exercise" : "New Exercise")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
+                // Only presented as a sheet when editing; when pushed via a
+                // NavigationLink to create a new exercise, the back arrow already dismisses it.
+                if isEditing {
+                    ToolbarItem(placement: .cancellationAction) {
+                        Button("", systemImage: "xmark") {
+                            dismiss()
+                        }
+                    }
+                }
+                
                 ToolbarItem(placement: .confirmationAction) {
                     Button("", systemImage: "checkmark") {
                         createExercise()
@@ -208,13 +228,30 @@ struct CreateExerciseView: View {
             return
         }
         
+        let trimmedNotes = notes.trimmingCharacters(in: .whitespacesAndNewlines)
+        
+        if let existingExercise {
+            existingExercise.name = trimmedName
+            existingExercise.isTimeBased = isTimeBased
+            existingExercise.isDistanceBased = isDistanceBased
+            existingExercise.notes = trimmedNotes
+            
+            do {
+                try modelContext.save()
+                onCreate(existingExercise)
+                dismiss()
+            } catch {
+                print("Failed to update exercise: \(error)")
+            }
+            
+            return
+        }
+        
         let exercise = Exercise(
             name: trimmedName,
             isTimeBased: isTimeBased,
             isDistanceBased: isDistanceBased,
-            notes: notes.trimmingCharacters(
-                in: .whitespacesAndNewlines
-            )
+            notes: trimmedNotes
         )
         
         modelContext.insert(exercise)
@@ -257,7 +294,24 @@ struct AddExerciseView: View {
     
     @State private var expandedTimeField: ExpandableTimeField?
     
+    @State private var exerciseToEdit: Exercise?
+    
     @FocusState private var focusedField: FocusableField?
+    
+    init(mode: AddExerciseMode, onAdd: @escaping (WorkoutExercise) -> Void) {
+        self.mode = mode
+        self.onAdd = onAdd
+        
+        if case let .edit(workoutExercise) = mode {
+            _selectedExercise = State(initialValue: workoutExercise.exercise)
+            _sets = State(initialValue: workoutExercise.targetSets)
+            _reps = State(initialValue: workoutExercise.targetReps)
+            _distance = State(initialValue: workoutExercise.targetDistance)
+            _restSeconds = State(initialValue: workoutExercise.restSeconds ?? 150)
+            _timeBeforeNext = State(initialValue: workoutExercise.timeBeforeNext ?? 15)
+            _weight = State(initialValue: workoutExercise.targetWeight)
+        }
+    }
     
     private var filteredExercises: [Exercise] {
         let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -273,10 +327,21 @@ struct AddExerciseView: View {
     
     private var isNormalMode: Bool {
         switch mode {
-        case .normal:
+        case .normal, .edit:
             return true
         case .superset:
             return false
+        }
+    }
+    
+    private var navigationTitleText: String {
+        switch mode {
+        case .normal:
+            return "Add Exercise"
+        case .superset:
+            return "Add Superset Exercise"
+        case .edit:
+            return "Edit Exercise"
         }
     }
     
@@ -335,6 +400,20 @@ struct AddExerciseView: View {
                                                 .foregroundStyle(.secondary)
                                         }
                                     }
+                                }
+                                .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                                    Button(role: .destructive) {
+                                        deleteExercise(exercise)
+                                    } label: {
+                                        Label("Delete", systemImage: "trash")
+                                    }
+                                    
+                                    Button {
+                                        exerciseToEdit = exercise
+                                    } label: {
+                                        Label("Edit", systemImage: "pencil")
+                                    }
+                                    .tint(.blue)
                                 }
                             }
                         }
@@ -469,7 +548,7 @@ struct AddExerciseView: View {
                 }
             }
             .withTextFieldToolbarDone(focusedField: $focusedField)
-            .navigationTitle(isNormalMode ? "Add Exercise" : "Add Superset Exercise")
+            .navigationTitle(navigationTitleText)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
@@ -487,6 +566,16 @@ struct AddExerciseView: View {
                 }
             }
         }
+        .sheet(item: $exerciseToEdit) { exercise in
+            CreateExerciseView(existingExercise: exercise) { _ in }
+        }
+    }
+    
+    // MARK: - Delete
+    
+    private func deleteExercise(_ exercise: Exercise) {
+        modelContext.delete(exercise)
+        try? modelContext.save()
     }
     
     // MARK: - Add
@@ -522,6 +611,17 @@ struct AddExerciseView: View {
                 restSeconds: baseExercise.restSeconds,
                 timeBeforeNext: nil
             )
+            
+            onAdd(workoutExercise)
+            
+        case .edit(let workoutExercise):
+            workoutExercise.exercise = exercise
+            workoutExercise.targetSets = sets
+            workoutExercise.targetReps = exercise.isDistanceBased ? 0 : reps
+            workoutExercise.targetDistance = exercise.isDistanceBased ? distance : 0
+            workoutExercise.targetWeight = weight
+            workoutExercise.restSeconds = restSeconds
+            workoutExercise.timeBeforeNext = timeBeforeNext
             
             onAdd(workoutExercise)
         }
@@ -611,12 +711,24 @@ struct CreateTrainingBlockView: View {
     
     @Query private var existingBlocks: [TrainingBlock]
     
+    let existingBlock: TrainingBlock?
     let onCreate: (TrainingBlock) -> Void
     
-    @State private var name: String = ""
-    @State private var notes: String = ""
+    @State private var name: String
+    @State private var notes: String
     
     @FocusState private var focusedField: FocusableField?
+    
+    private var isEditing: Bool {
+        existingBlock != nil
+    }
+    
+    init(existingBlock: TrainingBlock? = nil, onCreate: @escaping (TrainingBlock) -> Void) {
+        self.existingBlock = existingBlock
+        self.onCreate = onCreate
+        _name = State(initialValue: existingBlock?.name ?? "")
+        _notes = State(initialValue: existingBlock?.notes ?? "")
+    }
     
     var body: some View {
         NavigationStack {
@@ -639,7 +751,7 @@ struct CreateTrainingBlockView: View {
                 fields: [.mesocycleName, .notes],
                 focusedField: $focusedField
             )
-            .navigationTitle("New Program")
+            .navigationTitle(isEditing ? "Edit Program" : "New Program")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
@@ -670,7 +782,23 @@ struct CreateTrainingBlockView: View {
             return
         }
         
-
+        let trimmedNotes = notes.trimmingCharacters(in: .whitespacesAndNewlines)
+        
+        if let existingBlock {
+            existingBlock.name = trimmedName
+            existingBlock.notes = trimmedNotes
+            
+            do {
+                try modelContext.save()
+                onCreate(existingBlock)
+                dismiss()
+            } catch {
+                print("Failed to update training block: \(error)")
+            }
+            
+            return
+        }
+        
         if let existing = existingBlocks.first(where: {
             $0.name.localizedCaseInsensitiveCompare(trimmedName) == .orderedSame
         }) {
@@ -683,7 +811,7 @@ struct CreateTrainingBlockView: View {
             name: trimmedName,
             startDate: Date(),
             orderIndex: existingBlocks.count,
-            notes: notes.trimmingCharacters(in: .whitespacesAndNewlines)
+            notes: trimmedNotes
         )
         
         modelContext.insert(trainingBlock)
@@ -716,17 +844,26 @@ enum TemplateExerciseRow: Identifiable {
 private struct SupersetExerciseRow: View {
     let first: WorkoutExercise
     let second: WorkoutExercise
+    let onEdit: (WorkoutExercise) -> Void
     let onUnlink: () -> Void
     
     var body: some View {
         HStack(alignment: .center, spacing: 12) {
             exerciseInfo(first, alignment: .leading)
+                .contentShape(Rectangle())
+                .onTapGesture {
+                    onEdit(first)
+                }
             
             Image(systemName: "link")
                 .font(.caption)
                 .foregroundStyle(.secondary)
             
             exerciseInfo(second, alignment: .trailing)
+                .contentShape(Rectangle())
+                .onTapGesture {
+                    onEdit(second)
+                }
         }
         .swipeActions(edge: .leading, allowsFullSwipe: false) {
             Button {
@@ -755,10 +892,12 @@ struct CreateWorkoutTemplateView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var modelContext
     
+    let existingTemplate: WorkoutTemplate?
+    
     // MARK: - Workout
     
-    @State private var name: String = ""
-    @State private var notes: String = ""
+    @State private var name: String
+    @State private var notes: String
     
     // MARK: - Program
     
@@ -767,17 +906,37 @@ struct CreateWorkoutTemplateView: View {
     
     @State private var selectedTrainingBlock: TrainingBlock?
     @State private var showCreateTrainingBlockSheet: Bool = false
+    @State private var trainingBlockToEdit: TrainingBlock?
+    @State private var showProgramOptions: Bool = false
     
     // MARK: - Exercises
     
-    @State private var workoutExercises: [WorkoutExercise] = []
+    @State private var workoutExercises: [WorkoutExercise]
+    @State private var exercisesToDelete: [WorkoutExercise] = []
     @State private var showAddExerciseSheet: Bool = false
     
     @State private var supersetBaseExercise: WorkoutExercise?
+    @State private var exerciseToEdit: WorkoutExercise?
     
     @FocusState private var focusedField: FocusableField?
     
     let onCreate: (WorkoutTemplate) -> Void
+    
+    private var isEditing: Bool {
+        existingTemplate != nil
+    }
+    
+    private let originalExerciseIDs: Set<UUID>
+    
+    init(existingTemplate: WorkoutTemplate? = nil, onCreate: @escaping (WorkoutTemplate) -> Void) {
+        self.existingTemplate = existingTemplate
+        self.onCreate = onCreate
+        _name = State(initialValue: existingTemplate?.name ?? "")
+        _notes = State(initialValue: existingTemplate?.notes ?? "")
+        _selectedTrainingBlock = State(initialValue: existingTemplate?.trainingBlock)
+        _workoutExercises = State(initialValue: existingTemplate?.exercises ?? [])
+        originalExerciseIDs = Set(existingTemplate?.exercises?.map(\.id) ?? [])
+    }
     
     var body: some View {
         NavigationStack {
@@ -798,47 +957,79 @@ struct CreateWorkoutTemplateView: View {
                 // MARK: - Program
                 
                 Section {
-                    Menu {
+                    if showProgramOptions {
                         Button {
-                            selectedTrainingBlock = nil
-                        } label: {
-                            if selectedTrainingBlock == nil {
-                                Label("No Program", systemImage: "checkmark")
-                            } else {
-                                Text("No Program")
+                            withAnimation {
+                                selectedTrainingBlock = nil
+                                showProgramOptions = false
                             }
-                        }
-                        
-                        if !trainingBlocks.isEmpty {
-                            Divider()
-                            
-                            ForEach(trainingBlocks) { block in
-                                Button {
-                                    selectedTrainingBlock = block
-                                } label: {
-                                    if selectedTrainingBlock?.id == block.id {
-                                        Label(block.name, systemImage: "checkmark")
-                                    } else {
-                                        Text(block.name)
-                                    }
+                        } label: {
+                            HStack {
+                                Text("No Program")
+                                    .foregroundStyle(.primary)
+                                
+                                Spacer()
+                                
+                                if selectedTrainingBlock == nil {
+                                    Image(systemName: "checkmark")
+                                        .foregroundStyle(.secondary)
                                 }
                             }
                         }
                         
-                        Divider()
-                        
-                        Button("Create New Program", systemImage: "plus") {
-                            showCreateTrainingBlockSheet = true
+                        ForEach(trainingBlocks) { block in
+                            HStack {
+                                Button {
+                                    withAnimation {
+                                        selectedTrainingBlock = block
+                                        showProgramOptions = false
+                                    }
+                                } label: {
+                                    HStack {
+                                        Text(block.name)
+                                            .foregroundStyle(.primary)
+                                        
+                                        Spacer()
+                                        
+                                        if selectedTrainingBlock?.id == block.id {
+                                            Image(systemName: "checkmark")
+                                                .foregroundStyle(.secondary)
+                                        }
+                                    }
+                                }
+                                .buttonStyle(.plain)
+                                
+                                Button {
+                                    trainingBlockToEdit = block
+                                } label: {
+                                    Image(systemName: "chevron.right")
+                                        .foregroundStyle(.secondary)
+                                }
+                                .buttonStyle(.borderless)
+                                .padding(.leading, 8)
+                            }
                         }
-                    } label: {
-                        HStack {
-                            Text("Program")
-                                .foregroundStyle(.primary)
-                            
-                            Spacer()
-                            
-                            Text(selectedTrainingBlock?.name ?? "None")
-                                .foregroundStyle(.secondary)
+                        
+                        Button {
+                            showCreateTrainingBlockSheet = true
+                        } label: {
+                            Label("Create New Program", systemImage: "plus")
+                        }
+                    } else {
+                        Button {
+                            withAnimation {
+                                showProgramOptions = true
+                            }
+                        } label: {
+                            HStack {
+                                Text("Program")
+                                    .foregroundStyle(.primary)
+                                
+                                Spacer()
+                                
+                                Text(selectedTrainingBlock?.name ?? "None")
+                                    .foregroundStyle(.secondary)
+                            }
                         }
                     }
                 } header: {
@@ -871,15 +1062,36 @@ struct CreateWorkoutTemplateView: View {
                                 }
                                 .buttonStyle(.borderless)
                             }
+                            .contentShape(Rectangle())
+                            .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                                Button(role: .destructive) {
+                                    delete(row)
+                                } label: {
+                                    Label("Delete", systemImage: "trash")
+                                }
+                                
+                                Button {
+                                    exerciseToEdit = workoutExercise
+                                } label: {
+                                    Label("Edit", systemImage: "pencil")
+                                }
+                                .tint(.blue)
+                            }
                             
                         case .superset(let first, let second):
-                            SupersetExerciseRow(first: first, second: second) {
+                            SupersetExerciseRow(first: first, second: second, onEdit: { exercise in
+                                exerciseToEdit = exercise
+                            }, onUnlink: {
                                 unlinkSuperset(first: first, second: second)
+                            })
+                            .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                                Button(role: .destructive) {
+                                    delete(row)
+                                } label: {
+                                    Label("Delete", systemImage: "trash")
+                                }
                             }
                         }
-                    }
-                    .onDelete { offsets in
-                        deleteRows(at: offsets)
                     }
                     
                     Button("Add Exercise", systemImage: "plus") {
@@ -894,9 +1106,19 @@ struct CreateWorkoutTemplateView: View {
                 fields: [.workoutName, .notes],
                 focusedField: $focusedField
             )
-            .navigationTitle("New Template")
+            .navigationTitle(isEditing ? "Edit Template" : "New Template")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
+                // Only presented as a sheet when editing; when pushed via a
+                // NavigationLink to create a new template, the back arrow already dismisses it.
+                if isEditing {
+                    ToolbarItem(placement: .cancellationAction) {
+                        Button("", systemImage: "xmark") {
+                            dismiss()
+                        }
+                    }
+                }
+                
                 ToolbarItem(placement: .confirmationAction) {
                     Button("", systemImage: "checkmark") {
                         createTemplate()
@@ -921,6 +1143,14 @@ struct CreateWorkoutTemplateView: View {
                 mode: .superset(with: baseExercise)
             ) { workoutExercise in
                 addSupersetExercise(workoutExercise, to: baseExercise)
+            }
+        }
+        .sheet(item: $exerciseToEdit) { workoutExercise in
+            AddExerciseView(mode: .edit(workoutExercise)) { _ in }
+        }
+        .sheet(item: $trainingBlockToEdit) { block in
+            CreateTrainingBlockView(existingBlock: block) { updated in
+                selectedTrainingBlock = updated
             }
         }
         .sheet(isPresented: $showCreateTrainingBlockSheet) {
@@ -992,31 +1222,29 @@ struct CreateWorkoutTemplateView: View {
         renumberExercises()
     }
     
-    private func deleteRows(at offsets: IndexSet) {
-        let rows = templateExerciseRows
-        var indicesToRemove: Set<Int> = []
-        
-        for offset in offsets {
-            switch rows[offset] {
-            case .single(let exercise):
-                if let index = workoutExercises.firstIndex(where: { $0.id == exercise.id }) {
-                    indicesToRemove.insert(index)
-                }
-                
-            case .superset(let first, let second):
-                if let index = workoutExercises.firstIndex(where: { $0.id == first.id }) {
-                    indicesToRemove.insert(index)
-                }
-                
-                if let index = workoutExercises.firstIndex(where: { $0.id == second.id }) {
-                    indicesToRemove.insert(index)
-                }
-            }
+    private func delete(_ row: TemplateExerciseRow) {
+        switch row {
+        case .single(let exercise):
+            remove(exercise)
+            
+        case .superset(let first, let second):
+            remove(first)
+            remove(second)
         }
         
-        workoutExercises.remove(atOffsets: IndexSet(indicesToRemove))
-        
         renumberExercises()
+    }
+    
+    private func remove(_ exercise: WorkoutExercise) {
+        if let index = workoutExercises.firstIndex(where: { $0.id == exercise.id }) {
+            workoutExercises.remove(at: index)
+        }
+        
+        // Exercises that were already persisted as part of the template being edited
+        // need to be explicitly deleted from the model context on save.
+        if originalExerciseIDs.contains(exercise.id) {
+            exercisesToDelete.append(exercise)
+        }
     }
     
     private func renumberExercises() {
@@ -1046,17 +1274,30 @@ struct CreateWorkoutTemplateView: View {
         
         let trimmedNotes = notes.trimmingCharacters(in: .whitespacesAndNewlines)
         
-        let workoutTemplate = WorkoutTemplate(name: trimmedName, notes: trimmedNotes.isEmpty ? nil : trimmedNotes)
-        workoutTemplate.trainingBlock = selectedTrainingBlock
+        let workoutTemplate = existingTemplate ?? WorkoutTemplate(name: trimmedName, notes: trimmedNotes.isEmpty ? nil : trimmedNotes)
         
-        for (index, workoutExercise) in workoutExercises.enumerated() {
-            workoutExercise.order = index
+        workoutTemplate.name = trimmedName
+        workoutTemplate.notes = trimmedNotes.isEmpty ? nil : trimmedNotes
+        workoutTemplate.trainingBlock = selectedTrainingBlock
+        workoutTemplate.updatedAt = Date()
+        
+        for exercise in exercisesToDelete {
+            modelContext.delete(exercise)
+        }
+        
+        // Keeps superset pairs sharing the same order value while assigning
+        // sequential order to every other row.
+        renumberExercises()
+        
+        for workoutExercise in workoutExercises {
             workoutExercise.workoutTemplate = workoutTemplate
             
             modelContext.insert(workoutExercise)
         }
         
-        modelContext.insert(workoutTemplate)
+        if existingTemplate == nil {
+            modelContext.insert(workoutTemplate)
+        }
         
         do {
             try modelContext.save()
@@ -1064,11 +1305,10 @@ struct CreateWorkoutTemplateView: View {
             onCreate(workoutTemplate)
             dismiss()
         } catch {
-            print("Failed to create workout template: \(error)")
+            print("Failed to save workout template: \(error)")
         }
     }
 }
-
 
 struct AddWorkoutView: View {
     @Environment(\.dismiss) private var dismiss
@@ -1081,6 +1321,7 @@ struct AddWorkoutView: View {
     
     @State private var searchText: String = ""
     @State private var selectedTemplate: WorkoutTemplate?
+    @State private var templateToEdit: WorkoutTemplate?
     
     // MARK: - Schedule
     
@@ -1117,6 +1358,20 @@ struct AddWorkoutView: View {
     
     private var trainingBlock: TrainingBlock? {
         selectedTemplate?.trainingBlock
+    }
+    
+    private func exerciseNamesSummary(for template: WorkoutTemplate) -> String {
+        let exercises = (template.exercises ?? []).sorted {
+            if $0.order != $1.order {
+                return $0.order < $1.order
+            }
+            
+            return ($0.supersetPosition?.rawValue ?? 0) < ($1.supersetPosition?.rawValue ?? 0)
+        }
+        
+        return exercises
+            .map { $0.exercise?.name ?? "Unknown Exercise" }
+            .joined(separator: ", ")
     }
     
     var body: some View {
@@ -1165,22 +1420,39 @@ struct AddWorkoutView: View {
                                     searchText = ""
                                 } label: {
                                     VStack(alignment: .leading, spacing: 4) {
-                                        Text(template.name)
-                                            .foregroundStyle(.primary)
-                                        
-                                        if let trainingBlock = template.trainingBlock {
-                                            Text(trainingBlock.name)
-                                                .font(.caption)
-                                                .foregroundStyle(.secondary)
+                                        HStack(spacing: 4) {
+                                            Text(template.name)
+                                                .foregroundStyle(.primary)
+                                            
+                                            if let trainingBlock = template.trainingBlock {
+                                                Text("(\(trainingBlock.name))")
+                                                    .foregroundStyle(.secondary)
+                                            }
                                         }
                                         
-                                        if let notes = template.notes {
-                                            Text(notes)
+                                        let exerciseNames = exerciseNamesSummary(for: template)
+                                        
+                                        if !exerciseNames.isEmpty {
+                                            Text(exerciseNames)
                                                 .font(.caption)
                                                 .foregroundStyle(.secondary)
                                                 .lineLimit(2)
                                         }
                                     }
+                                }
+                                .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                                    Button(role: .destructive) {
+                                        deleteTemplate(template)
+                                    } label: {
+                                        Label("Delete", systemImage: "trash")
+                                    }
+                                    
+                                    Button {
+                                        templateToEdit = template
+                                    } label: {
+                                        Label("Edit", systemImage: "pencil")
+                                    }
+                                    .tint(.blue)
                                 }
                             }
                         }
@@ -1266,6 +1538,18 @@ struct AddWorkoutView: View {
                 }
             }
         }
+        .sheet(item: $templateToEdit) { template in
+            CreateWorkoutTemplateView(existingTemplate: template) { updated in
+                selectedTemplate = updated
+            }
+        }
+    }
+    
+    // MARK: - Delete
+    
+    private func deleteTemplate(_ template: WorkoutTemplate) {
+        modelContext.delete(template)
+        try? modelContext.save()
     }
     
     // MARK: - Save
