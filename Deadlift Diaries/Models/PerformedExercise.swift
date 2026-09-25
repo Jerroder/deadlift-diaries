@@ -57,4 +57,47 @@ final class PerformedExercise {
             )
         }
     }
+    
+    func syncTargets(from workoutExercise: WorkoutExercise, modelContext: ModelContext) {
+        let isDistanceBased = workoutExercise.exercise?.isDistanceBased ?? false
+        
+        exerciseName = workoutExercise.exercise?.name ?? exerciseName
+        targetSets = workoutExercise.targetSets
+        targetReps = workoutExercise.targetReps
+        targetDistance = workoutExercise.targetDistance
+        targetWeight = workoutExercise.targetWeight
+        
+        var currentSets = (sets ?? []).sorted { $0.setNumber < $1.setNumber }
+        
+        for set in currentSets {
+            set.weight = workoutExercise.targetWeight
+            set.reps = isDistanceBased ? nil : workoutExercise.targetReps
+            set.distance = isDistanceBased ? workoutExercise.targetDistance : nil
+        }
+        
+        if currentSets.count > workoutExercise.targetSets {
+            for set in currentSets.suffix(currentSets.count - workoutExercise.targetSets) {
+                sets?.removeAll { $0.id == set.id }
+                modelContext.delete(set)
+            }
+            
+            currentSets = Array(currentSets.prefix(workoutExercise.targetSets))
+        } else if currentSets.count < workoutExercise.targetSets {
+            for _ in 0..<(workoutExercise.targetSets - currentSets.count) {
+                let newSet = PerformedSet(
+                    setNumber: 0,
+                    weight: workoutExercise.targetWeight,
+                    reps: isDistanceBased ? nil : workoutExercise.targetReps,
+                    distance: isDistanceBased ? workoutExercise.targetDistance : nil
+                )
+                
+                sets?.append(newSet)
+                currentSets.append(newSet)
+            }
+        }
+        
+        for (index, set) in currentSets.enumerated() {
+            set.setNumber = index + 1
+        }
+    }
 }

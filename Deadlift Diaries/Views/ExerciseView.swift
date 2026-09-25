@@ -33,8 +33,10 @@ struct ExerciseCard: View {
     let isLastExercise: Bool
     
     @Environment(\.editMode) private var editMode
+    @Environment(\.modelContext) private var modelContext
     
     @State private var showHistory = false
+    @State private var showEditSheet = false
     
     private let weightUnit: Unit = isMetricSystem() ? Unit(symbol: "kg") : Unit(symbol: "lbs")
     
@@ -56,6 +58,21 @@ struct ExerciseCard: View {
     var body: some View {
         if editMode?.wrappedValue.isEditing == true {
             exerciseDetails()
+                .contentShape(Rectangle())
+                .onTapGesture {
+                    if exercise.sourceExercise != nil {
+                        showEditSheet = true
+                    }
+                }
+                .sheet(isPresented: $showEditSheet) {
+                    if let sourceExercise = exercise.sourceExercise {
+                        AddExerciseView(mode: .edit(sourceExercise)) { updated in
+                            exercise.syncTargets(from: updated, modelContext: modelContext)
+                            updated.propagateToFollowingWorkouts(deleted: false, modelContext: modelContext)
+                            try? modelContext.save()
+                        }
+                    }
+                }
         } else {
             exerciseDetails()
             
@@ -87,7 +104,7 @@ struct ExerciseCard: View {
                         NavigationStack {
                             ExerciseHistoryView(
                                 exercise: linkedExercise,
-                                trainingBlock: exercise.sourceExercise?.workoutTemplate?.trainingBlock
+                                trainingBlock: exercise.sourceExercise?.scheduledWorkout?.workoutTemplate?.trainingBlock
                             )
                                 .toolbar {
                                     ToolbarItem(placement: .confirmationAction) {
@@ -306,11 +323,10 @@ struct WorkoutSessionView: View {
         }
     }
     
-    // Adds the exercise both to this session and to the underlying workout template,
-    // so it also shows up when the scheduled workout is viewed from the CalendarView.
     private func addExerciseToSession(_ workoutExercise: WorkoutExercise) {
-        if let template = session.scheduledWorkout?.workoutTemplate {
-            workoutExercise.workoutTemplate = template
+        if let scheduledWorkout = session.scheduledWorkout {
+            workoutExercise.scheduledWorkout = scheduledWorkout
+            scheduledWorkout.exercises?.append(workoutExercise)
         }
         
         modelContext.insert(workoutExercise)
@@ -321,6 +337,8 @@ struct WorkoutSessionView: View {
         
         modelContext.insert(performedExercise)
         session.exercises?.append(performedExercise)
+        
+        workoutExercise.propagateToFollowingWorkouts(deleted: false, modelContext: modelContext)
         
         try? modelContext.save()
     }
@@ -353,9 +371,8 @@ struct WorkoutSessionView: View {
     }
     
     private func deletePerformedExercise(_ exercise: PerformedExercise) {
-        // Also remove the corresponding exercise from the scheduled workout
-        // so it no longer appears in the CalendarView.
         if let sourceExercise = exercise.sourceExercise {
+            sourceExercise.propagateToFollowingWorkouts(deleted: true, modelContext: modelContext)
             modelContext.delete(sourceExercise)
         }
         
@@ -410,13 +427,9 @@ struct ExerciseView: View {
             return
         }
         
-        guard let template = scheduledWorkout.workoutTemplate else {
-            return
-        }
-        
         let session = WorkoutSession(scheduledWorkout: scheduledWorkout)
         
-        createPerformedExercises(from: template, session: session)
+        createPerformedExercises(from: scheduledWorkout, session: session)
         
         modelContext.insert(session)
         
@@ -425,8 +438,8 @@ struct ExerciseView: View {
         try? modelContext.save()
     }
     
-    private func createPerformedExercises(from template: WorkoutTemplate, session: WorkoutSession) {
-        let exercises = template.exercises?.sorted {
+    private func createPerformedExercises(from scheduledWorkout: ScheduledWorkout, session: WorkoutSession) {
+        let exercises = scheduledWorkout.exercises?.sorted {
             if $0.order != $1.order {
                 return $0.order < $1.order
             }

@@ -12,13 +12,9 @@ import SwiftData
 struct SettingsSheet: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var modelContext
-//    let mesocycles: [Mesocycle]?
     
     @State private var showingShareSheet: Bool = false
     @State private var isShowingDocumentPicker: Bool = false
-    
-//    @Query private var allTemplates: [ExerciseTemplate]
-//    @Query private var allHistory: [ExerciseHistory]
     
     @AppStorage("isICouldEnabled") private var isICouldEnabled: Bool = false
     @AppStorage("selectedSoundID") private var selectedSoundID: Int = 1075

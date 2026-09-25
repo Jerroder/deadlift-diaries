@@ -32,9 +32,7 @@ struct ExerciseHistoryView: View {
     private var distanceUnit: Unit {
         isMetricSystem() ? Unit(symbol: "km") : Unit(symbol: "mi")
     }
-
-    // Every PerformedExercise snapshots the exercise's name, which lets history survive
-    // even if the WorkoutExercise/template it came from is later removed.
+    
     private var historyEntries: [ExerciseHistoryEntry] {
         allPerformedExercises
             .filter { $0.exerciseName == exercise.name }

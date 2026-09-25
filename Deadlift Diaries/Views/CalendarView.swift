@@ -49,46 +49,34 @@ struct ScheduledWorkoutCard: View {
         scheduledWorkout.workoutTemplate
     }
     
+    private var exercises: [WorkoutExercise] {
+        (scheduledWorkout.exercises ?? []).sorted { $0.order < $1.order }
+    }
+    
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            if let workoutTemplate {
-                HStack(spacing: 12) {
-                    VStack(alignment: .leading, spacing: 3) {
-                        Text(workoutTemplate.name)
-                            .font(.headline)
-                            .foregroundStyle(.primary)
-                        
-                        if let notes = workoutTemplate.notes, !notes.isEmpty {
-                            Text(notes)
-                                .font(.subheadline)
-                                .foregroundStyle(.secondary)
-                                .lineLimit(2)
-                        }
-                    }
-                }
-                
-                if let exercises = workoutTemplate.exercises, !exercises.isEmpty {
-                    VStack(alignment: .leading, spacing: 0) {
-                        ForEach(exercises.sorted(by: { $0.order < $1.order })) { workoutExercise in
-                            WorkoutExerciseRow(workoutExercise: workoutExercise)
-                        }
-                    }
-                    .padding(.leading, 14)
-                }
-            } else {
-                HStack(spacing: 12) {
-                    Image(systemName: "exclamationmark.circle")
-                        .foregroundStyle(.secondary)
+            HStack(spacing: 12) {
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(workoutTemplate?.name ?? "Workout")
+                        .font(.headline)
+                        .foregroundStyle(.primary)
                     
-                    VStack(alignment: .leading, spacing: 3) {
-                        Text("Workout")
-                            .font(.headline)
-                        
-                        Text("Template unavailable")
+                    if let notes = workoutTemplate?.notes, !notes.isEmpty {
+                        Text(notes)
                             .font(.subheadline)
                             .foregroundStyle(.secondary)
+                            .lineLimit(2)
                     }
                 }
+            }
+            
+            if !exercises.isEmpty {
+                VStack(alignment: .leading, spacing: 0) {
+                    ForEach(exercises) { workoutExercise in
+                        WorkoutExerciseRow(workoutExercise: workoutExercise)
+                    }
+                }
+                .padding(.leading, 14)
             }
         }
     }
@@ -196,8 +184,6 @@ struct CreateExerciseView: View {
             .navigationTitle(isEditing ? "Edit Exercise" : "New Exercise")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                // Only presented as a sheet when editing; when pushed via a
-                // NavigationLink to create a new exercise, the back arrow already dismisses it.
                 if isEditing {
                     ToolbarItem(placement: .cancellationAction) {
                         Button("", systemImage: "xmark") {
@@ -655,7 +641,6 @@ struct AddExerciseView: View {
     }
 }
 
-// A minutes/seconds wheel picker for durations that must always be greater than 0.
 private struct DurationWheelPicker: View {
     @Binding var totalSeconds: Int
     
@@ -1109,8 +1094,6 @@ struct CreateWorkoutTemplateView: View {
             .navigationTitle(isEditing ? "Edit Template" : "New Template")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                // Only presented as a sheet when editing; when pushed via a
-                // NavigationLink to create a new template, the back arrow already dismisses it.
                 if isEditing {
                     ToolbarItem(placement: .cancellationAction) {
                         Button("", systemImage: "xmark") {
@@ -1160,7 +1143,6 @@ struct CreateWorkoutTemplateView: View {
         }
     }
     
-    // Groups linked exercises together so supersets render as a single, connected row.
     private var templateExerciseRows: [TemplateExerciseRow] {
         let sorted = workoutExercises.sorted {
             if $0.order != $1.order {
@@ -1240,8 +1222,6 @@ struct CreateWorkoutTemplateView: View {
             workoutExercises.remove(at: index)
         }
         
-        // Exercises that were already persisted as part of the template being edited
-        // need to be explicitly deleted from the model context on save.
         if originalExerciseIDs.contains(exercise.id) {
             exercisesToDelete.append(exercise)
         }
@@ -1285,8 +1265,6 @@ struct CreateWorkoutTemplateView: View {
             modelContext.delete(exercise)
         }
         
-        // Keeps superset pairs sharing the same order value while assigning
-        // sequential order to every other row.
         renumberExercises()
         
         for workoutExercise in workoutExercises {
@@ -1577,6 +1555,15 @@ struct AddWorkoutView: View {
             
             modelContext.insert(scheduledWorkout)
             
+            for templateExercise in workoutTemplate.exercises ?? [] {
+                guard let copy = templateExercise.makeCopy(for: scheduledWorkout) else {
+                    continue
+                }
+                
+                modelContext.insert(copy)
+                scheduledWorkout.exercises?.append(copy)
+            }
+            
             scheduledDate = calendar.date(byAdding: .day, value: 7, to: scheduledDate)!
         }
         
@@ -1589,19 +1576,229 @@ struct AddWorkoutView: View {
     }
 }
 
+struct EditScheduledWorkoutView: View {
+    let scheduledWorkout: ScheduledWorkout
+    
+    @Environment(\.dismiss) private var dismiss
+    @Environment(\.modelContext) private var modelContext
+    
+    @State private var showAddExerciseSheet: Bool = false
+    @State private var supersetBaseExercise: WorkoutExercise?
+    @State private var exerciseToEdit: WorkoutExercise?
+    
+    private var exercises: [WorkoutExercise] {
+        (scheduledWorkout.exercises ?? []).sorted { $0.order < $1.order }
+    }
+    
+    private var nextOrder: Int {
+        (exercises.map(\.order).max() ?? -1) + 1
+    }
+    
+    private var exerciseRows: [TemplateExerciseRow] {
+        var rows: [TemplateExerciseRow] = []
+        var index = 0
+        
+        while index < exercises.count {
+            let exercise = exercises[index]
+            
+            guard let supersetID = exercise.supersetID else {
+                rows.append(.single(exercise))
+                index += 1
+                continue
+            }
+            
+            let supersetExercises = exercises.filter { $0.supersetID == supersetID }
+            
+            if let first = supersetExercises.first(where: { $0.supersetPosition == .first }),
+               let second = supersetExercises.first(where: { $0.supersetPosition == .second }) {
+                rows.append(.superset(first: first, second: second))
+                
+                index += supersetExercises.count
+            } else { // Defensive fallback for malformed/incomplete data.
+                rows.append(.single(exercise))
+                index += 1
+            }
+        }
+        
+        return rows
+    }
+    
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section {
+                    ForEach(exerciseRows) { row in
+                        switch row {
+                        case .single(let workoutExercise):
+                            HStack {
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text(workoutExercise.exercise?.name ?? "Unknown Exercise")
+                                    
+                                    Text("\(workoutExercise.targetSets) x \(formattedTargetValue(for: workoutExercise))")
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                }
+                                
+                                Spacer()
+                                
+                                Button {
+                                    supersetBaseExercise = workoutExercise
+                                } label: {
+                                    Image(systemName: "link.badge.plus")
+                                }
+                                .buttonStyle(.borderless)
+                            }
+                            .contentShape(Rectangle())
+                            .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                                Button(role: .destructive) {
+                                    delete(row)
+                                } label: {
+                                    Label("Delete", systemImage: "trash")
+                                }
+                                
+                                Button {
+                                    exerciseToEdit = workoutExercise
+                                } label: {
+                                    Label("Edit", systemImage: "pencil")
+                                }
+                                .tint(.blue)
+                            }
+                            
+                        case .superset(let first, let second):
+                            SupersetExerciseRow(first: first, second: second, onEdit: { exercise in
+                                exerciseToEdit = exercise
+                            }, onUnlink: {
+                                unlinkSuperset(first: first, second: second)
+                            })
+                            .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                                Button(role: .destructive) {
+                                    delete(row)
+                                } label: {
+                                    Label("Delete", systemImage: "trash")
+                                }
+                            }
+                        }
+                    }
+                    
+                    Button("Add Exercise", systemImage: "plus") {
+                        showAddExerciseSheet = true
+                    }
+                } header: {
+                    Text("Exercises")
+                } footer: {
+                    Text("Changes here only affect this workout and its following occurrences - the template it was created from stays unchanged.")
+                }
+            }
+            .navigationTitle(scheduledWorkout.workoutTemplate?.name ?? "Workout")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("", systemImage: "checkmark") {
+                        dismiss()
+                    }
+                }
+            }
+        }
+        .sheet(isPresented: $showAddExerciseSheet) {
+            AddExerciseView(mode: .normal(order: nextOrder)) { workoutExercise in
+                addExercise(workoutExercise)
+            }
+        }
+        .sheet(item: $supersetBaseExercise) { baseExercise in
+            AddExerciseView(mode: .superset(with: baseExercise)) { workoutExercise in
+                addSupersetExercise(workoutExercise, to: baseExercise)
+            }
+        }
+        .sheet(item: $exerciseToEdit) { workoutExercise in
+            AddExerciseView(mode: .edit(workoutExercise)) { updated in
+                updated.propagateToFollowingWorkouts(deleted: false, modelContext: modelContext)
+                updated.syncOwnPerformedExercise(modelContext: modelContext)
+                try? modelContext.save()
+            }
+        }
+    }
+    
+    // MARK: - Mutations
+    
+    private func addExercise(_ workoutExercise: WorkoutExercise) {
+        workoutExercise.scheduledWorkout = scheduledWorkout
+        modelContext.insert(workoutExercise)
+        scheduledWorkout.exercises?.append(workoutExercise)
+        
+        workoutExercise.propagateToFollowingWorkouts(deleted: false, modelContext: modelContext)
+        workoutExercise.addToOwnSessionIfNeeded(modelContext: modelContext)
+        
+        try? modelContext.save()
+    }
+    
+    private func addSupersetExercise(_ workoutExercise: WorkoutExercise, to baseExercise: WorkoutExercise) {
+        let supersetID = baseExercise.supersetID ?? UUID()
+        
+        baseExercise.supersetID = supersetID
+        baseExercise.supersetPosition = .first
+        
+        workoutExercise.supersetID = supersetID
+        workoutExercise.supersetPosition = .second
+        workoutExercise.order = baseExercise.order
+        workoutExercise.scheduledWorkout = scheduledWorkout
+        
+        modelContext.insert(workoutExercise)
+        scheduledWorkout.exercises?.append(workoutExercise)
+        
+        baseExercise.propagateToFollowingWorkouts(deleted: false, modelContext: modelContext)
+        workoutExercise.propagateToFollowingWorkouts(deleted: false, modelContext: modelContext)
+        workoutExercise.addToOwnSessionIfNeeded(modelContext: modelContext)
+        
+        try? modelContext.save()
+    }
+    
+    private func unlinkSuperset(first: WorkoutExercise, second: WorkoutExercise) {
+        first.supersetID = nil
+        first.supersetPosition = nil
+        
+        second.supersetID = nil
+        second.supersetPosition = nil
+        
+        first.propagateToFollowingWorkouts(deleted: false, modelContext: modelContext)
+        second.propagateToFollowingWorkouts(deleted: false, modelContext: modelContext)
+        
+        try? modelContext.save()
+    }
+    
+    private func delete(_ row: TemplateExerciseRow) {
+        switch row {
+        case .single(let exercise):
+            remove(exercise)
+            
+        case .superset(let first, let second):
+            remove(first)
+            remove(second)
+        }
+        
+        try? modelContext.save()
+    }
+    
+    private func remove(_ exercise: WorkoutExercise) {
+        exercise.propagateToFollowingWorkouts(deleted: true, modelContext: modelContext)
+        exercise.removeFromOwnSessionIfNeeded(modelContext: modelContext)
+        
+        scheduledWorkout.exercises?.removeAll { $0.id == exercise.id }
+        modelContext.delete(exercise)
+    }
+}
+
 struct CalendarView: View {
     @Environment(\.modelContext) private var modelContext
 
     @Query(sort: \ScheduledWorkout.scheduledDate)
     private var scheduledWorkouts: [ScheduledWorkout]
 
-    // @FocusState.Binding var focusedField: FocusableField?
-
     @State private var displayedMonth: Date = Date()
     @State private var selectedDate: Date = Date()
 
     @State private var showAddWorkoutSheet: Bool = false
     @State private var showingSettingsSheet: Bool = false
+    @State private var workoutToEdit: ScheduledWorkout?
 
     private var calendar: Calendar {
         var calendar = Calendar.current
@@ -1668,6 +1865,9 @@ struct CalendarView: View {
         }
         .sheet(isPresented: $showingSettingsSheet) {
             SettingsSheet()
+        }
+        .sheet(item: $workoutToEdit) { scheduledWorkout in
+            EditScheduledWorkoutView(scheduledWorkout: scheduledWorkout)
         }
     }
 
@@ -1833,9 +2033,20 @@ struct CalendarView: View {
                         .listRowSeparator(.hidden)
                         .listRowBackground(RoundedRectangle(cornerRadius: 16)
                             .fill(Color(uiColor: .secondarySystemBackground)))
-                    }
-                    .onDelete { offsets in
-                        deleteWorkouts(at: offsets, from: workouts)
+                        .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                            Button(role: .destructive) {
+                                deleteWorkout(scheduledWorkout)
+                            } label: {
+                                Label("Delete", systemImage: "trash")
+                            }
+                            
+                            Button {
+                                workoutToEdit = scheduledWorkout
+                            } label: {
+                                Label("Edit", systemImage: "pencil")
+                            }
+                            .tint(.blue)
+                        }
                     }
                 }
                 .listStyle(.plain)
@@ -1844,10 +2055,8 @@ struct CalendarView: View {
         .frame(maxHeight: .infinity)
     }
     
-    private func deleteWorkouts(at offsets: IndexSet, from workouts: [ScheduledWorkout]) {
-        for index in offsets {
-            modelContext.delete(workouts[index])
-        }
+    private func deleteWorkout(_ scheduledWorkout: ScheduledWorkout) {
+        modelContext.delete(scheduledWorkout)
         try? modelContext.save()
     }
 

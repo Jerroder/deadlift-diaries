@@ -12,6 +12,9 @@ final class ScheduledWorkout {
 
     // The template to use
     var workoutTemplate: WorkoutTemplate?
+    
+    @Relationship(deleteRule: .cascade, inverse: \WorkoutExercise.scheduledWorkout)
+    var exercises: [WorkoutExercise]? = []
 
     // If this scheduled workout has been started/completed
     var session: WorkoutSession?
