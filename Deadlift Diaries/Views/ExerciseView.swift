@@ -85,7 +85,10 @@ struct ExerciseCard: View {
                     .buttonStyle(.plain)
                     .sheet(isPresented: $showHistory) {
                         NavigationStack {
-                            ExerciseHistoryView(exercise: linkedExercise)
+                            ExerciseHistoryView(
+                                exercise: linkedExercise,
+                                trainingBlock: exercise.sourceExercise?.workoutTemplate?.trainingBlock
+                            )
                                 .toolbar {
                                     ToolbarItem(placement: .confirmationAction) {
                                         Button("", systemImage: "checkmark") {

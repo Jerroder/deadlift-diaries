@@ -591,6 +591,91 @@ private struct DurationWheelPicker: View {
     }
 }
 
+struct CreateTrainingBlockView: View {
+    @Environment(\.dismiss) private var dismiss
+    @Environment(\.modelContext) private var modelContext
+    
+    @Query private var existingBlocks: [TrainingBlock]
+    
+    let onCreate: (TrainingBlock) -> Void
+    
+    @State private var name: String = ""
+    @State private var notes: String = ""
+    
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section {
+                    TextField("Name", text: $name)
+                    
+                    TextField("Notes", text: $notes, axis: .vertical)
+                        .lineLimit(3...6)
+                } header: {
+                    Text("Program")
+                } footer: {
+                    Text("Just a name to group templates under, so their exercise history " +
+                         "is tracked separately from other programs.")
+                }
+            }
+            .navigationTitle("New Program")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("", systemImage: "xmark") {
+                        dismiss()
+                    }
+                }
+                
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("", systemImage: "checkmark") {
+                        createTrainingBlock()
+                    }
+                    .tint(.accentColor)
+                    .disabled(
+                        name
+                            .trimmingCharacters(in: .whitespacesAndNewlines)
+                            .isEmpty
+                    )
+                }
+            }
+        }
+    }
+    
+    private func createTrainingBlock() {
+        let trimmedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        
+        guard !trimmedName.isEmpty else {
+            return
+        }
+        
+
+        if let existing = existingBlocks.first(where: {
+            $0.name.localizedCaseInsensitiveCompare(trimmedName) == .orderedSame
+        }) {
+            onCreate(existing)
+            dismiss()
+            return
+        }
+        
+        let trainingBlock = TrainingBlock(
+            name: trimmedName,
+            startDate: Date(),
+            orderIndex: existingBlocks.count,
+            notes: notes.trimmingCharacters(in: .whitespacesAndNewlines)
+        )
+        
+        modelContext.insert(trainingBlock)
+        
+        do {
+            try modelContext.save()
+            onCreate(trainingBlock)
+            dismiss()
+        } catch {
+            print("Failed to save training block: \(error)")
+        }
+    }
+}
+
 struct CreateWorkoutTemplateView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var modelContext
@@ -599,6 +684,14 @@ struct CreateWorkoutTemplateView: View {
     
     @State private var name: String = ""
     @State private var notes: String = ""
+    
+    // MARK: - Program
+    
+    @Query(sort: \TrainingBlock.orderIndex)
+    private var trainingBlocks: [TrainingBlock]
+    
+    @State private var selectedTrainingBlock: TrainingBlock?
+    @State private var showCreateTrainingBlockSheet: Bool = false
     
     // MARK: - Exercises
     
@@ -621,6 +714,58 @@ struct CreateWorkoutTemplateView: View {
                         .lineLimit(3...6)
                 } header: {
                     Text("Workout")
+                }
+                
+                // MARK: - Program
+                
+                Section {
+                    Menu {
+                        Button {
+                            selectedTrainingBlock = nil
+                        } label: {
+                            if selectedTrainingBlock == nil {
+                                Label("No Program", systemImage: "checkmark")
+                            } else {
+                                Text("No Program")
+                            }
+                        }
+                        
+                        if !trainingBlocks.isEmpty {
+                            Divider()
+                            
+                            ForEach(trainingBlocks) { block in
+                                Button {
+                                    selectedTrainingBlock = block
+                                } label: {
+                                    if selectedTrainingBlock?.id == block.id {
+                                        Label(block.name, systemImage: "checkmark")
+                                    } else {
+                                        Text(block.name)
+                                    }
+                                }
+                            }
+                        }
+                        
+                        Divider()
+                        
+                        Button("Create New Program", systemImage: "plus") {
+                            showCreateTrainingBlockSheet = true
+                        }
+                    } label: {
+                        HStack {
+                            Text("Program")
+                                .foregroundStyle(.primary)
+                            
+                            Spacer()
+                            
+                            Text(selectedTrainingBlock?.name ?? "None")
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                } header: {
+                    Text("Program")
+                } footer: {
+                    Text("Optional. Keeps this template's exercise history separate from other programs.")
                 }
                 
                 // MARK: - Exercises
@@ -694,6 +839,11 @@ struct CreateWorkoutTemplateView: View {
                 addSupersetExercise(workoutExercise, to: baseExercise)
             }
         }
+        .sheet(isPresented: $showCreateTrainingBlockSheet) {
+            CreateTrainingBlockView { trainingBlock in
+                selectedTrainingBlock = trainingBlock
+            }
+        }
     }
     
     private func addSupersetExercise(_ secondExercise: WorkoutExercise, to firstExercise: WorkoutExercise) {
@@ -721,6 +871,7 @@ struct CreateWorkoutTemplateView: View {
         let trimmedNotes = notes.trimmingCharacters(in: .whitespacesAndNewlines)
         
         let workoutTemplate = WorkoutTemplate(name: trimmedName, notes: trimmedNotes.isEmpty ? nil : trimmedNotes)
+        workoutTemplate.trainingBlock = selectedTrainingBlock
         
         for (index, workoutExercise) in workoutExercises.enumerated() {
             workoutExercise.order = index
@@ -786,6 +937,10 @@ struct AddWorkoutView: View {
         Calendar.current.date(byAdding: .weekOfYear, value: numberOfWeeks - 1, to: startDate)
     }
     
+    private var trainingBlock: TrainingBlock? {
+        selectedTemplate?.trainingBlock
+    }
+    
     var body: some View {
         NavigationStack {
             Form {
@@ -797,6 +952,12 @@ struct AddWorkoutView: View {
                             VStack(alignment: .leading, spacing: 4) {
                                 Text(selectedTemplate.name)
                                     .font(.headline)
+                                
+                                if let trainingBlock = selectedTemplate.trainingBlock {
+                                    Text(trainingBlock.name)
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                }
                                 
                                 if let notes = selectedTemplate.notes {
                                     Text(notes)
@@ -827,6 +988,12 @@ struct AddWorkoutView: View {
                                     VStack(alignment: .leading, spacing: 4) {
                                         Text(template.name)
                                             .foregroundStyle(.primary)
+                                        
+                                        if let trainingBlock = template.trainingBlock {
+                                            Text(trainingBlock.name)
+                                                .font(.caption)
+                                                .foregroundStyle(.secondary)
+                                        }
                                         
                                         if let notes = template.notes {
                                             Text(notes)
@@ -890,9 +1057,16 @@ struct AddWorkoutView: View {
                 } header: {
                     Text("Schedule")
                 } footer: {
-                    Text("The workout will repeat every \(startDate.formatted(.dateTime.weekday(.wide))) " +
-                         "for \(numberOfWeeks) \(numberOfWeeks == 1 ? "week" : "weeks")."
-                    )
+                    if let trainingBlock {
+                        Text("The workout will repeat every \(startDate.formatted(.dateTime.weekday(.wide))) " +
+                             "for \(numberOfWeeks) \(numberOfWeeks == 1 ? "week" : "weeks"). " +
+                             "Tied to the \(trainingBlock.name) program for history tracking."
+                        )
+                    } else {
+                        Text("The workout will repeat every \(startDate.formatted(.dateTime.weekday(.wide))) " +
+                             "for \(numberOfWeeks) \(numberOfWeeks == 1 ? "week" : "weeks")."
+                        )
+                    }
                 }
             }
             .navigationTitle("Add Workout")

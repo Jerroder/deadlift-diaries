@@ -13,6 +13,8 @@ final class WorkoutTemplate {
     var createdAt: Date = Date()
     var updatedAt: Date = Date()
 
+    var trainingBlock: TrainingBlock?
+
     @Relationship(deleteRule: .cascade, inverse: \WorkoutExercise.workoutTemplate)
     var exercises: [WorkoutExercise]? = []
 

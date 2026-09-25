@@ -18,6 +18,9 @@ final class TrainingBlock {
 
     var notes: String = ""
 
+    @Relationship(inverse: \WorkoutTemplate.trainingBlock)
+    var workoutTemplates: [WorkoutTemplate]? = []
+
     init(
         name: String,
         startDate: Date,

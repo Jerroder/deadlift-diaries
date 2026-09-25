@@ -21,6 +21,8 @@ private struct ExerciseHistoryEntry {
 struct ExerciseHistoryView: View {
     let exercise: Exercise
 
+    let trainingBlock: TrainingBlock?
+
     @Query private var allPerformedExercises: [PerformedExercise]
 
     private var weightUnit: Unit {
@@ -36,8 +38,13 @@ struct ExerciseHistoryView: View {
     private var historyEntries: [ExerciseHistoryEntry] {
         allPerformedExercises
             .filter { $0.exerciseName == exercise.name }
+            .filter { performed in
+                let performedBlock = performed.workoutSession?.scheduledWorkout?.workoutTemplate?.trainingBlock
+                return performedBlock?.id == trainingBlock?.id
+            }
             .compactMap { performed -> ExerciseHistoryEntry? in
-                guard let date = performed.workoutSession?.startedAt else { return nil }
+                guard let date = performed.workoutSession?.scheduledWorkout?.scheduledDate
+                        ?? performed.workoutSession?.startedAt else { return nil }
 
                 let allSets = performed.sets ?? []
                 let completedSets = allSets.filter(\.completed)
@@ -83,6 +90,16 @@ struct ExerciseHistoryView: View {
         ScrollView {
             if !historyEntries.isEmpty {
                 VStack(spacing: 24) {
+                    if let trainingBlock {
+                        HStack(spacing: 6) {
+                            Image(systemName: "square.stack.3d.up")
+                            Text(trainingBlock.name)
+                            Spacer()
+                        }
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                    }
+                    
                     if hasWeightData {
                         ProgressChartCard(
                             title: "weight".localized(comment: "Weight"),
