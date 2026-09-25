@@ -64,7 +64,7 @@ struct ExerciseHistoryView: View {
     }
 
     private var hasRepsData: Bool {
-        !exercise.isTimeBased && historyEntries.contains { $0.reps != nil }
+        !exercise.isTimeBased && !exercise.isDistanceBased && historyEntries.contains { $0.reps != nil }
     }
 
     private var hasSetsData: Bool {

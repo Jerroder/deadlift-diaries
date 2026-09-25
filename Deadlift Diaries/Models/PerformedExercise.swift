@@ -9,6 +9,7 @@ final class PerformedExercise {
     var exerciseName: String = ""
     var targetSets: Int = 0
     var targetReps: Int = 0
+    var targetDistance: Int = 0
     var targetWeight: Double?
     
     var orderIndex: Int = 0
@@ -35,9 +36,12 @@ final class PerformedExercise {
     }
     
     init(from workoutExercise: WorkoutExercise, orderIndex: Int) {
+        let isDistanceBased = workoutExercise.exercise?.isDistanceBased ?? false
+        
         self.exerciseName = workoutExercise.exercise?.name ?? "Unknown"
         self.targetSets = workoutExercise.targetSets
         self.targetReps = workoutExercise.targetReps
+        self.targetDistance = workoutExercise.targetDistance
         self.targetWeight = workoutExercise.targetWeight
         self.orderIndex = orderIndex
         
@@ -45,7 +49,12 @@ final class PerformedExercise {
         self.supersetPosition = workoutExercise.supersetPosition
         
         self.sets = (0..<workoutExercise.targetSets).map { index in
-            PerformedSet(setNumber: index + 1, weight: workoutExercise.targetWeight, reps: workoutExercise.targetReps)
+            PerformedSet(
+                setNumber: index + 1,
+                weight: workoutExercise.targetWeight,
+                reps: isDistanceBased ? nil : workoutExercise.targetReps,
+                distance: isDistanceBased ? workoutExercise.targetDistance : nil
+            )
         }
     }
 }

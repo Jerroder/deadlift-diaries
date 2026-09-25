@@ -21,3 +21,7 @@ func isMetricSystem() -> Bool {
         return false
     }
 }
+
+func distanceUnit() -> Unit {
+    isMetricSystem() ? Unit(symbol: "km") : Unit(symbol: "mi")
+}

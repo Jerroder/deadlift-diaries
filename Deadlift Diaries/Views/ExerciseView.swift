@@ -43,6 +43,16 @@ struct ExerciseCard: View {
         exercise.sourceExercise?.exercise
     }
     
+    private var targetText: String {
+        if linkedExercise?.isTimeBased == true {
+            return "duration_x_sec".localized(with: exercise.targetReps, comment: "Duration: x sec")
+        } else if linkedExercise?.isDistanceBased == true {
+            return "distance_x".localized(with: exercise.targetDistance, distanceUnit().symbol, comment: "Distance: x m")
+        } else {
+            return "reps_x".localized(with: exercise.targetReps, comment: "Reps: x")
+        }
+    }
+    
     var body: some View {
         if editMode?.wrappedValue.isEditing == true {
             exerciseDetails()
@@ -100,7 +110,7 @@ struct ExerciseCard: View {
                     .foregroundColor(Color(UIColor.secondaryLabel))
             }
             
-            Text("reps_x".localized(with: exercise.targetReps, comment: "Reps: x"))
+            Text(targetText)
                 .font(.subheadline)
                 .foregroundColor(Color(UIColor.secondaryLabel))
             

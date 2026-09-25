@@ -11,6 +11,36 @@ enum AddExerciseMode {
     case superset(with: WorkoutExercise)
 }
 
+private func formattedDuration(_ seconds: Int) -> String {
+    if seconds < 60 {
+        return "\(seconds)s"
+    }
+    
+    let minutes = seconds / 60
+    let remaining = seconds % 60
+    
+    if remaining == 0 {
+        return "\(minutes)m"
+    }
+    
+    return "\(minutes)m \(remaining)s"
+}
+
+// Formats the reps/duration/distance target of a workout exercise, depending on its type.
+private func formattedTargetValue(for workoutExercise: WorkoutExercise) -> String {
+    guard let exercise = workoutExercise.exercise else {
+        return "\(workoutExercise.targetReps)"
+    }
+    
+    if exercise.isTimeBased {
+        return formattedDuration(workoutExercise.targetReps)
+    } else if exercise.isDistanceBased {
+        return "\(workoutExercise.targetDistance) \(distanceUnit().symbol)"
+    } else {
+        return "\(workoutExercise.targetReps)"
+    }
+}
+
 struct ScheduledWorkoutCard: View {
     let scheduledWorkout: ScheduledWorkout
     
@@ -92,11 +122,13 @@ struct ScheduledWorkoutCard: View {
         }
         
         private var targetDescription: String {
+            let target = formattedTargetValue(for: workoutExercise)
+            
             if let weight = workoutExercise.targetWeight {
-                return "\(workoutExercise.targetSets) x \(workoutExercise.targetReps) @ \(weight.formatted()) kg"
+                return "\(workoutExercise.targetSets) x \(target) @ \(weight.formatted()) kg"
             }
             
-            return "\(workoutExercise.targetSets) x \(workoutExercise.targetReps)"
+            return "\(workoutExercise.targetSets) x \(target)"
         }
     }
 }
@@ -189,6 +221,11 @@ struct CreateExerciseView: View {
     }
 }
 
+enum ExpandableTimeField: Equatable {
+    case rest
+    case countdown
+}
+
 struct AddExerciseView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var modelContext
@@ -205,9 +242,12 @@ struct AddExerciseView: View {
     
     @State private var sets: Int = 3
     @State private var reps: Int = 8
+    @State private var distance: Int = 0
     @State private var restSeconds: Int = 150
-    @State private var timeBeforeNext: Int = 0
+    @State private var timeBeforeNext: Int = 15
     @State private var weight: Double?
+    
+    @State private var expandedTimeField: ExpandableTimeField?
     
     private var filteredExercises: [Exercise] {
         let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -323,8 +363,18 @@ struct AddExerciseView: View {
                                 }
                             }
                         } else if selectedExercise.isDistanceBased {
-                            Text("Distance target can be added here.")
-                                .foregroundStyle(.secondary)
+                            HStack {
+                                Text("Distance")
+                                
+                                Spacer()
+                                
+                                TextField("0", value: $distance, format: .number)
+                                    .keyboardType(.numberPad)
+                                    .multilineTextAlignment(.trailing)
+                                
+                                Text(distanceUnit().symbol)
+                                    .foregroundStyle(.secondary)
+                            }
                         } else {
                             Stepper(value: $reps, in: 1...100) {
                                 HStack {
@@ -352,24 +402,54 @@ struct AddExerciseView: View {
                     
                     if isNormalMode {
                         Section("Rest") {
-                            Stepper(value: $restSeconds, in: 0...600, step: 15) {
+                            Button {
+                                toggleTimeField(.rest)
+                            } label: {
                                 HStack {
-                                    Text("Rest")
+                                    HStack(spacing: 4) {
+                                        Text("Rest")
+                                        Text(formattedRest(restSeconds))
+                                            .font(.subheadline)
+                                            .foregroundColor(Color(UIColor.secondaryLabel))
+                                        Image(systemName: expandedTimeField == .rest ? "chevron.up" : "chevron.down")
+                                            .font(.caption)
+                                    }
+                                    .fixedSize()
+                                    
                                     Spacer()
-                                    Text(formattedRest(restSeconds))
-                                        .foregroundStyle(.secondary)
                                 }
+                                .contentShape(Rectangle())
+                            }
+                            .buttonStyle(.plain)
+                            
+                            if expandedTimeField == .rest {
+                                DurationWheelPicker(totalSeconds: $restSeconds)
                             }
                         }
                         
                         Section("Before Next Exercise") {
-                            Stepper(value: $timeBeforeNext, in: 0...600, step: 15) {
+                            Button {
+                                toggleTimeField(.countdown)
+                            } label: {
                                 HStack {
-                                    Text("Countdown")
+                                    HStack(spacing: 4) {
+                                        Text("Countdown")
+                                        Text(formattedRest(timeBeforeNext))
+                                            .font(.subheadline)
+                                            .foregroundColor(Color(UIColor.secondaryLabel))
+                                        Image(systemName: expandedTimeField == .countdown ? "chevron.up" : "chevron.down")
+                                            .font(.caption)
+                                    }
+                                    .fixedSize()
+                                    
                                     Spacer()
-                                    Text(timeBeforeNext == 0 ? "None" : formattedRest(timeBeforeNext))
-                                        .foregroundStyle(.secondary)
                                 }
+                                .contentShape(Rectangle())
+                            }
+                            .buttonStyle(.plain)
+                            
+                            if expandedTimeField == .countdown {
+                                DurationWheelPicker(totalSeconds: $timeBeforeNext)
                             }
                         }
                     }
@@ -408,10 +488,11 @@ struct AddExerciseView: View {
                 exercise: exercise,
                 order: order,
                 targetSets: sets,
-                targetReps: reps,
+                targetReps: exercise.isDistanceBased ? 0 : reps,
+                targetDistance: exercise.isDistanceBased ? distance : 0,
                 targetWeight: weight,
                 restSeconds: restSeconds,
-                timeBeforeNext: timeBeforeNext > 0 ? timeBeforeNext : nil
+                timeBeforeNext: timeBeforeNext
             )
             
             onAdd(workoutExercise)
@@ -421,7 +502,8 @@ struct AddExerciseView: View {
                 exercise: exercise,
                 order: baseExercise.order,
                 targetSets: baseExercise.targetSets,
-                targetReps: reps,
+                targetReps: exercise.isDistanceBased ? 0 : reps,
+                targetDistance: exercise.isDistanceBased ? distance : 0,
                 targetWeight: weight,
                 restSeconds: baseExercise.restSeconds,
                 timeBeforeNext: nil
@@ -431,6 +513,14 @@ struct AddExerciseView: View {
         }
         
         dismiss()
+    }
+    
+    // MARK: - Expandable Time Fields
+    
+    private func toggleTimeField(_ field: ExpandableTimeField) {
+        withAnimation {
+            expandedTimeField = expandedTimeField == field ? nil : field
+        }
     }
     
     // MARK: - Formatting
@@ -449,20 +539,55 @@ struct AddExerciseView: View {
         
         return "\(minutes)m \(remaining)s"
     }
+}
+
+// A minutes/seconds wheel picker for durations that must always be greater than 0.
+private struct DurationWheelPicker: View {
+    @Binding var totalSeconds: Int
     
-    private func formattedDuration(_ seconds: Int) -> String {
-        if seconds < 60 {
-            return "\(seconds)s"
+    private static let minuteOptions = Array(0...10)
+    private static let secondOptions = Array(stride(from: 0, through: 55, by: 5))
+    
+    private var minutesBinding: Binding<Int> {
+        Binding(
+            get: { totalSeconds / 60 },
+            set: { newMinutes in
+                let newTotal = newMinutes * 60 + (totalSeconds % 60)
+                totalSeconds = newTotal == 0 ? Self.secondOptions[1] : newTotal
+            }
+        )
+    }
+    
+    private var secondsBinding: Binding<Int> {
+        Binding(
+            get: { totalSeconds % 60 },
+            set: { newSeconds in
+                let newTotal = (totalSeconds / 60) * 60 + newSeconds
+                totalSeconds = newTotal == 0 ? Self.secondOptions[1] : newTotal
+            }
+        )
+    }
+    
+    var body: some View {
+        HStack(spacing: 0) {
+            Picker("Minutes", selection: minutesBinding) {
+                ForEach(Self.minuteOptions, id: \.self) { minute in
+                    Text("\(minute) min").tag(minute)
+                }
+            }
+            .pickerStyle(.wheel)
+            .labelsHidden()
+            .frame(maxWidth: .infinity)
+            
+            Picker("Seconds", selection: secondsBinding) {
+                ForEach(Self.secondOptions, id: \.self) { second in
+                    Text("\(second) sec").tag(second)
+                }
+            }
+            .pickerStyle(.wheel)
+            .labelsHidden()
+            .frame(maxWidth: .infinity)
         }
-        
-        let minutes = seconds / 60
-        let remaining = seconds % 60
-        
-        if remaining == 0 {
-            return "\(minutes)m"
-        }
-        
-        return "\(minutes)m \(remaining)s"
     }
 }
 
@@ -506,7 +631,7 @@ struct CreateWorkoutTemplateView: View {
                             VStack(alignment: .leading, spacing: 4) {
                                 Text(workoutExercise.exercise?.name ?? "Unknown Exercise")
                                 
-                                Text("\(workoutExercise.targetSets) x \(workoutExercise.targetReps)")
+                                Text("\(workoutExercise.targetSets) x \(formattedTargetValue(for: workoutExercise))")
                                     .font(.caption)
                                     .foregroundStyle(.secondary)
                             }

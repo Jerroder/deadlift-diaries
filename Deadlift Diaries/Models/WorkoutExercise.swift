@@ -24,6 +24,7 @@ final class WorkoutExercise: Identifiable {
 
     var targetSets: Int = 0
     var targetReps: Int = 0
+    var targetDistance: Int = 0
 
     var targetWeight: Double?
     var restSeconds: Int?
@@ -45,13 +46,14 @@ final class WorkoutExercise: Identifiable {
         supersetID != nil
     }
 
-    init(exercise: Exercise, order: Int, targetSets: Int, targetReps: Int,
+    init(exercise: Exercise, order: Int, targetSets: Int, targetReps: Int, targetDistance: Int = 0,
          targetWeight: Double? = nil, restSeconds: Int? = nil, timeBeforeNext: Int? = nil, notes: String? = nil,
          supersetID: UUID? = nil, supersetPosition: SupersetPosition? = nil) {
         self.exercise = exercise
         self.order = order
         self.targetSets = targetSets
         self.targetReps = targetReps
+        self.targetDistance = targetDistance
         self.targetWeight = targetWeight
         self.restSeconds = restSeconds
         self.timeBeforeNext = timeBeforeNext
