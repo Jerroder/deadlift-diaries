@@ -993,6 +993,13 @@ struct CreateWorkoutTemplateView: View {
                                 .buttonStyle(.borderless)
                                 .padding(.leading, 8)
                             }
+                            .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                                Button(role: .destructive) {
+                                    deleteTrainingBlock(block)
+                                } label: {
+                                    Label("Delete", systemImage: "trash")
+                                }
+                            }
                         }
                         
                         Button {
@@ -1141,6 +1148,17 @@ struct CreateWorkoutTemplateView: View {
                 selectedTrainingBlock = trainingBlock
             }
         }
+    }
+    
+    // MARK: - Program
+    
+    private func deleteTrainingBlock(_ block: TrainingBlock) {
+        if selectedTrainingBlock?.id == block.id {
+            selectedTrainingBlock = nil
+        }
+        
+        modelContext.delete(block)
+        try? modelContext.save()
     }
     
     private var templateExerciseRows: [TemplateExerciseRow] {
