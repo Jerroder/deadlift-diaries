@@ -676,6 +676,59 @@ struct CreateTrainingBlockView: View {
     }
 }
 
+enum TemplateExerciseRow: Identifiable {
+    case single(WorkoutExercise)
+    case superset(first: WorkoutExercise, second: WorkoutExercise)
+    
+    var id: UUID {
+        switch self {
+        case .single(let exercise):
+            return exercise.id
+            
+        case .superset(let first, _):
+            return first.supersetID ?? first.id
+        }
+    }
+}
+
+private struct SupersetExerciseRow: View {
+    let first: WorkoutExercise
+    let second: WorkoutExercise
+    let onUnlink: () -> Void
+    
+    var body: some View {
+        HStack(alignment: .center, spacing: 12) {
+            exerciseInfo(first, alignment: .leading)
+            
+            Image(systemName: "link")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            
+            exerciseInfo(second, alignment: .trailing)
+        }
+        .swipeActions(edge: .leading, allowsFullSwipe: false) {
+            Button {
+                onUnlink()
+            } label: {
+                Label("Unlink", systemImage: "link.badge.minus")
+            }
+            .tint(.orange)
+        }
+    }
+    
+    @ViewBuilder
+    private func exerciseInfo(_ workoutExercise: WorkoutExercise, alignment: HorizontalAlignment) -> some View {
+        VStack(alignment: alignment, spacing: 4) {
+            Text(workoutExercise.exercise?.name ?? "Unknown Exercise")
+            
+            Text("\(workoutExercise.targetSets) x \(formattedTargetValue(for: workoutExercise))")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+        .frame(maxWidth: .infinity, alignment: alignment == .leading ? .leading : .trailing)
+    }
+}
+
 struct CreateWorkoutTemplateView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var modelContext
@@ -771,35 +824,36 @@ struct CreateWorkoutTemplateView: View {
                 // MARK: - Exercises
                 
                 Section {
-                    ForEach(workoutExercises, id: \.id) { workoutExercise in
-                        HStack {
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text(workoutExercise.exercise?.name ?? "Unknown Exercise")
+                    ForEach(templateExerciseRows) { row in
+                        switch row {
+                        case .single(let workoutExercise):
+                            HStack {
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text(workoutExercise.exercise?.name ?? "Unknown Exercise")
+                                    
+                                    Text("\(workoutExercise.targetSets) x \(formattedTargetValue(for: workoutExercise))")
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                }
                                 
-                                Text("\(workoutExercise.targetSets) x \(formattedTargetValue(for: workoutExercise))")
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
-                            }
-                            
-                            Spacer()
-                            
-                            if workoutExercise.supersetID == nil {
+                                Spacer()
+                                
                                 Button {
                                     supersetBaseExercise = workoutExercise
                                 } label: {
-                                    Image(systemName: "arrow.left.arrow.right")
+                                    Image(systemName: "link.badge.plus")
                                 }
                                 .buttonStyle(.borderless)
+                            }
+                            
+                        case .superset(let first, let second):
+                            SupersetExerciseRow(first: first, second: second) {
+                                unlinkSuperset(first: first, second: second)
                             }
                         }
                     }
                     .onDelete { offsets in
-                        workoutExercises.remove(atOffsets: offsets)
-                        
-                        // Re-number exercises after deletion
-                        for (index, exercise) in workoutExercises.enumerated() {
-                            exercise.order = index
-                        }
+                        deleteRows(at: offsets)
                     }
                     
                     Button("Add Exercise", systemImage: "plus") {
@@ -846,6 +900,44 @@ struct CreateWorkoutTemplateView: View {
         }
     }
     
+    // Groups linked exercises together so supersets render as a single, connected row.
+    private var templateExerciseRows: [TemplateExerciseRow] {
+        let sorted = workoutExercises.sorted {
+            if $0.order != $1.order {
+                return $0.order < $1.order
+            }
+            
+            return ($0.supersetPosition?.rawValue ?? 0) < ($1.supersetPosition?.rawValue ?? 0)
+        }
+        
+        var rows: [TemplateExerciseRow] = []
+        var index = 0
+        
+        while index < sorted.count {
+            let exercise = sorted[index]
+            
+            guard let supersetID = exercise.supersetID else {
+                rows.append(.single(exercise))
+                index += 1
+                continue
+            }
+            
+            let supersetExercises = sorted.filter { $0.supersetID == supersetID }
+            
+            if let first = supersetExercises.first(where: { $0.supersetPosition == .first }),
+               let second = supersetExercises.first(where: { $0.supersetPosition == .second }) {
+                rows.append(.superset(first: first, second: second))
+                
+                index += supersetExercises.count
+            } else { // Defensive fallback for malformed/incomplete data.
+                rows.append(.single(exercise))
+                index += 1
+            }
+        }
+        
+        return rows
+    }
+    
     private func addSupersetExercise(_ secondExercise: WorkoutExercise, to firstExercise: WorkoutExercise) {
         let supersetID = UUID()
         
@@ -858,6 +950,60 @@ struct CreateWorkoutTemplateView: View {
         secondExercise.order = firstExercise.order
         
         workoutExercises.append(secondExercise)
+    }
+    
+    private func unlinkSuperset(first: WorkoutExercise, second: WorkoutExercise) {
+        first.supersetID = nil
+        first.supersetPosition = nil
+        
+        second.supersetID = nil
+        second.supersetPosition = nil
+        
+        renumberExercises()
+    }
+    
+    private func deleteRows(at offsets: IndexSet) {
+        let rows = templateExerciseRows
+        var indicesToRemove: Set<Int> = []
+        
+        for offset in offsets {
+            switch rows[offset] {
+            case .single(let exercise):
+                if let index = workoutExercises.firstIndex(where: { $0.id == exercise.id }) {
+                    indicesToRemove.insert(index)
+                }
+                
+            case .superset(let first, let second):
+                if let index = workoutExercises.firstIndex(where: { $0.id == first.id }) {
+                    indicesToRemove.insert(index)
+                }
+                
+                if let index = workoutExercises.firstIndex(where: { $0.id == second.id }) {
+                    indicesToRemove.insert(index)
+                }
+            }
+        }
+        
+        workoutExercises.remove(atOffsets: IndexSet(indicesToRemove))
+        
+        renumberExercises()
+    }
+    
+    private func renumberExercises() {
+        var order = 0
+        
+        for row in templateExerciseRows {
+            switch row {
+            case .single(let exercise):
+                exercise.order = order
+                order += 1
+                
+            case .superset(let first, let second):
+                first.order = order
+                second.order = order
+                order += 1
+            }
+        }
     }
     
     // MARK: - Create
