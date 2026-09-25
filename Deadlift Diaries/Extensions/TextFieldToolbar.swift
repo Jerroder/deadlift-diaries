@@ -8,31 +8,27 @@
 import SwiftUI
 
 struct TextFieldToolbarDone: ViewModifier {
-    @Binding var isKeyboardShowing: Bool
     var focusedField: FocusState<FocusableField?>.Binding
 
     func body(content: Content) -> some View {
         if #available(iOS 26.0, *) {
             content
-                .safeAreaBar(edge: .bottom) {
-                    if isKeyboardShowing {
-                        HStack {
-                            Spacer()
-                            Button {
-                                focusedField.wrappedValue = nil
-                            } label: {
-                                Image(systemName: "checkmark")
-                                    .padding()
-                            }
-                            .buttonStyle(.plain)
-                            .glassEffect(.regular.interactive())
-                            .padding(.horizontal, 15)
-                            .padding(.bottom, 10)
+                .toolbar {
+                    ToolbarItemGroup(placement: .keyboard) {
+                        Spacer()
+                        
+                        Button {
+                            focusedField.wrappedValue = nil
+                        } label: {
+                            Image(systemName: "checkmark")
+                                .padding(15)
                         }
+                        .buttonStyle(.plain)
+                        .glassEffect(.regular.interactive())
+                        .padding(.bottom, 15)
                     }
+                    .sharedBackgroundVisibility(.hidden)
                 }
-                .detectKeyboard(isKeyboardShowing: $isKeyboardShowing)
-                .animation(.default, value: isKeyboardShowing)
         } else {
             content
                 .toolbar {
@@ -48,72 +44,78 @@ struct TextFieldToolbarDone: ViewModifier {
 }
 
 struct TextFieldToolbarDoneWithChevrons: ViewModifier {
-    @Binding var isKeyboardShowing: Bool
-    @Binding var isSupersetToggleOn: Bool
+    var fields: [FocusableField]
     var focusedField: FocusState<FocusableField?>.Binding
+
+    private var currentIndex: Int? {
+        guard let current = focusedField.wrappedValue else {
+            return nil
+        }
+
+        return fields.firstIndex(of: current)
+    }
+
+    private var canGoUp: Bool {
+        guard let currentIndex else {
+            return false
+        }
+
+        return currentIndex > 0
+    }
+
+    private var canGoDown: Bool {
+        guard let currentIndex else {
+            return false
+        }
+
+        return currentIndex < fields.count - 1
+    }
 
     func body(content: Content) -> some View {
         if #available(iOS 26.0, *) {
             content
-                .safeAreaBar(edge: .bottom) {
-                    if isKeyboardShowing {
-                        HStack {
-                            Button(action: {
-                                switch focusedField.wrappedValue {
-                                case .exerciseWeight:
-                                    focusedField.wrappedValue = .exerciseName
-                                case .supersetName:
-                                    focusedField.wrappedValue = .exerciseWeight
-                                case .supersetWeight:
-                                    focusedField.wrappedValue = .supersetName
-                                default:
-                                    break
-                                }
-                            }) {
-                                Image(systemName: "chevron.up")
-                                    .padding()
+                .toolbar {
+                    ToolbarItemGroup(placement: .keyboard) {
+                        Button {
+                            if let currentIndex, canGoUp {
+                                focusedField.wrappedValue = fields[currentIndex - 1]
                             }
-                            .disabled(focusedField.wrappedValue == .exerciseName ? true : false)
-
-                            Button(action: {
-                                switch focusedField.wrappedValue {
-                                case .exerciseName:
-                                    focusedField.wrappedValue = .exerciseWeight
-                                case .exerciseWeight:
-                                    focusedField.wrappedValue = .supersetName
-                                case .supersetName:
-                                    focusedField.wrappedValue = .supersetWeight
-                                default:
-                                    break
-                                }
-                            }) {
-                                Image(systemName: "chevron.down")
-                                    .padding()
+                        } label: {
+                            Image(systemName: "chevron.up")
+                                .padding(15)
+                        }
+                        .disabled(!canGoUp)
+                        .buttonStyle(.plain)
+                        .glassEffect(.regular.interactive())
+                        .padding(.bottom, 15)
+                        
+                        Button {
+                            if let currentIndex, canGoDown {
+                                focusedField.wrappedValue = fields[currentIndex + 1]
                             }
-                            .disabled({if (isSupersetToggleOn && focusedField.wrappedValue == .supersetWeight) ||
-                                            (!isSupersetToggleOn && focusedField.wrappedValue == .exerciseWeight) {
-                                return true
-                            } else {
-                                return false
-                            }}())
-
-                            Spacer()
-
-                            Button {
-                                focusedField.wrappedValue = nil
-                            } label: {
-                                Image(systemName: "checkmark")
-                                    .padding()
-                            }
+                        } label: {
+                            Image(systemName: "chevron.down")
+                                .padding(15)
+                        }
+                        .disabled(!canGoDown)
+                        .buttonStyle(.plain)
+                        .glassEffect(.regular.interactive())
+                        .padding(.bottom, 15)
+                        
+                        Spacer()
+                        
+                        Button {
+                            focusedField.wrappedValue = nil
+                        } label: {
+                            Image(systemName: "checkmark")
+                                .padding(15)
                         }
                         .buttonStyle(.plain)
                         .glassEffect(.regular.interactive())
-                        .padding(.horizontal, 15)
-                        .padding(.bottom, 10)
+                        .padding(.bottom, 15)
                     }
+                    .sharedBackgroundVisibility(.hidden)
                 }
-                .detectKeyboard(isKeyboardShowing: $isKeyboardShowing)
-                .animation(.default, value: isKeyboardShowing)
         } else {
             content
                 .toolbar {
@@ -129,15 +131,15 @@ struct TextFieldToolbarDoneWithChevrons: ViewModifier {
 }
 
 extension View {
-    func withTextFieldToolbarDone(isKeyboardShowing: Binding<Bool>, focusedField: FocusState<FocusableField?>.Binding) -> some View {
+    func withTextFieldToolbarDone(focusedField: FocusState<FocusableField?>.Binding) -> some View {
         self.modifier(
-            TextFieldToolbarDone(isKeyboardShowing: isKeyboardShowing, focusedField: focusedField)
+            TextFieldToolbarDone(focusedField: focusedField)
         )
     }
 
-    func withTextFieldToolbarDoneWithChevrons(isKeyboardShowing: Binding<Bool>, isSupersetToggleOn: Binding<Bool>, focusedField: FocusState<FocusableField?>.Binding) -> some View {
+    func withTextFieldToolbarDoneWithChevrons(fields: [FocusableField], focusedField: FocusState<FocusableField?>.Binding) -> some View {
         self.modifier(
-            TextFieldToolbarDoneWithChevrons(isKeyboardShowing: isKeyboardShowing, isSupersetToggleOn: isSupersetToggleOn, focusedField: focusedField)
+            TextFieldToolbarDoneWithChevrons(fields: fields, focusedField: focusedField)
         )
     }
 }

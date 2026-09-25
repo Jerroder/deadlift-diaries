@@ -145,6 +145,8 @@ struct CreateExerciseView: View {
     @State private var isDistanceBased: Bool = false
     @State private var notes: String = ""
     
+    @FocusState private var focusedField: FocusableField?
+    
     init(initialName: String = "", onCreate: @escaping (Exercise) -> Void) {
         self.initialName = initialName
         self.onCreate = onCreate
@@ -156,6 +158,7 @@ struct CreateExerciseView: View {
             Form {
                 Section("Exercise") {
                     TextField("Name", text: $name)
+                        .focused($focusedField, equals: .exerciseName)
                     
                     Toggle("Time based", isOn: $isTimeBased)
                         .onChange(of: isTimeBased) { _, value in
@@ -173,8 +176,13 @@ struct CreateExerciseView: View {
                     
                     TextField("Notes", text: $notes, axis: .vertical)
                         .lineLimit(3...6)
+                        .focused($focusedField, equals: .notes)
                 }
             }
+            .withTextFieldToolbarDoneWithChevrons(
+                fields: [.exerciseName, .notes],
+                focusedField: $focusedField
+            )
             .navigationTitle("New Exercise")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -249,6 +257,8 @@ struct AddExerciseView: View {
     
     @State private var expandedTimeField: ExpandableTimeField?
     
+    @FocusState private var focusedField: FocusableField?
+    
     private var filteredExercises: [Exercise] {
         let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
         
@@ -301,6 +311,7 @@ struct AddExerciseView: View {
                         }
                     } else {
                         TextField("Search exercises", text: $searchText)
+                            .focused($focusedField, equals: .exerciseName)
                         
                         if !filteredExercises.isEmpty {
                             ForEach(filteredExercises) { exercise in
@@ -371,6 +382,7 @@ struct AddExerciseView: View {
                                 TextField("0", value: $distance, format: .number)
                                     .keyboardType(.numberPad)
                                     .multilineTextAlignment(.trailing)
+                                    .focused($focusedField, equals: .exerciseWeight)
                                 
                                 Text(distanceUnit().symbol)
                                     .foregroundStyle(.secondary)
@@ -394,6 +406,7 @@ struct AddExerciseView: View {
                             TextField("Optional", value: $weight, format: .number)
                                 .keyboardType(.decimalPad)
                                 .multilineTextAlignment(.trailing)
+                                .focused($focusedField, equals: .exerciseWeight)
                             
                             Text("kg")
                                 .foregroundStyle(.secondary)
@@ -455,6 +468,7 @@ struct AddExerciseView: View {
                     }
                 }
             }
+            .withTextFieldToolbarDone(focusedField: $focusedField)
             .navigationTitle(isNormalMode ? "Add Exercise" : "Add Superset Exercise")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -602,14 +616,18 @@ struct CreateTrainingBlockView: View {
     @State private var name: String = ""
     @State private var notes: String = ""
     
+    @FocusState private var focusedField: FocusableField?
+    
     var body: some View {
         NavigationStack {
             Form {
                 Section {
                     TextField("Name", text: $name)
+                        .focused($focusedField, equals: .mesocycleName)
                     
                     TextField("Notes", text: $notes, axis: .vertical)
                         .lineLimit(3...6)
+                        .focused($focusedField, equals: .notes)
                 } header: {
                     Text("Program")
                 } footer: {
@@ -617,6 +635,10 @@ struct CreateTrainingBlockView: View {
                          "is tracked separately from other programs.")
                 }
             }
+            .withTextFieldToolbarDoneWithChevrons(
+                fields: [.mesocycleName, .notes],
+                focusedField: $focusedField
+            )
             .navigationTitle("New Program")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -753,6 +775,8 @@ struct CreateWorkoutTemplateView: View {
     
     @State private var supersetBaseExercise: WorkoutExercise?
     
+    @FocusState private var focusedField: FocusableField?
+    
     let onCreate: (WorkoutTemplate) -> Void
     
     var body: some View {
@@ -762,9 +786,11 @@ struct CreateWorkoutTemplateView: View {
                 
                 Section {
                     TextField("Workout Name", text: $name)
+                        .focused($focusedField, equals: .workoutName)
                     
                     TextField("Notes", text: $notes, axis: .vertical)
                         .lineLimit(3...6)
+                        .focused($focusedField, equals: .notes)
                 } header: {
                     Text("Workout")
                 }
@@ -864,6 +890,10 @@ struct CreateWorkoutTemplateView: View {
                     Text("Exercises")
                 }
             }
+            .withTextFieldToolbarDoneWithChevrons(
+                fields: [.workoutName, .notes],
+                focusedField: $focusedField
+            )
             .navigationTitle("New Template")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -1057,6 +1087,8 @@ struct AddWorkoutView: View {
     @State private var startDate: Date
     @State private var numberOfWeeks: Int = 1
     
+    @FocusState private var focusedField: FocusableField?
+    
     init(startDate: Date = Date()) {
         _startDate = State(initialValue: startDate)
     }
@@ -1120,6 +1152,7 @@ struct AddWorkoutView: View {
                         }
                     } else {
                         TextField("Search templates", text: $searchText)
+                            .focused($focusedField, equals: .searchField)
                         
                         if filteredTemplates.isEmpty {
                             ContentUnavailableView("No Templates", systemImage: "list.bullet.rectangle",
@@ -1215,6 +1248,7 @@ struct AddWorkoutView: View {
                     }
                 }
             }
+            .withTextFieldToolbarDone(focusedField: $focusedField)
             .navigationTitle("Add Workout")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

@@ -11,6 +11,8 @@ import UserNotifications
 
 enum FocusableField: Hashable {
     case mesocycleName, workoutName, exerciseName, exerciseWeight, supersetName, supersetWeight
+    case notes
+    case searchField
 }
 
 struct ContentView: View {
