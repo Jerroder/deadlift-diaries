@@ -1907,6 +1907,8 @@ struct EditScheduledWorkoutView: View {
         
         baseExercise.propagateToFollowingWorkouts(deleted: false, modelContext: modelContext)
         workoutExercise.propagateToFollowingWorkouts(deleted: false, modelContext: modelContext)
+        
+        baseExercise.syncOwnPerformedExercise(modelContext: modelContext)
         workoutExercise.addToOwnSessionIfNeeded(modelContext: modelContext)
     }
     
@@ -1919,6 +1921,9 @@ struct EditScheduledWorkoutView: View {
         
         first.propagateToFollowingWorkouts(deleted: false, modelContext: modelContext)
         second.propagateToFollowingWorkouts(deleted: false, modelContext: modelContext)
+        
+        first.syncOwnPerformedExercise(modelContext: modelContext)
+        second.syncOwnPerformedExercise(modelContext: modelContext)
     }
     
     private func delete(_ row: TemplateExerciseRow) {
