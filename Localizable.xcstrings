@@ -658,36 +658,6 @@
         }
       }
     },
-    "countdown" : {
-      "comment" : "Countdown",
-      "extractionState" : "manual",
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Countdown"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Countdown"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Cuenta atrás"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Compte à rebours"
-          }
-        }
-      }
-    },
     "create_new_exercise" : {
       "comment" : "Create New Exercise",
       "extractionState" : "manual",

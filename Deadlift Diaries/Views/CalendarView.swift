@@ -537,7 +537,7 @@ struct AddExerciseView: View {
                                 HStack {
                                     HStack(spacing: 4) {
                                         Text("rest_label".localized(comment: "Rest"))
-                                        Text(formattedRest(restSeconds))
+                                        Text(" \(formattedRest(restSeconds))")
                                             .font(.subheadline)
                                             .foregroundColor(Color(UIColor.secondaryLabel))
                                         Image(systemName: expandedTimeField == .rest ? "chevron.up" : "chevron.down")
@@ -562,8 +562,8 @@ struct AddExerciseView: View {
                             } label: {
                                 HStack {
                                     HStack(spacing: 4) {
-                                        Text("countdown".localized(comment: "Countdown"))
-                                        Text(formattedRest(timeBeforeNext))
+                                        Text("time_before_next".localized(comment: "Time before next exercise"))
+                                        Text(" \(formattedRest(timeBeforeNext))")
                                             .font(.subheadline)
                                             .foregroundColor(Color(UIColor.secondaryLabel))
                                         Image(systemName: expandedTimeField == .countdown ? "chevron.up" : "chevron.down")
