@@ -299,11 +299,11 @@ struct ProgressBarView: View {
                 startSet()
             }
         } else if completedRestIndex >= sets.count && showsTimeBeforeNext && !exercise.beforeNextCompleted {
-            Button("start_next_exercise_timer".localized(comment: "Start next exercise timer")) {
+            Button("start".localized(comment: "Start")) {
                 startBeforeNext()
             }
         } else {
-            Button("start_rest".localized(comment: "Start rest")) {
+            Button("start".localized(comment: "Start")) {
                 startRest()
             }
             .disabled(completedRestIndex >= sets.count)

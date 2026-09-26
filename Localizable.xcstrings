@@ -2590,6 +2590,36 @@
         }
       }
     },
+    "remove_from_superset" : {
+      "comment" : "Remove from Superset",
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aus Superset entfernen"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Remove from Superset"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Quitar del superset"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Retirer du superset"
+          }
+        }
+      }
+    },
     "rename_workout" : {
       "comment" : "Rename Workout",
       "extractionState" : "manual",
@@ -3036,6 +3066,36 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Planning"
+          }
+        }
+      }
+    },
+    "schedule_weeks_footer" : {
+      "comment" : "Changes the number of weeks this workout repeats for, starting from when it first began.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ändert die Anzahl der Wochen, für die sich dieses Training wiederholt, ausgehend vom ursprünglichen Startdatum."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Changes the number of weeks this workout repeats for, starting from when it first began."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cambia el número de semanas que se repite este entrenamiento, contando desde su fecha de inicio original."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Modifie le nombre de semaines de répétition de cet entraînement, à partir de sa date de début initiale."
           }
         }
       }
@@ -3516,66 +3576,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Partir de zéro"
-          }
-        }
-      }
-    },
-    "start_next_exercise_timer" : {
-      "comment" : "Start next exercise timer",
-      "extractionState" : "manual",
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Timer für nächste Übung starten"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Start next exercise timer"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Iniciar temporizador del siguiente ejercicio"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Démarrer le minuteur du prochain exercice"
-          }
-        }
-      }
-    },
-    "start_rest" : {
-      "comment" : "Start rest",
-      "extractionState" : "manual",
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Pause starten"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Start rest"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Iniciar descanso"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Démarrer le repos"
           }
         }
       }
@@ -4386,66 +4386,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Les modifications ici n'affectent que cet entraînement et ses occurrences suivantes - le modèle dont il provient reste inchangé."
-          }
-        }
-      }
-    },
-    "remove_from_superset" : {
-      "comment" : "Remove from Superset",
-      "extractionState" : "manual",
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Aus Superset entfernen"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Remove from Superset"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Quitar del superset"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Retirer du superset"
-          }
-        }
-      }
-    },
-    "schedule_weeks_footer" : {
-      "comment" : "Changes the number of weeks this workout repeats for, starting from when it first began.",
-      "extractionState" : "manual",
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ändert die Anzahl der Wochen, für die sich dieses Training wiederholt, ausgehend vom ursprünglichen Startdatum."
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Changes the number of weeks this workout repeats for, starting from when it first began."
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Cambia el número de semanas que se repite este entrenamiento, contando desde su fecha de inicio original."
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Modifie le nombre de semaines de répétition de cet entraînement, à partir de sa date de début initiale."
           }
         }
       }
