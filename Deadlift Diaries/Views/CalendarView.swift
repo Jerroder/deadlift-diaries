@@ -1911,12 +1911,29 @@ struct CalendarView: View {
                     }
                 }
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button("today".localized(comment: "Today")) {
-                        goToToday()
+                    if #available(iOS 26.0, *) {
+                        if calendar.isDateInToday(selectedDate) {
+                            Button("today".localized(comment: "Today")) {
+                                goToToday()
+                            }
+                        } else {
+                            Button("today".localized(comment: "Today")) {
+                                goToToday()
+                            }
+                            .buttonStyle(.glassProminent)
+                        }
+                    } else {
+                        if calendar.isDateInToday(selectedDate) {
+                            Button("today".localized(comment: "Today")) {
+                                goToToday()
+                            }
+                        } else {
+                            Button("today".localized(comment: "Today")) {
+                                goToToday()
+                            }
+                            .buttonStyle(.borderedProminent)
+                        }
                     }
-                    .tint(
-                        calendar.isDateInToday(selectedDate) ? nil : .accentColor
-                    )
                 }
             }
         }
