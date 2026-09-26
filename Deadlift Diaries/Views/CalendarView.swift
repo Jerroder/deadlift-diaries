@@ -83,7 +83,7 @@ struct ScheduledWorkoutCard: View {
                         WorkoutExerciseRow(workoutExercise: workoutExercise)
                     }
                 }
-                .padding(.leading, 14)
+                .padding(.leading, 16)
             }
         }
     }
@@ -2270,8 +2270,10 @@ struct CalendarView: View {
                             ScheduledWorkoutCard(scheduledWorkout: scheduledWorkout)
                         }
                         .listRowSeparator(.hidden)
+                        .listRowInsets(EdgeInsets(top: 12, leading: 30, bottom: 16, trailing: 24))
                         .listRowBackground(RoundedRectangle(cornerRadius: 16)
-                            .fill(Color(uiColor: .secondarySystemBackground)))
+                            .fill(Color(uiColor: .secondarySystemBackground))
+                            .padding(.horizontal, 14))
                         .swipeActions(edge: .trailing, allowsFullSwipe: false) {
                             Button(role: .destructive) {
                                 deleteWorkout(scheduledWorkout)
