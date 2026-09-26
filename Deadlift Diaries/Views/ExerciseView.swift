@@ -91,7 +91,7 @@ struct ExerciseCard: View {
             exerciseDetails()
             
             if isExpanded {
-                SetProgressView(exercise: exercise, isLastExercise: isLastExercise)
+                ProgressBarView(exercise: exercise, isLastExercise: isLastExercise)
                     .contentShape(Rectangle())
                     .onTapGesture { }
             }
@@ -179,7 +179,7 @@ struct SupersetCard: View {
             exerciseDetails()
             
             if isExpanded {
-                SetProgressView(exercise: first, isLastExercise: isLastExercise)
+                ProgressBarView(exercise: first, isLastExercise: isLastExercise)
                     .contentShape(Rectangle())
                     .onTapGesture { }
             }

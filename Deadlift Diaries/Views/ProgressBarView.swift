@@ -5,733 +5,479 @@
 //  Created by Jerroder on 2025-10-06.
 //
 
-import AudioToolbox
-import AVFoundation
 import SwiftUI
-import UserNotifications
-import ActivityKit
+
+struct RestBox: View {
+    let totalDuration: Double
+    let remaining: Duration
+    let isActive: Bool
+    let isCompleted: Bool
+    var color: Color = Color(red: 0xFF / 255, green: 0xBC / 255, blue: 0x8E / 255)
+    
+    var body: some View {
+        TimelineView(.animation) { _ in
+            GeometryReader { geo in
+                let progress: Double = {
+                    if isCompleted {
+                        return 1
+                    }
+                    
+                    guard isActive else {
+                        return 0
+                    }
+                    
+                    let components = remaining.components
+                    let remainingSeconds = Double(components.seconds) +
+                    Double(components.attoseconds) / 1_000_000_000_000_000_000
+                    
+                    return min(max(1 - remainingSeconds / totalDuration, 0), 1)
+                }()
+                
+                ZStack(alignment: .leading) {
+                    RoundedRectangle(cornerRadius: 4)
+                        .fill(color.opacity(0.3))
+                    
+                    RoundedRectangle(cornerRadius: 4)
+                        .fill(color)
+                        .frame(width: geo.size.width * progress)
+                }
+            }
+        }
+    }
+}
 
 struct ProgressBarView: View {
-    let totalSets: Int
-    @Binding var currentSet: Int
-    let restDuration: Double
-    let timeBeforeNextExercise: Double
-    @Binding var isTimerRunning: Bool
-    @Binding var elapsed: Double
-    let isTimeBased: Bool
-    let duration: Double
-    let isCalledFromTimer: Bool
-
-    @Environment(\.scenePhase) var scenePhase
-    @State private var isActive: Bool = true
-
-    @AppStorage("selectedSoundID") private var selectedSoundID: Int = 1075
+    @Bindable var exercise: PerformedExercise
+    let isLastExercise: Bool
+    
+    @State private var currentSetIndex: Int = 0
+    
     @AppStorage("sendNotification") private var sendNotification: Bool = false
+    @AppStorage("selectedSoundID") private var selectedSoundID: Int = 1075
     @AppStorage("autoStartSetAfterRest") private var autoStartSetAfterRest: Bool = false
     @AppStorage("autoStartRestAfterSet") private var autoStartRestAfterSet: Bool = false
-    @AppStorage("autoResetTimer") private var autoResetTimer: Bool = false
-
-    @State private var isExerciseDone: Bool = false
-    @State private var restProgress: CGFloat = 0
-    @State private var timer: DispatchSourceTimer?
-    @State private var backgroundTask: UIBackgroundTaskIdentifier = .invalid
-    @State private var timeStarted: Double?
-    @State private var timeRemaining: Double = 60.0
-    @State private var isExerciseInterval: Bool = true
-    @State private var timerActivity: Activity<TimerWidgetAttributes>?
-    @State private var timerEndDate: Date?
-
-    // accentColor is 0x5DA79B
-    let orange: Color = Color(red: 0xFF/255, green: 0xBC/255, blue: 0x8E/255)
-    let yellow: Color = Color(red: 0xFF/255, green: 0xD6/255, blue: 0x8E/255)
-    let red: Color = Color(red: 0xF5/255, green: 0x89/255, blue: 0x96/255)
-    let blue: Color = Color(red: 0x68/255, green: 0x83/255, blue: 0xAE/255)
-    let green: Color = Color(red: 0x8D/255, green: 0xD9/255, blue: 0x79/255)
-
-    private var realDuration: Double {
-        if isExerciseDone {
-            return timeBeforeNextExercise
-        } else if isTimeBased {
-            if isExerciseInterval {
-                if currentSet > nbSet {
-                    return 0
-                } else {
-                    return duration
-                }
-            } else {
-                return restDuration
-            }
-        } else {
-            if currentSet > nbSet {
-                return 0
-            } else {
-                return restDuration
-            }
+    
+    private let liveActivityManager = TimerLiveActivityManager.shared
+    @State private var restSessionID = UUID()
+    
+    private var workoutTimer = RestTimerManager.shared
+    
+    private var sets: [PerformedSet] {
+        (exercise.sets ?? []).sorted { $0.setNumber < $1.setNumber }
+    }
+    
+    private var isTimeBased: Bool {
+        exercise.sourceExercise?.exercise?.isTimeBased ?? false
+    }
+    
+    // The target duration (in seconds) of a single time-based set, e.g. a 60 second plank.
+    private var setDuration: Int {
+        exercise.targetReps
+    }
+    
+    private var restDuration: Int {
+        exercise.sourceExercise?.restSeconds ?? 60
+    }
+    
+    // The countdown shown after this exercise's sets are done, before the next exercise starts.
+    private var timeBeforeNext: Int? {
+        guard let seconds = exercise.sourceExercise?.timeBeforeNext, seconds > 0 else {
+            return nil
         }
+        
+        return seconds
     }
-
-    private var nbSet: Int {
-        isTimeBased ? totalSets * 2 : totalSets
+    
+    private var showsTimeBeforeNext: Bool {
+        !isLastExercise && timeBeforeNext != nil
     }
-
-    // MARK: - Main view
-
+    
+    private var completedRestIndex: Int {
+        sets.firstIndex(where: { !$0.completed }) ?? sets.count
+    }
+    
+    private var currentSetCompleted: Bool {
+        guard sets.indices.contains(currentSetIndex) else {
+            return true
+        }
+        
+        return sets[currentSetIndex].completed
+    }
+    
+    private var isCurrentExerciseResting: Bool {
+        workoutTimer.isActive && workoutTimer.phase == .rest && workoutTimer.exerciseID == exercise.id
+    }
+    
+    private var isCurrentExerciseSetTiming: Bool {
+        workoutTimer.isActive && workoutTimer.phase == .workingSet && workoutTimer.exerciseID == exercise.id
+    }
+    
+    private var isCurrentExerciseBeforeNext: Bool {
+        workoutTimer.isActive && workoutTimer.phase == .beforeNextExercise && workoutTimer.exerciseID == exercise.id
+    }
+    
+    private var isCurrentExerciseTiming: Bool {
+        isCurrentExerciseResting || isCurrentExerciseSetTiming || isCurrentExerciseBeforeNext
+    }
+    
+    private var restSeconds: Int {
+        if completedRestIndex == sets.count {
+            return 0
+        }
+        
+        if isCurrentExerciseResting {
+            return Int(workoutTimer.remaining.components.seconds)
+        }
+        
+        return restDuration
+    }
+    
+    // The value shown under the progress bar: whichever timer is relevant right now.
+    private var displaySeconds: Int {
+        if isCurrentExerciseTiming {
+            return Int(workoutTimer.remaining.components.seconds)
+        }
+        
+        if completedRestIndex >= sets.count {
+            if showsTimeBeforeNext && !exercise.beforeNextCompleted, let timeBeforeNext {
+                return timeBeforeNext
+            }
+            
+            return 0
+        }
+        
+        if isTimeBased && !currentSetCompleted {
+            return setDuration
+        }
+        
+        return restDuration
+    }
+    
+    private var displayTimeString: String {
+        formattedSeconds(displaySeconds)
+    }
+    
+    private var restoredSetIndex: Int {
+        if isTimeBased && completedRestIndex < sets.count {
+            return completedRestIndex
+        }
+        
+        return max(0, completedRestIndex - 1)
+    }
+    
+    private func formattedSeconds(_ seconds: Int) -> String {
+        let totalSeconds = max(0, seconds)
+        
+        if totalSeconds < 60 {
+            return "\(totalSeconds)s"
+        }
+        
+        let minutes = totalSeconds / 60
+        let remainingSeconds = totalSeconds % 60
+        
+        return String(format: "%02d:%02d", minutes, remainingSeconds)
+    }
+    
     var body: some View {
-        VStack {
-            progressBars()
-                .frame(height: 20)
-                .padding(.horizontal, totalSets > 6 ? 0 : nil)
-
-            Text("remaining_x_sec".localized(with: Int(timeRemaining.rounded(.down)), comment: "Remaining: x sec"))
+        VStack(spacing: 12) {
+            GeometryReader { geo in
+                let segmentCount = sets.count * 2 - 1 + (showsTimeBeforeNext ? 1 : 0)
+                let spacing: CGFloat = 6
+                let totalSpacing = CGFloat(segmentCount - 1) * spacing
+                let segmentWidth = (geo.size.width - totalSpacing) / CGFloat(segmentCount)
+                
+                HStack(spacing: spacing) {
+                    ForEach(Array(sets.enumerated()), id: \.element.id) { index, set in
+                        let isSetTiming = isTimeBased && isCurrentExerciseSetTiming && index == currentSetIndex
+                        
+                        Button {
+                            selectSet(index)
+                        } label: {
+                            if isSetTiming {
+                                RestBox(
+                                    totalDuration: Double(setDuration),
+                                    remaining: workoutTimer.remaining,
+                                    isActive: true,
+                                    isCompleted: false,
+                                    color: .accentColor
+                                )
+                                .frame(width: segmentWidth, height: 20)
+                            } else {
+                                RoundedRectangle(cornerRadius: 4)
+                                    .fill(set.completed ? Color.accentColor : Color.accentColor.opacity(0.3))
+                                    .frame(width: segmentWidth, height: 20)
+                            }
+                        }
+                        .buttonStyle(.plain)
+                        .allowsHitTesting(!isSetTiming)
+                        
+                        if index < sets.count - 1 {
+                            let isRestActive = isCurrentExerciseResting && index == currentSetIndex
+                            
+                            Button {
+                                selectRest(after: index)
+                            } label: {
+                                RestBox(
+                                    totalDuration: Double(restDuration),
+                                    remaining: isRestActive ? workoutTimer.remaining : .seconds(restSeconds),
+                                    isActive: isRestActive,
+                                    isCompleted: index < currentSetIndex && set.completed
+                                )
+                                .frame(width: segmentWidth, height: 20)
+                            }
+                            .buttonStyle(.plain)
+                            .allowsHitTesting(!isRestActive)
+                        }
+                    }
+                    
+                    if showsTimeBeforeNext, let timeBeforeNext {
+                        Button {
+                            toggleBeforeNext()
+                        } label: {
+                            RestBox(
+                                totalDuration: Double(timeBeforeNext),
+                                remaining: isCurrentExerciseBeforeNext ? workoutTimer.remaining : .seconds(timeBeforeNext),
+                                isActive: isCurrentExerciseBeforeNext,
+                                isCompleted: exercise.beforeNextCompleted
+                            )
+                            .frame(width: segmentWidth, height: 20)
+                        }
+                        .buttonStyle(.plain)
+                        .allowsHitTesting(!isCurrentExerciseBeforeNext)
+                    }
+                }
+            }
+            .frame(height: 20)
+            
+            Text("remaining_x".localized(with: displayTimeString, comment: "Remaining: x"))
                 .font(.title)
-
-            if #available(iOS 26.0, *) {
-                HStack {
-                    Spacer()
-                    Button(action: toggleTimer) {
-                        Text(isTimerRunning ? "pause".localized(comment: "Pause") : "start".localized(comment: "Start"))
-                    }
-                    .disabled(currentSet > nbSet)
-                    .buttonStyle(.glassProminent)
-                    Spacer()
-                    Button("reset".localized(comment: "Reset")) {
-                        resetValues(index: 1, isExerciseInterval: true)
-                    }
-                    .buttonStyle(.glass)
-                    Spacer()
-                }
-            } else {
-                HStack {
-                    Spacer()
-                    Button(action: toggleTimer) {
-                        Text(isTimerRunning ? "pause".localized(comment: "Pause") : "start".localized(comment: "Start"))
-                    }
-                    .disabled(currentSet > nbSet)
-                    Spacer()
-                    Button("reset".localized(comment: "Reset")) {
-                        resetValues(index: 1, isExerciseInterval: true)
-                    }
-                    Spacer()
-                }
-            }
-        }
-        .onAppear {
-            timeRemaining = max(0, realDuration - elapsed)
-            if timeRemaining < realDuration {
-                restProgress = 1 - (CGFloat(timeRemaining.rounded(.down)) / CGFloat(realDuration.rounded(.up)))
-            } else {
-                restProgress = 0
-            }
-        }
-        .onChange(of: restDuration) {
-            timeRemaining = realDuration
-        }
-        .onChange(of: duration) {
-            timeRemaining = realDuration
-        }
-        .onChange(of: timeBeforeNextExercise) {
-            timeRemaining = realDuration
-        }
-        .onChange(of: totalSets) { _, newValue in
-            if newValue == 1 && !isTimeBased {
-                isExerciseDone = true
-            } else {
-                isExerciseDone = false
-            }
-            timeRemaining = realDuration
-        }
-        .onChange(of: isTimeBased) { _, newValue in
-            currentSet = (isTimeBased) ? (currentSet * 2) - 1 : (currentSet / 2) + 1
-            isExerciseDone = (totalSets == 1 && !isTimeBased) || (currentSet == nbSet) ? true : false
-            isExerciseInterval = newValue
-            timeRemaining = realDuration
-        }
-        .onAppear {
-            isExerciseDone = (totalSets == 1 && !isTimeBased) || (currentSet == nbSet) ? true : false
-            timeRemaining = realDuration
-        }
-        .onChange(of: scenePhase) { _, newPhase in
-            switch newPhase {
-            case .active:
-                isActive = true
-                print("App became active")
-
-                if isTimerRunning, let start = timeStarted {
-                    let now = Date.now.timeIntervalSince1970 * 1000
-                    let totalElapsed = (now - start) / 1000
-                    let remaining = max(0, realDuration - totalElapsed - elapsed)
-                    timeRemaining = remaining
-                    restProgress = 1 - (CGFloat(timeRemaining.rounded(.down)) / CGFloat(realDuration.rounded(.up)))
-                }
-            case .inactive:
-                print("App became inactive")
-            case .background:
-                isActive = false
-                print("App entered background")
-            @unknown default:
-                print("Unknown scene phase")
-            }
-        }
-        .onDisappear {
-            if !isTimerRunning {
-                endLiveActivity()
-            }
-        }
-    }
-
-    // MARK: - ViewBuilder functions
-
-    @ViewBuilder
-    private func progressBars() -> some View {
-        GeometryReader { geometry in
-            let needsScrolling = totalSets > 6
-            let squareWidth: Double = {
-                if needsScrolling {
-                    return 35 // Fixed width when scrolling
+            
+            HStack(spacing: 48) {
+                if #available(iOS 26.0, *) {
+                    resetButton()
+                        .buttonStyle(.glass)
+                    
+                    actionButton()
+                        .buttonStyle(.glassProminent)
                 } else {
-                    return geometry.size.width / CGFloat(2 * self.totalSets) // Scale to fit when not scrolling
+                    resetButton()
+                        .buttonStyle(.bordered)
+                    
+                    actionButton()
+                        .buttonStyle(.borderedProminent)
                 }
-            }()
-
-            if needsScrolling {
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 4) {
-                        ForEach(UInt8(1)..<2 * UInt8(self.totalSets) + 1, id: \.self) { index in
-                    if isTimeBased { // time based
-                        if index.isMultiple(of: 2) { // rest
-                            if index == currentSet {
-                                ZStack(alignment: .leading) {
-                                    Rectangle()
-                                        .frame(width: squareWidth, height: 20)
-                                        .foregroundColor(orange.opacity(0.3))
-                                        .cornerRadius(4)
-                                    Rectangle()
-                                        .frame(width: squareWidth * self.restProgress, height: 20)
-                                        .foregroundColor(orange)
-                                        .cornerRadius(4)
-                                        .animation(.linear, value: self.restProgress)
-                                }
-                            } else if index < currentSet {
-                                Rectangle()
-                                    .frame(width: squareWidth, height: 20)
-                                    .foregroundColor(orange)
-                                    .cornerRadius(4)
-                                    .onTapGesture {
-                                        if !isTimerRunning {
-                                            resetValues(index: Int(index), isExerciseInterval: false)
-                                        }
-                                    }
-                            } else {
-                                Rectangle()
-                                    .frame(width: squareWidth, height: 20)
-                                    .foregroundColor(orange.opacity(0.3))
-                                    .cornerRadius(4)
-                                    .onTapGesture {
-                                        if !isTimerRunning {
-                                            resetValues(index: Int(index), isExerciseInterval: false)
-                                        }
-                                    }
-                            }
-                        } else { // set
-                            if index == currentSet {
-                                ZStack(alignment: .leading) {
-                                    Rectangle()
-                                        .frame(width: squareWidth, height: 20)
-                                        .foregroundColor(.accentColor.opacity(0.3))
-                                        .cornerRadius(4)
-                                    Rectangle()
-                                        .frame(width: squareWidth * self.restProgress, height: 20)
-                                        .foregroundColor(.accentColor)
-                                        .cornerRadius(4)
-                                        .animation(.linear, value: self.restProgress)
-                                }
-                            } else if index < currentSet {
-                                Rectangle()
-                                    .frame(width: squareWidth, height: 20)
-                                    .foregroundColor(.accentColor)
-                                    .cornerRadius(4)
-                                    .onTapGesture {
-                                        if !isTimerRunning {
-                                            resetValues(index: Int(index), isExerciseInterval: true)
-                                        }
-                                    }
-                            } else {
-                                Rectangle()
-                                    .frame(width: squareWidth, height: 20)
-                                    .foregroundColor(.accentColor.opacity(0.3))
-                                    .cornerRadius(4)
-                                    .onTapGesture {
-                                        if !isTimerRunning {
-                                            resetValues(index: Int(index), isExerciseInterval: true)
-                                        }
-                                    }
-                            }
-                        }
-                    } else { // reps based
-                        if index.isMultiple(of: 2) { // rest
-                            if index / 2 == currentSet {
-                                ZStack(alignment: .leading) {
-                                    Rectangle()
-                                        .frame(width: squareWidth, height: 20)
-                                        .foregroundColor(orange.opacity(0.3))
-                                        .cornerRadius(4)
-                                    Rectangle()
-                                        .frame(width: squareWidth * self.restProgress, height: 20)
-                                        .foregroundColor(orange)
-                                        .cornerRadius(4)
-                                        .animation(.linear, value: self.restProgress)
-                                }
-                            } else if index / 2 < currentSet {
-                                Rectangle()
-                                    .frame(width: squareWidth, height: 20)
-                                    .foregroundColor(orange)
-                                    .cornerRadius(4)
-                            } else {
-                                Rectangle()
-                                    .frame(width: squareWidth, height: 20)
-                                    .foregroundColor(orange.opacity(0.3))
-                                    .cornerRadius(4)
-                            }
-                        } else { // set
-                            if (index + 1) / 2 <= currentSet {
-                                Rectangle()
-                                    .frame(width: squareWidth, height: 20)
-                                    .foregroundColor(.accentColor)
-                                    .cornerRadius(4)
-                                    .onTapGesture {
-                                        if !isTimerRunning {
-                                            resetValues(index: Int((index + 1) / 2), isExerciseInterval: false)
-                                        }
-                                    }
-                            } else {
-                                Rectangle()
-                                    .frame(width: squareWidth, height: 20)
-                                    .foregroundColor(.accentColor.opacity(0.3))
-                                    .cornerRadius(4)
-                                    .onTapGesture {
-                                        if !isTimerRunning {
-                                            resetValues(index: Int((index + 1) / 2), isExerciseInterval: false)
-                                        }
-                                    }
-                            }
-                        }
-                        }
-                    }
+            }
+        }
+        .onAppear {
+            if !isTimeBased {
+                completeCurrentSet()
+            }
+            
+            currentSetIndex = restoredSetIndex
+        }
+    }
+    
+    @ViewBuilder
+    private func resetButton() -> some View {
+        Button("reset".localized(comment: "Reset")) {
+            resetProgress()
+        }
+    }
+    
+    @ViewBuilder
+    private func actionButton() -> some View {
+        if isCurrentExerciseTiming {
+            Button(workoutTimer.isPaused ? "resume".localized(comment: "Resume") : "pause".localized(comment: "Pause")) {
+                if workoutTimer.isPaused {
+                    workoutTimer.resume(sendNotification: sendNotification)
+                } else {
+                    workoutTimer.pause()
                 }
-                .frame(height: 20)
+            }
+        } else if isTimeBased && !currentSetCompleted {
+            Button("start".localized(comment: "Start")) {
+                startSet()
+            }
+        } else if completedRestIndex >= sets.count && showsTimeBeforeNext && !exercise.beforeNextCompleted {
+            Button("start_next_exercise_timer".localized(comment: "Start next exercise timer")) {
+                startBeforeNext()
+            }
+        } else {
+            Button("start_rest".localized(comment: "Start rest")) {
+                startRest()
+            }
+            .disabled(completedRestIndex >= sets.count)
+        }
+    }
+    
+    private func selectSet(_ index: Int) {
+        guard sets.indices.contains(index) else {
+            return
+        }
+        
+        workoutTimer.stop()
+        
+        withTransaction(Transaction(animation: nil)) {
+            currentSetIndex = index
+            
+            let completedBoundary = isTimeBased ? index : index + 1
+            
+            for (i, set) in sets.enumerated() {
+                set.completed = i < completedBoundary
+            }
+            
+            exercise.beforeNextCompleted = false
+        }
+    }
+    
+    private func selectRest(after index: Int) {
+        guard sets.indices.contains(index) else {
+            return
+        }
+        
+        workoutTimer.stop()
+        
+        withTransaction(Transaction(animation: nil)) {
+            currentSetIndex = index
+            
+            for (i, set) in sets.enumerated() {
+                set.completed = i <= index
+            }
+            
+            exercise.beforeNextCompleted = false
+        }
+    }
+    
+    private func toggleBeforeNext() {
+        workoutTimer.stop()
+        
+        withTransaction(Transaction(animation: nil)) {
+            if let lastIndex = sets.indices.last {
+                currentSetIndex = lastIndex
+            }
+            
+            for set in sets {
+                set.completed = true
+            }
+            
+            exercise.beforeNextCompleted.toggle()
+        }
+    }
+    
+    private func resetProgress() {
+        workoutTimer.stop()
+        
+        withTransaction(Transaction(animation: nil)) {
+            currentSetIndex = 0
+            
+            for set in sets {
+                set.completed = false
+            }
+            
+            exercise.beforeNextCompleted = false
+            
+            if !isTimeBased {
+                completeCurrentSet()
+            }
+        }
+    }
+    
+    private func completeCurrentSet() {
+        guard sets.indices.contains(currentSetIndex) else {
+            return
+        }
+        
+        sets[currentSetIndex].completed = true
+    }
+    
+    // Times the working portion of a time-based set (e.g. a 60 second plank).
+    private func startSet() {
+        guard sets.indices.contains(currentSetIndex) else {
+            return
+        }
+        
+        workoutTimer.onFinish = { finishedExerciseID, finishedSetIndex in
+            guard finishedExerciseID == exercise.id else {
+                return
+            }
+            
+            guard sets.indices.contains(finishedSetIndex) else {
+                return
+            }
+            
+            sets[finishedSetIndex].completed = true
+            
+            if autoStartRestAfterSet && finishedSetIndex + 1 < sets.count {
+                startRest()
+            }
+        }
+        
+        workoutTimer.start(
+            phase: .workingSet,
+            exerciseID: exercise.id,
+            setIndex: currentSetIndex,
+            totalSets: sets.count,
+            duration: .seconds(setDuration),
+            selectedSoundID: selectedSoundID,
+            sendNotification: sendNotification
+        )
+    }
+    
+    private func startRest() {
+        workoutTimer.onFinish = { finishedExerciseID, finishedSetIndex in
+            guard finishedExerciseID == exercise.id else {
+                return
+            }
+            
+            let nextSetIndex = finishedSetIndex + 1
+            
+            guard sets.indices.contains(nextSetIndex) else {
+                return
+            }
+            
+            currentSetIndex = nextSetIndex
+            
+            if isTimeBased {
+                if autoStartSetAfterRest {
+                    startSet()
                 }
-                .frame(width: geometry.size.width, height: 20)
             } else {
-                HStack(spacing: 4) {
-                    ForEach(UInt8(1)..<2 * UInt8(self.totalSets) + 1, id: \.self) { index in
-                        if isTimeBased { // time based
-                            if index.isMultiple(of: 2) { // rest
-                                if index == currentSet {
-                                    ZStack(alignment: .leading) {
-                                        Rectangle()
-                                            .frame(width: squareWidth, height: 20)
-                                            .foregroundColor(orange.opacity(0.3))
-                                            .cornerRadius(4)
-                                        Rectangle()
-                                            .frame(width: squareWidth * self.restProgress, height: 20)
-                                            .foregroundColor(orange)
-                                            .cornerRadius(4)
-                                            .animation(.linear, value: self.restProgress)
-                                    }
-                                } else if index < currentSet {
-                                    Rectangle()
-                                        .frame(width: squareWidth, height: 20)
-                                        .foregroundColor(orange)
-                                        .cornerRadius(4)
-                                        .onTapGesture {
-                                            if !isTimerRunning {
-                                                resetValues(index: Int(index), isExerciseInterval: false)
-                                            }
-                                        }
-                                } else {
-                                    Rectangle()
-                                        .frame(width: squareWidth, height: 20)
-                                        .foregroundColor(orange.opacity(0.3))
-                                        .cornerRadius(4)
-                                        .onTapGesture {
-                                            if !isTimerRunning {
-                                                resetValues(index: Int(index), isExerciseInterval: false)
-                                            }
-                                        }
-                                }
-                            } else { // set
-                                if index == currentSet {
-                                    ZStack(alignment: .leading) {
-                                        Rectangle()
-                                            .frame(width: squareWidth, height: 20)
-                                            .foregroundColor(.accentColor.opacity(0.3))
-                                            .cornerRadius(4)
-                                        Rectangle()
-                                            .frame(width: squareWidth * self.restProgress, height: 20)
-                                            .foregroundColor(.accentColor)
-                                            .cornerRadius(4)
-                                            .animation(.linear, value: self.restProgress)
-                                    }
-                                } else if index < currentSet {
-                                    Rectangle()
-                                        .frame(width: squareWidth, height: 20)
-                                        .foregroundColor(.accentColor)
-                                        .cornerRadius(4)
-                                        .onTapGesture {
-                                            if !isTimerRunning {
-                                                resetValues(index: Int(index), isExerciseInterval: true)
-                                            }
-                                        }
-                                } else {
-                                    Rectangle()
-                                        .frame(width: squareWidth, height: 20)
-                                        .foregroundColor(.accentColor.opacity(0.3))
-                                        .cornerRadius(4)
-                                        .onTapGesture {
-                                            if !isTimerRunning {
-                                                resetValues(index: Int(index), isExerciseInterval: true)
-                                            }
-                                        }
-                                }
-                            }
-                        } else { // reps based
-                            if index.isMultiple(of: 2) { // rest
-                                if index / 2 == currentSet {
-                                    ZStack(alignment: .leading) {
-                                        Rectangle()
-                                            .frame(width: squareWidth, height: 20)
-                                            .foregroundColor(orange.opacity(0.3))
-                                            .cornerRadius(4)
-                                        Rectangle()
-                                            .frame(width: squareWidth * self.restProgress, height: 20)
-                                            .foregroundColor(orange)
-                                            .cornerRadius(4)
-                                            .animation(.linear, value: self.restProgress)
-                                    }
-                                } else if index / 2 < currentSet {
-                                    Rectangle()
-                                        .frame(width: squareWidth, height: 20)
-                                        .foregroundColor(orange)
-                                        .cornerRadius(4)
-                                } else {
-                                    Rectangle()
-                                        .frame(width: squareWidth, height: 20)
-                                        .foregroundColor(orange.opacity(0.3))
-                                        .cornerRadius(4)
-                                }
-                            } else { // set
-                                if (index + 1) / 2 <= currentSet {
-                                    Rectangle()
-                                        .frame(width: squareWidth, height: 20)
-                                        .foregroundColor(.accentColor)
-                                        .cornerRadius(4)
-                                        .onTapGesture {
-                                            if !isTimerRunning {
-                                                resetValues(index: Int((index + 1) / 2), isExerciseInterval: false)
-                                            }
-                                        }
-                                } else {
-                                    Rectangle()
-                                        .frame(width: squareWidth, height: 20)
-                                        .foregroundColor(.accentColor.opacity(0.3))
-                                        .cornerRadius(4)
-                                        .onTapGesture {
-                                            if !isTimerRunning {
-                                                resetValues(index: Int((index + 1) / 2), isExerciseInterval: false)
-                                            }
-                                        }
-                                }
-                            }
-                        }
-                    }
-                }
-                .frame(width: geometry.size.width, height: 20)
+                sets[nextSetIndex].completed = true
             }
         }
-    }
-
-    // MARK: - Helper Functions
-
-    private func resetValues(index: Int, isExerciseInterval: Bool) {
-        timer?.cancel()
-        timer = nil
-        cancelPendingNotifications()
-        isTimerRunning = false
-        currentSet = index
-        isExerciseDone = (currentSet == nbSet) ? true : false
-        self.isExerciseInterval = isExerciseInterval
-        timeRemaining = realDuration
-        restProgress = 0
-        timeStarted = nil
-        elapsed = 0.0
-        endBackgroundTask()
-
-        endLiveActivity()
-    }
-
-    private func toggleTimer() {
-        isTimerRunning.toggle()
-        updateLiveActivity()
-
-        if isTimerRunning {
-            startTimer()
-        } else {
-            stopTimer()
-        }
-    }
-
-    private func startTimer() {
-        backgroundTask = UIApplication.shared.beginBackgroundTask { [self] in
-            self.endBackgroundTask()
-        }
-
-        timeStarted = Date.now.timeIntervalSince1970 * 1000
-        timeRemaining = max(0, realDuration - self.elapsed)
-        timerEndDate = Date().addingTimeInterval(timeRemaining)
-        cancelPendingNotifications()
-        if sendNotification {
-            scheduleNotification()
-        }
-
-        if timerActivity != nil {
-            updateLiveActivity()
-        } else {
-            startLiveActivity()
-        }
-
-        let queue: DispatchQueue = DispatchQueue(label: "com.jerroder.deadliftdiaries.timer", qos: .userInitiated)
-        timer = DispatchSource.makeTimerSource(queue: queue)
-        timer?.schedule(deadline: .now(), repeating: .seconds(1))
-        timer?.setEventHandler { [self] in
-            DispatchQueue.main.async {
-                let now: Double = Date.now.timeIntervalSince1970 * 1000
-                let elapsedSinceStart: Double = max(0, now - (timeStarted ?? 0)) / 1000
-                let totalElapsed: Double = elapsedSinceStart + self.elapsed // elapsed = accumulated paused time
-                let remaining: Double = max(0, realDuration - totalElapsed)
-                timeRemaining = remaining
-                restProgress = 1 - (CGFloat(timeRemaining.rounded(.down)) / CGFloat(realDuration.rounded(.up)))
-
-                if timeRemaining <= 0 {
-                    toggleTimer()
-
-                    if isTimeBased {
-                        isExerciseInterval.toggle()
-                    }
-
-                    if currentSet < nbSet {
-                        currentSet += 1
-                        timeRemaining = realDuration
-                        restProgress = 0
-                        self.elapsed = 0.0
-                        timerEndDate = nil
-                    }
-
-                    if currentSet == nbSet && isExerciseDone {
-                        currentSet += 1
-                        if autoResetTimer && isCalledFromTimer {
-                            resetValues(index: 1, isExerciseInterval: isTimeBased)
-                        } else {
-                            endLiveActivity()
-                        }
-                    }
-
-                    if currentSet == nbSet {
-                        isExerciseDone = true
-                        timeRemaining = timeBeforeNextExercise
-                        timerEndDate = nil
-                    }
-
-                    if isTimeBased && !isExerciseDone {
-                        if (isExerciseInterval && autoStartSetAfterRest) || (!isExerciseInterval && autoStartRestAfterSet) {
-                            toggleTimer()
-                        }
-                    }
-                } else if round(timeRemaining) == 1 {
-                    if isActive {
-                        playSystemSound()
-                    }
-                }
-            }
-        }
-        timer?.resume()
-    }
-
-    private func stopTimer() {
-        let now: Double = Date.now.timeIntervalSince1970 * 1000
-        if let timeStarted = timeStarted {
-            let elapsedSinceStart = max(0, now - timeStarted) / 1000
-            elapsed += elapsedSinceStart
-            timeRemaining = max(0, realDuration - elapsed)
-        }
-        timer?.cancel()
-        timer = nil
-        timerEndDate = nil
-        cancelPendingNotifications()
-        endBackgroundTask()
-    }
-
-    private func endBackgroundTask() {
-        if backgroundTask != .invalid {
-            UIApplication.shared.endBackgroundTask(backgroundTask)
-            backgroundTask = .invalid
-        }
-    }
-
-    private func playSystemSound() {
-        let audioSession: AVAudioSession = AVAudioSession.sharedInstance()
-        do {
-            try audioSession.setCategory(.ambient, options: .duckOthers)
-            try audioSession.setActive(true)
-        } catch {
-            print("Failed to set audio session category: \(error)")
-        }
-
-        if selectedSoundID != 0 {
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                AudioServicesPlaySystemSound(UInt32(selectedSoundID))
-            }
-
-            let duration: Double = selectedSoundID == 1328 ? 2.0 : 1.0
-            DispatchQueue.main.asyncAfter(deadline: .now() + duration) {
-                do {
-                    try audioSession.setActive(false)
-                } catch {
-                    print("Failed to deactivate audio session: \(error)")
-                }
-            }
-        } else {
-            do {
-                try audioSession.setActive(false)
-            } catch {
-                print("Failed to deactivate audio session: \(error)")
-            }
-        }
-    }
-
-    private func scheduleNotification() {
-        let content = UNMutableNotificationContent()
-        content.title = "timer_is_up".localized(comment: "The timer is up")
-        content.body = isExerciseInterval ? "exercise_is_over".localized(comment: "Exercise is over") : "rest_is_over".localized(comment: "Rest is over")
-        content.sound = UNNotificationSound.default
-
-        let trigger = UNTimeIntervalNotificationTrigger(timeInterval: timeRemaining, repeats: false)
-        let request = UNNotificationRequest(
-            identifier: UUID().uuidString,
-            content: content,
-            trigger: trigger
+        
+        workoutTimer.start(
+            phase: .rest,
+            exerciseID: exercise.id,
+            setIndex: currentSetIndex,
+            totalSets: sets.count,
+            duration: .seconds(restDuration),
+            selectedSoundID: selectedSoundID,
+            sendNotification: sendNotification
         )
-
-        UNUserNotificationCenter.current().add(request) { error in
-            if let error = error {
-                print("Error scheduling notification: \(error.localizedDescription)")
-            } else {
-                print("Notification scheduled for \(timeRemaining) seconds from now.")
-            }
-        }
     }
-
-    private func cancelPendingNotifications() {
-        UNUserNotificationCenter.current().removeAllPendingNotificationRequests()
-    }
-
-    // MARK: - Live Activity Functions
-
-    private func startLiveActivity() {
-        guard ActivityAuthorizationInfo().areActivitiesEnabled else {
-            print("Live Activities are not enabled")
+    
+    private func startBeforeNext() {
+        guard let timeBeforeNext else {
             return
         }
-
-        let attributes = TimerWidgetAttributes(
-            timerType: isExerciseDone ? "beforeNext" : (isExerciseInterval ? "exercise" : "rest")
+        
+        workoutTimer.onFinish = { finishedExerciseID, _ in
+            guard finishedExerciseID == exercise.id else {
+                return
+            }
+            
+            exercise.beforeNextCompleted = true
+        }
+        
+        workoutTimer.start(
+            phase: .beforeNextExercise,
+            exerciseID: exercise.id,
+            setIndex: 0,
+            totalSets: 1,
+            duration: .seconds(timeBeforeNext),
+            selectedSoundID: selectedSoundID,
+            sendNotification: sendNotification
         )
-
-        let isInRestPeriod: Bool
-        if isTimeBased {
-            isInRestPeriod = !isExerciseInterval
-        } else {
-            isInRestPeriod = true
-        }
-
-        let endTime = Date().addingTimeInterval(timeRemaining)
-        let contentState = TimerWidgetAttributes.ContentState(
-            timeRemaining: timeRemaining,
-            totalDuration: realDuration,
-            currentSet: isTimeBased ? (currentSet + 1) / 2 : currentSet,
-            totalSets: totalSets,
-            isResting: isInRestPeriod,
-            isRunning: true,
-            startTime: Date(),
-            endTime: endTime
-        )
-
-        do {
-            timerActivity = try Activity.request(
-                attributes: attributes,
-                content: .init(state: contentState, staleDate: endTime),
-                pushType: nil
-            )
-        } catch {
-            print("Error starting Live Activity: \(error.localizedDescription)")
-        }
-    }
-
-    private func updateLiveActivity() {
-        guard let activity = timerActivity else {
-            return
-        }
-
-        let isInRestPeriod: Bool
-        if isTimeBased {
-            isInRestPeriod = !isExerciseInterval
-        } else {
-            isInRestPeriod = true
-        }
-
-        let endTime = Date().addingTimeInterval(timeRemaining)
-        let contentState = TimerWidgetAttributes.ContentState(
-            timeRemaining: timeRemaining,
-            totalDuration: realDuration,
-            currentSet: isTimeBased ? (currentSet + 1) / 2 : currentSet,
-            totalSets: totalSets,
-            isResting: isInRestPeriod,
-            isRunning: isTimerRunning,
-            startTime: Date(),
-            endTime: endTime
-        )
-
-        Task {
-            await activity.update(
-                ActivityContent(
-                    state: contentState,
-                    staleDate: endTime
-                )
-            )
-        }
-    }
-
-    private func endLiveActivity() {
-        guard let activity = timerActivity else {
-            return
-        }
-
-        let finalState = TimerWidgetAttributes.ContentState(
-            timeRemaining: 0,
-            totalDuration: realDuration,
-            currentSet: isTimeBased ? (currentSet + 1) / 2 : currentSet,
-            totalSets: totalSets,
-            isResting: !isExerciseInterval,
-            isRunning: false,
-            startTime: nil,
-            endTime: Date()
-        )
-
-        Task {
-            await activity.end(
-                ActivityContent(state: finalState, staleDate: nil),
-                dismissalPolicy: .immediate
-            )
-            timerActivity = nil
-        }
     }
 }

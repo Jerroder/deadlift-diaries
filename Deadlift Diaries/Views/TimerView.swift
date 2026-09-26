@@ -5,31 +5,61 @@
 //  Created by Jerroder on 2025-06-06.
 //
 
+import SwiftData
 import SwiftUI
 
 struct TimerView: View {
     @AppStorage("totalSets") private var totalSets: Int = 5
-    @AppStorage("currentSet") private var currentSet: Int = 1
     @AppStorage("isTimeBased") private var isTimeBased: Bool = false
     @AppStorage("duration") private var duration: Double = 30.0
     @AppStorage("restDuration") private var restDuration: Double = 60.0
     @AppStorage("timeBeforeNext") private var timeBeforeNext: Double = 120.0
-    @AppStorage("elapsed") private var elapsed: Double = 0.0
 
-    @State private var isTimerRunning: Bool = false
+    @State private var practiceExercise: Exercise
+    @State private var practiceWorkoutExercise: WorkoutExercise
+    @State private var performedExercise: PerformedExercise
+
     @State private var showingSettingsSheet: Bool = false
     @State private var showingRestPicker: Bool = false
     @State private var showingDurationPicker: Bool = false
     @State private var showingTimeBeforeNextPicker: Bool = false
 
+    private var workoutTimer = RestTimerManager.shared
+
+    private var isTimerRunning: Bool {
+        workoutTimer.isActive && workoutTimer.exerciseID == performedExercise.id
+    }
+
+    init() {
+        let totalSets = UserDefaults.standard.object(forKey: "totalSets") as? Int ?? 5
+        let isTimeBased = UserDefaults.standard.object(forKey: "isTimeBased") as? Bool ?? false
+        let duration = UserDefaults.standard.object(forKey: "duration") as? Double ?? 30.0
+        let restDuration = UserDefaults.standard.object(forKey: "restDuration") as? Double ?? 60.0
+        let timeBeforeNext = UserDefaults.standard.object(forKey: "timeBeforeNext") as? Double ?? 120.0
+
+        let exercise = Exercise(name: "timer".localized(comment: "Timer"), isTimeBased: isTimeBased)
+        let workoutExercise = WorkoutExercise(
+            exercise: exercise,
+            order: 0,
+            targetSets: totalSets,
+            targetReps: Int(duration),
+            restSeconds: Int(restDuration),
+            timeBeforeNext: Int(timeBeforeNext)
+        )
+        let performed = PerformedExercise(from: workoutExercise, orderIndex: 0)
+        performed.sourceExercise = workoutExercise
+
+        _practiceExercise = State(initialValue: exercise)
+        _practiceWorkoutExercise = State(initialValue: workoutExercise)
+        _performedExercise = State(initialValue: performed)
+    }
+
     var body: some View {
         NavigationStack {
             Form {
                 Stepper("total_sets_x".localized(with: totalSets, comment: "Total Sets: x"), value: $totalSets, in: 1...20)
-                    .onChange(of: totalSets) { _, newValue in
-                        if currentSet > newValue {
-                            currentSet = newValue
-                        }
+                    .onChange(of: totalSets) { _, _ in
+                        rebuildPerformedExercise()
                     }
                     .disabled(isTimerRunning)
 
@@ -101,6 +131,9 @@ struct TimerView: View {
                     }
                     .pickerStyle(.wheel)
                     .disabled(isTimerRunning)
+                    .onChange(of: restDuration) { _, _ in
+                        rebuildPerformedExercise()
+                    }
                 }
 
                 if isTimeBased {
@@ -134,6 +167,9 @@ struct TimerView: View {
                         }
                         .pickerStyle(.wheel)
                         .disabled(isTimerRunning)
+                        .onChange(of: duration) { _, _ in
+                            rebuildPerformedExercise()
+                        }
                     }
                 }
 
@@ -167,19 +203,13 @@ struct TimerView: View {
                     }
                     .pickerStyle(.wheel)
                     .disabled(isTimerRunning)
+                    .onChange(of: timeBeforeNext) { _, _ in
+                        rebuildPerformedExercise()
+                    }
                 }
 
-                ProgressBarView(
-                    totalSets: totalSets,
-                    currentSet: $currentSet,
-                    restDuration: restDuration,
-                    timeBeforeNextExercise: timeBeforeNext,
-                    isTimerRunning: $isTimerRunning,
-                    elapsed: $elapsed,
-                    isTimeBased: isTimeBased,
-                    duration: duration,
-                    isCalledFromTimer: true
-                )
+                ProgressBarView(exercise: performedExercise, isLastExercise: false)
+                    .id(performedExercise.id)
             }
             .navigationTitle("timer".localized(comment: "Timer"))
             .sheet(isPresented: $showingSettingsSheet) {
@@ -204,6 +234,8 @@ struct TimerView: View {
                                 withAnimation {
                                     isTimeBased.toggle()
                                 }
+                                practiceExercise.isTimeBased = isTimeBased
+                                rebuildPerformedExercise()
                             }) {
                                 Label("time_based_exercise".localized(comment: "Time-based exercise"), systemImage: "clock.arrow.trianglehead.clockwise.rotate.90.path.dotted")
                             }
@@ -214,6 +246,8 @@ struct TimerView: View {
                                 withAnimation {
                                     isTimeBased.toggle()
                                 }
+                                practiceExercise.isTimeBased = isTimeBased
+                                rebuildPerformedExercise()
                             }) {
                                 Label("time_based_exercise".localized(comment: "Time-based exercise"), systemImage: "clock.arrow.trianglehead.clockwise.rotate.90.path.dotted")
                             }
@@ -228,6 +262,8 @@ struct TimerView: View {
                                 withAnimation {
                                     isTimeBased = newValue
                                 }
+                                practiceExercise.isTimeBased = newValue
+                                rebuildPerformedExercise()
                             }
                         )) {
                             Label("time_based_exercise".localized(comment: "Time-based exercise"), systemImage: "clock.arrow.trianglehead.clockwise.rotate.90.path.dotted")
@@ -237,5 +273,18 @@ struct TimerView: View {
                 }
             }
         }
+    }
+
+    // MARK: - Helper Functions
+
+    private func rebuildPerformedExercise() {
+        practiceWorkoutExercise.targetSets = totalSets
+        practiceWorkoutExercise.targetReps = Int(duration)
+        practiceWorkoutExercise.restSeconds = Int(restDuration)
+        practiceWorkoutExercise.timeBeforeNext = Int(timeBeforeNext)
+
+        let performed = PerformedExercise(from: practiceWorkoutExercise, orderIndex: 0)
+        performed.sourceExercise = practiceWorkoutExercise
+        performedExercise = performed
     }
 }
