@@ -105,6 +105,10 @@ final class WorkoutExercise: Identifiable {
             
             if deleted {
                 if let matchingCopy {
+                    if let session = following.session {
+                        matchingCopy.removeFromSessionIfNeeded(session, modelContext: modelContext)
+                    }
+                    
                     following.exercises?.removeAll { $0.id == matchingCopy.id }
                     modelContext.delete(matchingCopy)
                 }
@@ -123,27 +127,55 @@ final class WorkoutExercise: Identifiable {
                 matchingCopy.timeBeforeNext = timeBeforeNext
                 matchingCopy.supersetID = supersetID
                 matchingCopy.supersetPosition = supersetPosition
+                
+                // If the following workout's session was already started before this edit,
+                // make sure its performed exercises reflect the change too.
+                if let session = following.session {
+                    matchingCopy.addToSessionIfNeeded(session, modelContext: modelContext)
+                    matchingCopy.syncSessionIfNeeded(session, modelContext: modelContext)
+                }
             } else if let clone = makeCopy(for: following) {
                 modelContext.insert(clone)
                 following.exercises?.append(clone)
+                
+                if let session = following.session {
+                    clone.addToSessionIfNeeded(session, modelContext: modelContext)
+                }
             }
         }
     }
     
-    private var ownPerformedExercise: PerformedExercise? {
-        guard let session = scheduledWorkout?.session else {
-            return nil
+    /// Removes this exercise from its superset, deleting it entirely and leaving its
+    /// sibling as a standalone exercise. Propagates both changes to following workouts
+    /// and to any already-started workout sessions.
+    func removeFromSuperset(modelContext: ModelContext) {
+        guard let scheduledWorkout, let supersetID else {
+            return
         }
         
-        return performedExercises?.first { $0.workoutSession?.id == session.id }
+        if let sibling = (scheduledWorkout.exercises ?? []).first(where: { $0.supersetID == supersetID && $0.id != id }) {
+            sibling.supersetID = nil
+            sibling.supersetPosition = nil
+            
+            sibling.propagateToFollowingWorkouts(deleted: false, modelContext: modelContext)
+            sibling.syncOwnPerformedExercise(modelContext: modelContext)
+        }
+        
+        propagateToFollowingWorkouts(deleted: true, modelContext: modelContext)
+        removeFromOwnSessionIfNeeded(modelContext: modelContext)
+        
+        scheduledWorkout.exercises?.removeAll { $0.id == id }
+        modelContext.delete(self)
     }
     
-    func syncOwnPerformedExercise(modelContext: ModelContext) {
-        ownPerformedExercise?.syncTargets(from: self, modelContext: modelContext)
+    // MARK: - Session Syncing
+    
+    private func performedExercise(in session: WorkoutSession) -> PerformedExercise? {
+        performedExercises?.first { $0.workoutSession?.id == session.id }
     }
     
-    func addToOwnSessionIfNeeded(modelContext: ModelContext) {
-        guard let session = scheduledWorkout?.session, ownPerformedExercise == nil else {
+    private func addToSessionIfNeeded(_ session: WorkoutSession, modelContext: ModelContext) {
+        guard performedExercise(in: session) == nil else {
             return
         }
         
@@ -155,11 +187,47 @@ final class WorkoutExercise: Identifiable {
         session.exercises?.append(performedExercise)
     }
     
-    func removeFromOwnSessionIfNeeded(modelContext: ModelContext) {
-        guard let performed = ownPerformedExercise else {
+    private func syncSessionIfNeeded(_ session: WorkoutSession, modelContext: ModelContext) {
+        performedExercise(in: session)?.syncTargets(from: self, modelContext: modelContext)
+    }
+    
+    private func removeFromSessionIfNeeded(_ session: WorkoutSession, modelContext: ModelContext) {
+        guard let performed = performedExercise(in: session) else {
             return
         }
         
         modelContext.delete(performed)
+    }
+    
+    private var ownPerformedExercise: PerformedExercise? {
+        guard let session = scheduledWorkout?.session else {
+            return nil
+        }
+        
+        return performedExercise(in: session)
+    }
+    
+    func syncOwnPerformedExercise(modelContext: ModelContext) {
+        guard let session = scheduledWorkout?.session else {
+            return
+        }
+        
+        syncSessionIfNeeded(session, modelContext: modelContext)
+    }
+    
+    func addToOwnSessionIfNeeded(modelContext: ModelContext) {
+        guard let session = scheduledWorkout?.session else {
+            return
+        }
+        
+        addToSessionIfNeeded(session, modelContext: modelContext)
+    }
+    
+    func removeFromOwnSessionIfNeeded(modelContext: ModelContext) {
+        guard let session = scheduledWorkout?.session else {
+            return
+        }
+        
+        removeFromSessionIfNeeded(session, modelContext: modelContext)
     }
 }

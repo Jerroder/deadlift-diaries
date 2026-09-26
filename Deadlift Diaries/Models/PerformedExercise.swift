@@ -91,6 +91,9 @@ final class PerformedExercise {
         targetReps = workoutExercise.targetReps
         targetDistance = workoutExercise.targetDistance
         targetWeight = workoutExercise.targetWeight
+        orderIndex = workoutExercise.order
+        supersetID = workoutExercise.supersetID
+        supersetPosition = workoutExercise.supersetPosition
         
         var currentSets = (sets ?? []).sorted { $0.setNumber < $1.setNumber }
         

@@ -49,7 +49,13 @@ struct ScheduledWorkoutCard: View {
     }
     
     private var exercises: [WorkoutExercise] {
-        (scheduledWorkout.exercises ?? []).sorted { $0.order < $1.order }
+        (scheduledWorkout.exercises ?? []).sorted {
+            if $0.order != $1.order {
+                return $0.order < $1.order
+            }
+            
+            return ($0.supersetPosition?.rawValue ?? 0) < ($1.supersetPosition?.rawValue ?? 0)
+        }
     }
     
     var body: some View {
@@ -263,6 +269,7 @@ struct AddExerciseView: View {
     
     let mode: AddExerciseMode
     let onAdd: (WorkoutExercise) -> Void
+    var onRemoveFromSuperset: (() -> Void)? = nil
     
     @Query(sort: \Exercise.name)
     private var exercises: [Exercise]
@@ -302,9 +309,10 @@ struct AddExerciseView: View {
         return value > 0 ? value : defaultTimeBeforeNext
     }
     
-    init(mode: AddExerciseMode, onAdd: @escaping (WorkoutExercise) -> Void) {
+    init(mode: AddExerciseMode, onAdd: @escaping (WorkoutExercise) -> Void, onRemoveFromSuperset: (() -> Void)? = nil) {
         self.mode = mode
         self.onAdd = onAdd
+        self.onRemoveFromSuperset = onRemoveFromSuperset
         
         if case let .edit(workoutExercise) = mode {
             _selectedExercise = State(initialValue: workoutExercise.exercise)
@@ -334,8 +342,13 @@ struct AddExerciseView: View {
     
     private var isNormalMode: Bool {
         switch mode {
-        case .normal, .edit:
+        case .normal:
             return true
+        case .edit(let workoutExercise):
+            // The second exercise in a superset shares its rest/countdown with the
+            // main (first) exercise, same as when it was first added, so only the
+            // main exercise gets its own sets/rest/countdown.
+            return workoutExercise.supersetPosition != .second
         case .superset:
             return false
         }
@@ -565,6 +578,17 @@ struct AddExerciseView: View {
                             if expandedTimeField == .countdown {
                                 DurationWheelPicker(totalSeconds: $timeBeforeNext)
                             }
+                        }
+                    }
+                }
+                
+                if let onRemoveFromSuperset {
+                    Section {
+                        Button(role: .destructive) {
+                            onRemoveFromSuperset()
+                            dismiss()
+                        } label: {
+                            Label("remove_from_superset".localized(comment: "Remove from Superset"), systemImage: "link.badge.minus")
                         }
                     }
                 }
@@ -1086,6 +1110,10 @@ struct CreateWorkoutTemplateView: View {
                                         .font(.caption)
                                         .foregroundStyle(.secondary)
                                 }
+                                .contentShape(Rectangle())
+                                .onTapGesture {
+                                    exerciseToEdit = workoutExercise
+                                }
                                 
                                 Spacer()
                                 
@@ -1178,7 +1206,13 @@ struct CreateWorkoutTemplateView: View {
             }
         }
         .sheet(item: $exerciseToEdit) { workoutExercise in
-            AddExerciseView(mode: .edit(workoutExercise)) { _ in }
+            AddExerciseView(
+                mode: .edit(workoutExercise),
+                onAdd: { _ in },
+                onRemoveFromSuperset: workoutExercise.isInSuperset ? {
+                    removeFromSuperset(workoutExercise)
+                } : nil
+            )
         }
         .sheet(item: $trainingBlockToEdit) { block in
             CreateTrainingBlockView(existingBlock: block) { updated in
@@ -1261,6 +1295,19 @@ struct CreateWorkoutTemplateView: View {
         second.supersetID = nil
         second.supersetPosition = nil
         
+        renumberExercises()
+    }
+    
+    // Removes just one exercise from a superset, deleting it and leaving its
+    // sibling as a standalone single exercise.
+    private func removeFromSuperset(_ exercise: WorkoutExercise) {
+        if let supersetID = exercise.supersetID,
+           let sibling = workoutExercises.first(where: { $0.supersetID == supersetID && $0.id != exercise.id }) {
+            sibling.supersetID = nil
+            sibling.supersetPosition = nil
+        }
+        
+        remove(exercise)
         renumberExercises()
     }
     
@@ -1357,6 +1404,9 @@ struct AddWorkoutView: View {
     @Query(sort: \WorkoutTemplate.name)
     private var workoutTemplates: [WorkoutTemplate]
     
+    @Query(sort: \WorkoutSchedule.startDate, order: .reverse)
+    private var workoutSchedules: [WorkoutSchedule]
+    
     @State private var searchText: String = ""
     @State private var selectedTemplate: WorkoutTemplate?
     @State private var templateToEdit: WorkoutTemplate?
@@ -1376,6 +1426,26 @@ struct AddWorkoutView: View {
     
     private var weekday: Int {
         Calendar.current.component(.weekday, from: startDate)
+    }
+    
+    // Defaults the duration to whatever was used the last time this same
+    // template was scheduled, so recurring workouts don't need re-entering it.
+    private func updateNumberOfWeeks(for template: WorkoutTemplate?) {
+        guard let template else {
+            return
+        }
+        
+        guard let lastSchedule = workoutSchedules.first(where: { $0.workoutTemplate?.id == template.id }) else {
+            return
+        }
+        
+        guard let endDate = lastSchedule.endDate else {
+            numberOfWeeks = 1
+            return
+        }
+        
+        let days = Calendar.current.dateComponents([.day], from: lastSchedule.startDate, to: endDate).day ?? 0
+        numberOfWeeks = max(1, (days / 7) + 1)
     }
     
     private var filteredTemplates: [WorkoutTemplate] {
@@ -1576,6 +1646,9 @@ struct AddWorkoutView: View {
                 }
             }
         }
+        .onChange(of: selectedTemplate) { _, newValue in
+            updateNumberOfWeeks(for: newValue)
+        }
         .sheet(item: $templateToEdit) { template in
             CreateWorkoutTemplateView(existingTemplate: template) { updated in
                 selectedTemplate = updated
@@ -1642,9 +1715,15 @@ struct EditScheduledWorkoutView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var modelContext
     
+    @Query(sort: \WorkoutSchedule.startDate)
+    private var workoutSchedules: [WorkoutSchedule]
+    
     @State private var showAddExerciseSheet: Bool = false
     @State private var supersetBaseExercise: WorkoutExercise?
     @State private var exerciseToEdit: WorkoutExercise?
+    
+    @State private var numberOfWeeks: Int = 1
+    @State private var hasLoadedNumberOfWeeks: Bool = false
     
     private var exercises: [WorkoutExercise] {
         (scheduledWorkout.exercises ?? []).sorted { $0.order < $1.order }
@@ -1652,6 +1731,32 @@ struct EditScheduledWorkoutView: View {
     
     private var nextOrder: Int {
         (exercises.map(\.order).max() ?? -1) + 1
+    }
+    
+    // The recurring schedule that produced this occurrence, used to let the
+    // number of weeks be edited relative to the series' original start date.
+    private var matchingSchedule: WorkoutSchedule? {
+        let calendar = Calendar.current
+        let weekday = calendar.component(.weekday, from: scheduledWorkout.scheduledDate)
+        
+        return workoutSchedules
+            .filter {
+                $0.workoutTemplate?.id == scheduledWorkout.workoutTemplate?.id &&
+                $0.weekday == weekday &&
+                $0.startDate <= scheduledWorkout.scheduledDate
+            }
+            .max { $0.startDate < $1.startDate }
+    }
+    
+    private func weeks(for schedule: WorkoutSchedule) -> Int {
+        guard let endDate = schedule.endDate else {
+            return 1
+        }
+        
+        let calendar = Calendar.current
+        let days = calendar.dateComponents([.day], from: schedule.startDate, to: endDate).day ?? 0
+        
+        return max(1, (days / 7) + 1)
     }
     
     private var exerciseRows: [TemplateExerciseRow] {
@@ -1686,6 +1791,31 @@ struct EditScheduledWorkoutView: View {
     var body: some View {
         NavigationStack {
             Form {
+                if let matchingSchedule {
+                    Section {
+                        Stepper(value: $numberOfWeeks, in: 1...52) {
+                            HStack {
+                                Text("duration".localized(comment: "Duration"))
+                                
+                                Spacer()
+                                
+                                Text("x_week".localized(with: numberOfWeeks, comment: "x week(s)"))
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
+                    } header: {
+                        Text("schedule".localized(comment: "Schedule"))
+                    } footer: {
+                        Text("schedule_weeks_footer".localized(comment: "Changes the number of weeks this workout repeats for, starting from when it first began."))
+                    }
+                    .onAppear {
+                        if !hasLoadedNumberOfWeeks {
+                            numberOfWeeks = weeks(for: matchingSchedule)
+                            hasLoadedNumberOfWeeks = true
+                        }
+                    }
+                }
+                
                 Section {
                     ForEach(exerciseRows) { row in
                         switch row {
@@ -1697,6 +1827,10 @@ struct EditScheduledWorkoutView: View {
                                     Text("\(workoutExercise.targetSets) x \(formattedTargetValue(for: workoutExercise))")
                                         .font(.caption)
                                         .foregroundStyle(.secondary)
+                                }
+                                .contentShape(Rectangle())
+                                .onTapGesture {
+                                    exerciseToEdit = workoutExercise
                                 }
                                 
                                 Spacer()
@@ -1751,9 +1885,19 @@ struct EditScheduledWorkoutView: View {
             }
             .navigationTitle(scheduledWorkout.workoutTemplate?.name ?? "workout".localized(comment: "Workout"))
             .navigationBarTitleDisplayMode(.inline)
+            .interactiveDismissDisabled()
             .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("", systemImage: "xmark") {
+                        modelContext.rollback()
+                        dismiss()
+                    }
+                }
+                
                 ToolbarItem(placement: .confirmationAction) {
                     Button("", systemImage: "checkmark") {
+                        applyNumberOfWeeksChangeIfNeeded()
+                        try? modelContext.save()
                         dismiss()
                     }
                 }
@@ -1770,11 +1914,16 @@ struct EditScheduledWorkoutView: View {
             }
         }
         .sheet(item: $exerciseToEdit) { workoutExercise in
-            AddExerciseView(mode: .edit(workoutExercise)) { updated in
-                updated.propagateToFollowingWorkouts(deleted: false, modelContext: modelContext)
-                updated.syncOwnPerformedExercise(modelContext: modelContext)
-                try? modelContext.save()
-            }
+            AddExerciseView(
+                mode: .edit(workoutExercise),
+                onAdd: { updated in
+                    updated.propagateToFollowingWorkouts(deleted: false, modelContext: modelContext)
+                    updated.syncOwnPerformedExercise(modelContext: modelContext)
+                },
+                onRemoveFromSuperset: workoutExercise.isInSuperset ? {
+                    workoutExercise.removeFromSuperset(modelContext: modelContext)
+                } : nil
+            )
         }
     }
     
@@ -1787,8 +1936,6 @@ struct EditScheduledWorkoutView: View {
         
         workoutExercise.propagateToFollowingWorkouts(deleted: false, modelContext: modelContext)
         workoutExercise.addToOwnSessionIfNeeded(modelContext: modelContext)
-        
-        try? modelContext.save()
     }
     
     private func addSupersetExercise(_ workoutExercise: WorkoutExercise, to baseExercise: WorkoutExercise) {
@@ -1808,8 +1955,6 @@ struct EditScheduledWorkoutView: View {
         baseExercise.propagateToFollowingWorkouts(deleted: false, modelContext: modelContext)
         workoutExercise.propagateToFollowingWorkouts(deleted: false, modelContext: modelContext)
         workoutExercise.addToOwnSessionIfNeeded(modelContext: modelContext)
-        
-        try? modelContext.save()
     }
     
     private func unlinkSuperset(first: WorkoutExercise, second: WorkoutExercise) {
@@ -1821,8 +1966,6 @@ struct EditScheduledWorkoutView: View {
         
         first.propagateToFollowingWorkouts(deleted: false, modelContext: modelContext)
         second.propagateToFollowingWorkouts(deleted: false, modelContext: modelContext)
-        
-        try? modelContext.save()
     }
     
     private func delete(_ row: TemplateExerciseRow) {
@@ -1834,8 +1977,6 @@ struct EditScheduledWorkoutView: View {
             remove(first)
             remove(second)
         }
-        
-        try? modelContext.save()
     }
     
     private func remove(_ exercise: WorkoutExercise) {
@@ -1844,6 +1985,69 @@ struct EditScheduledWorkoutView: View {
         
         scheduledWorkout.exercises?.removeAll { $0.id == exercise.id }
         modelContext.delete(exercise)
+    }
+    
+    // MARK: - Number of Weeks
+    
+    // Extends or trims the recurring series so its total length matches
+    // numberOfWeeks, always counting from the series' original start date.
+    private func applyNumberOfWeeksChangeIfNeeded() {
+        guard let schedule = matchingSchedule,
+              let workoutTemplate = schedule.workoutTemplate else {
+            return
+        }
+        
+        let calendar = Calendar.current
+        let oldWeeks = weeks(for: schedule)
+        
+        guard numberOfWeeks != oldWeeks,
+              let newEndDate = calendar.date(byAdding: .day, value: (numberOfWeeks - 1) * 7, to: schedule.startDate) else {
+            return
+        }
+        
+        if numberOfWeeks > oldWeeks {
+            var date = calendar.date(byAdding: .day, value: oldWeeks * 7, to: schedule.startDate) ?? newEndDate
+            
+            while date <= newEndDate {
+                let alreadyScheduled = (workoutTemplate.scheduledWorkouts ?? []).contains {
+                    calendar.isDate($0.scheduledDate, inSameDayAs: date)
+                }
+                
+                if !alreadyScheduled {
+                    let newWorkout = ScheduledWorkout(scheduledDate: date, workoutTemplate: workoutTemplate)
+                    modelContext.insert(newWorkout)
+                    
+                    for templateExercise in workoutTemplate.exercises ?? [] {
+                        guard let copy = templateExercise.makeCopy(for: newWorkout) else {
+                            continue
+                        }
+                        
+                        modelContext.insert(copy)
+                        newWorkout.exercises?.append(copy)
+                    }
+                }
+                
+                guard let nextDate = calendar.date(byAdding: .day, value: 7, to: date) else {
+                    break
+                }
+                
+                date = nextDate
+            }
+        } else {
+            let oldEndDate = schedule.endDate ?? newEndDate
+            
+            let workoutsToRemove = (workoutTemplate.scheduledWorkouts ?? []).filter {
+                $0.scheduledDate > newEndDate &&
+                $0.scheduledDate <= oldEndDate &&
+                calendar.component(.weekday, from: $0.scheduledDate) == schedule.weekday
+            }
+            
+            for workout in workoutsToRemove {
+                modelContext.delete(workout)
+            }
+        }
+        
+        schedule.endDate = newEndDate
     }
 }
 

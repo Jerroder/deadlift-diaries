@@ -66,11 +66,18 @@ struct ExerciseCard: View {
                 }
                 .sheet(isPresented: $showEditSheet) {
                     if let sourceExercise = exercise.sourceExercise {
-                        AddExerciseView(mode: .edit(sourceExercise)) { updated in
-                            exercise.syncTargets(from: updated, modelContext: modelContext)
-                            updated.propagateToFollowingWorkouts(deleted: false, modelContext: modelContext)
-                            try? modelContext.save()
-                        }
+                        AddExerciseView(
+                            mode: .edit(sourceExercise),
+                            onAdd: { updated in
+                                exercise.syncTargets(from: updated, modelContext: modelContext)
+                                updated.propagateToFollowingWorkouts(deleted: false, modelContext: modelContext)
+                                try? modelContext.save()
+                            },
+                            onRemoveFromSuperset: sourceExercise.isInSuperset ? {
+                                sourceExercise.removeFromSuperset(modelContext: modelContext)
+                                try? modelContext.save()
+                            } : nil
+                        )
                     }
                 }
         } else {
