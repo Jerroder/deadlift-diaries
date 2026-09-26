@@ -20,7 +20,12 @@ struct ContentView: View {
         TabView {
             CalendarView().tabItem {
                 Image(systemName: "calendar")
-                Text("cycles".localized(comment: "Cycles"))
+                Text("calendar".localized(comment: "Calendar"))
+            }
+
+            OverviewView().tabItem {
+                Image(systemName: "list.bullet.clipboard")
+                Text("overview".localized(comment: "Overview"))
             }
 
             TimerView().tabItem {

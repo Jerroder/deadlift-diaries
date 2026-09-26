@@ -14,35 +14,6 @@ enum AddExerciseMode {
     case edit(WorkoutExercise)
 }
 
-private func formattedDuration(_ seconds: Int) -> String {
-    if seconds < 60 {
-        return "\(seconds)s"
-    }
-    
-    let minutes = seconds / 60
-    let remaining = seconds % 60
-    
-    if remaining == 0 {
-        return "\(minutes)m"
-    }
-    
-    return "\(minutes)m \(remaining)s"
-}
-
-private func formattedTargetValue(for workoutExercise: WorkoutExercise) -> String {
-    guard let exercise = workoutExercise.exercise else {
-        return "\(workoutExercise.targetReps)"
-    }
-    
-    if exercise.isTimeBased {
-        return formattedDuration(workoutExercise.targetReps)
-    } else if exercise.isDistanceBased {
-        return "\(workoutExercise.targetDistance) \(distanceUnit().symbol)"
-    } else {
-        return "\(workoutExercise.targetReps)"
-    }
-}
-
 struct ScheduledWorkoutCard: View {
     let scheduledWorkout: ScheduledWorkout
     
