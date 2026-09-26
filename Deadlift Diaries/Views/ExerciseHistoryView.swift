@@ -28,10 +28,6 @@ struct ExerciseHistoryView: View {
     private var weightUnit: Unit {
         isMetricSystem() ? Unit(symbol: "kg") : Unit(symbol: "lbs")
     }
-
-    private var distanceUnit: Unit {
-        isMetricSystem() ? Unit(symbol: "km") : Unit(symbol: "mi")
-    }
     
     private var historyEntries: [ExerciseHistoryEntry] {
         allPerformedExercises
@@ -156,7 +152,7 @@ struct ExerciseHistoryView: View {
                                 guard let distance = entry.distance else { return nil }
                                 return ChartDataPoint(date: entry.date, value: Double(distance))
                             },
-                            unit: distanceUnit.symbol,
+                            unit: distanceUnit().symbol,
                             color: .red,
                             valueFormat: "%.0f"
                         )

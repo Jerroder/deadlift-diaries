@@ -23,5 +23,6 @@ func isMetricSystem() -> Bool {
 }
 
 func distanceUnit() -> Unit {
-    isMetricSystem() ? Unit(symbol: "km") : Unit(symbol: "mi")
+    // I know meters and miles don't compare but they should just use SI like everyone else
+    isMetricSystem() ? Unit(symbol: "m") : Unit(symbol: "mi")
 }
