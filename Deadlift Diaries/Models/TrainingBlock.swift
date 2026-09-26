@@ -5,6 +5,8 @@
 //  Created by Jerroder on 2026-09-13.
 //
 
+/* Metadata to group workouts and exercise inside a propgram */
+
 import Foundation
 import SwiftData
 

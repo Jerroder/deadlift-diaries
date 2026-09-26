@@ -5,6 +5,8 @@
 //  Created by Jerroder on 2026-09-13.
 //
 
+/* A ScheduledWorkout becomes a WorkoutSession when it's opened and started */
+
 import SwiftData
 import SwiftUI
 

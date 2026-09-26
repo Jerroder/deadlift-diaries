@@ -5,6 +5,8 @@
 //  Created by Jerroder on 2026-09-13.
 //
 
+/* Actual set that was performed */
+
 import SwiftData
 import Foundation
 

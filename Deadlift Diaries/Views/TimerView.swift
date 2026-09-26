@@ -11,9 +11,9 @@ import SwiftUI
 struct TimerView: View {
     @AppStorage("totalSets") private var totalSets: Int = 5
     @AppStorage("isTimeBased") private var isTimeBased: Bool = false
-    @AppStorage("duration") private var duration: Double = 30.0
-    @AppStorage("restDuration") private var restDuration: Double = 60.0
-    @AppStorage("timeBeforeNext") private var timeBeforeNext: Double = 120.0
+    @AppStorage("duration") private var duration: Int = 30
+    @AppStorage("restDuration") private var restDuration: Int = 60
+    @AppStorage("timeBeforeNext") private var timeBeforeNext: Int = 120
 
     @State private var practiceExercise: Exercise
     @State private var practiceWorkoutExercise: WorkoutExercise
@@ -33,18 +33,18 @@ struct TimerView: View {
     init() {
         let totalSets = UserDefaults.standard.object(forKey: "totalSets") as? Int ?? 5
         let isTimeBased = UserDefaults.standard.object(forKey: "isTimeBased") as? Bool ?? false
-        let duration = UserDefaults.standard.object(forKey: "duration") as? Double ?? 30.0
-        let restDuration = UserDefaults.standard.object(forKey: "restDuration") as? Double ?? 60.0
-        let timeBeforeNext = UserDefaults.standard.object(forKey: "timeBeforeNext") as? Double ?? 120.0
+        let duration = UserDefaults.standard.object(forKey: "duration") as? Int ?? 30
+        let restDuration = UserDefaults.standard.object(forKey: "restDuration") as? Int ?? 60
+        let timeBeforeNext = UserDefaults.standard.object(forKey: "timeBeforeNext") as? Int ?? 120
 
         let exercise = Exercise(name: "timer".localized(comment: "Timer"), isTimeBased: isTimeBased)
         let workoutExercise = WorkoutExercise(
             exercise: exercise,
             order: 0,
             targetSets: totalSets,
-            targetReps: Int(duration),
-            restSeconds: Int(restDuration),
-            timeBeforeNext: Int(timeBeforeNext)
+            targetReps: duration,
+            restSeconds: restDuration,
+            timeBeforeNext: timeBeforeNext
         )
         let performed = PerformedExercise(from: workoutExercise, orderIndex: 0)
         performed.sourceExercise = workoutExercise
@@ -74,7 +74,7 @@ struct TimerView: View {
                         HStack {
                             HStack(spacing: 4) {
                                 Text("rest_duration".localized(comment: "Rest Duration:"))
-                                Text("  \(Int(restDuration))s ")
+                                Text("  \(formattedSeconds(restDuration))")
                                     .font(.subheadline)
                                     .foregroundColor(Color(UIColor.secondaryLabel))
                                 Image(systemName: showingRestPicker ? "chevron.up" : "chevron.down")
@@ -87,19 +87,26 @@ struct TimerView: View {
                     }
                     .buttonStyle(.plain)
                     .disabled(isTimerRunning)
+                    .onChange(of: isTimerRunning)  { _, newValue in
+                        if newValue {
+                            withAnimation {
+                                showingRestPicker = false
+                            }
+                        }
+                    }
 
                     if #available(iOS 26.0, *) {
-                        Grid(horizontalSpacing: 8, verticalSpacing: 8) {
+                        Grid(horizontalSpacing: 6, verticalSpacing: 8) {
                             GridRow {
-                                Button("30s") { restDuration = 30 }
+                                Button("00:30") { restDuration = 30 }
                                     .disabled(isTimerRunning)
-                                Button("60s") { restDuration = 60 }
+                                Button("01:00") { restDuration = 60 }
                                     .disabled(isTimerRunning)
                             }
                             GridRow {
-                                Button("90s") { restDuration = 90 }
+                                Button("01:30") { restDuration = 90 }
                                     .disabled(isTimerRunning)
-                                Button("120s") { restDuration = 120 }
+                                Button("02:00") { restDuration = 120 }
                                     .disabled(isTimerRunning)
                             }
                         }
@@ -107,15 +114,15 @@ struct TimerView: View {
                     } else {
                         Grid(horizontalSpacing: 8, verticalSpacing: 8) {
                             GridRow {
-                                Button("30s") { restDuration = 30 }
+                                Button("00:30") { restDuration = 30 }
                                     .disabled(isTimerRunning)
-                                Button("60s") { restDuration = 60 }
+                                Button("01:00") { restDuration = 60 }
                                     .disabled(isTimerRunning)
                             }
                             GridRow {
-                                Button("90s") { restDuration = 90 }
+                                Button("01:30") { restDuration = 90 }
                                     .disabled(isTimerRunning)
-                                Button("120s") { restDuration = 120 }
+                                Button("02:00") { restDuration = 120 }
                                     .disabled(isTimerRunning)
                             }
                         }
@@ -124,16 +131,11 @@ struct TimerView: View {
                 }
 
                 if showingRestPicker {
-                    Picker("rest_duration".localized(comment: "Rest duration"), selection: $restDuration) {
-                        ForEach(Array(stride(from: 5.0, through: 300.0, by: 5.0)), id: \.self) { duration in
-                            Text("x_seconds".localized(with: Int(duration), comment: "x seconds")).tag(duration)
+                    DurationWheelPicker(totalSeconds: $restDuration)
+                        .disabled(isTimerRunning)
+                        .onChange(of: restDuration) { _, _ in
+                            rebuildPerformedExercise()
                         }
-                    }
-                    .pickerStyle(.wheel)
-                    .disabled(isTimerRunning)
-                    .onChange(of: restDuration) { _, _ in
-                        rebuildPerformedExercise()
-                    }
                 }
 
                 if isTimeBased {
@@ -146,7 +148,7 @@ struct TimerView: View {
                     }) {
                         HStack {
                             Text("exercise_duration".localized(comment: "Exercise duration"))
-                            Text(" \(Int(duration))s")
+                            Text(" \(formattedSeconds(duration))")
                                 .font(.subheadline)
                                 .foregroundColor(Color(UIColor.secondaryLabel))
                             Image(systemName: showingDurationPicker ? "chevron.up" : "chevron.down")
@@ -158,18 +160,20 @@ struct TimerView: View {
                     }
                     .buttonStyle(.plain)
                     .disabled(isTimerRunning)
-
-                    if showingDurationPicker {
-                        Picker("exercise_duration".localized(comment: "Exercise duration"), selection: $duration) {
-                            ForEach(Array(stride(from: 5.0, through: 300.0, by: 5.0)), id: \.self) { duration in
-                                Text("x_seconds".localized(with: Int(duration), comment: "x seconds")).tag(duration)
+                    .onChange(of: isTimerRunning) { _, newValue in
+                        if newValue {
+                            withAnimation {
+                                showingDurationPicker = false
                             }
                         }
-                        .pickerStyle(.wheel)
-                        .disabled(isTimerRunning)
-                        .onChange(of: duration) { _, _ in
-                            rebuildPerformedExercise()
-                        }
+                    }
+
+                    if showingDurationPicker {
+                        DurationWheelPicker(totalSeconds: $duration)
+                            .disabled(isTimerRunning)
+                            .onChange(of: duration) { _, _ in
+                                rebuildPerformedExercise()
+                            }
                     }
                 }
 
@@ -182,7 +186,7 @@ struct TimerView: View {
                 }) {
                     HStack {
                         Text("time_before_next".localized(comment: "Time before next exercise"))
-                        Text(" \(Int(timeBeforeNext))s")
+                        Text(" \(formattedSeconds(timeBeforeNext))")
                             .font(.subheadline)
                             .foregroundColor(Color(UIColor.secondaryLabel))
                         Image(systemName: showingTimeBeforeNextPicker ? "chevron.up" : "chevron.down")
@@ -194,18 +198,20 @@ struct TimerView: View {
                 }
                 .buttonStyle(.plain)
                 .disabled(isTimerRunning)
-
-                if showingTimeBeforeNextPicker {
-                    Picker("time_before_next".localized(comment: "Time before next exercise"), selection: $timeBeforeNext) {
-                        ForEach(Array(stride(from: 5.0, through: 300.0, by: 5.0)), id: \.self) { duration in
-                            Text("x_seconds".localized(with: Int(duration), comment: "x seconds")).tag(duration)
+                .onChange(of: isTimerRunning) { _, newValue in
+                    if newValue {
+                        withAnimation {
+                            showingTimeBeforeNextPicker = false
                         }
                     }
-                    .pickerStyle(.wheel)
-                    .disabled(isTimerRunning)
-                    .onChange(of: timeBeforeNext) { _, _ in
-                        rebuildPerformedExercise()
-                    }
+                }
+
+                if showingTimeBeforeNextPicker {
+                    DurationWheelPicker(totalSeconds: $timeBeforeNext)
+                        .disabled(isTimerRunning)
+                        .onChange(of: timeBeforeNext) { _, newValue in
+                            rebuildPerformedExercise()
+                        }
                 }
 
                 ProgressBarView(exercise: performedExercise, isLastExercise: false)
@@ -279,9 +285,9 @@ struct TimerView: View {
 
     private func rebuildPerformedExercise() {
         practiceWorkoutExercise.targetSets = totalSets
-        practiceWorkoutExercise.targetReps = Int(duration)
-        practiceWorkoutExercise.restSeconds = Int(restDuration)
-        practiceWorkoutExercise.timeBeforeNext = Int(timeBeforeNext)
+        practiceWorkoutExercise.targetReps = duration
+        practiceWorkoutExercise.restSeconds = restDuration
+        practiceWorkoutExercise.timeBeforeNext = timeBeforeNext
 
         let performed = PerformedExercise(from: practiceWorkoutExercise, orderIndex: 0)
         performed.sourceExercise = practiceWorkoutExercise

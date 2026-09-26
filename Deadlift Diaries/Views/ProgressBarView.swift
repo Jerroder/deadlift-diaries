@@ -165,19 +165,6 @@ struct ProgressBarView: View {
         return max(0, completedRestIndex - 1)
     }
     
-    private func formattedSeconds(_ seconds: Int) -> String {
-        let totalSeconds = max(0, seconds)
-        
-        if totalSeconds < 60 {
-            return "\(totalSeconds)s"
-        }
-        
-        let minutes = totalSeconds / 60
-        let remainingSeconds = totalSeconds % 60
-        
-        return String(format: "%02d:%02d", minutes, remainingSeconds)
-    }
-    
     var body: some View {
         VStack(spacing: 12) {
             GeometryReader { geo in

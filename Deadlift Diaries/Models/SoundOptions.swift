@@ -5,7 +5,6 @@
 //  Created by Jerroder on 2025-09-29.
 //
 
-// SoundOptions.swift
 import Foundation
 
 enum SoundOptions {
