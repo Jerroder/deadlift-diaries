@@ -281,7 +281,7 @@ struct WorkoutSessionView: View {
             .onDelete(perform: deleteRow)
             .onMove(perform: moveRow)
         }
-        .navigationTitle("Workout")
+        .navigationTitle("workout".localized(comment: "Workout"))
         .listStyle(.plain)
         .toolbar{
             ToolbarItemGroup(placement: .navigationBarTrailing) {

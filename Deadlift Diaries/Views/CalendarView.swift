@@ -56,7 +56,7 @@ struct ScheduledWorkoutCard: View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 12) {
                 VStack(alignment: .leading, spacing: 3) {
-                    Text(workoutTemplate?.name ?? "Workout")
+                    Text(workoutTemplate?.name ?? "workout".localized(comment: "Workout"))
                         .font(.headline)
                         .foregroundStyle(.primary)
                     
@@ -84,7 +84,7 @@ struct ScheduledWorkoutCard: View {
         let workoutExercise: WorkoutExercise
         
         private var exerciseName: String {
-            workoutExercise.exercise?.name ?? "Unknown Exercise"
+            workoutExercise.exercise?.name ?? "unknown_exercise".localized(comment: "Unknown Exercise")
         }
         
         var body: some View {
@@ -153,25 +153,25 @@ struct CreateExerciseView: View {
     var body: some View {
         NavigationStack {
             Form {
-                Section("Exercise") {
-                    TextField("Name", text: $name)
+                Section("exercise".localized(comment: "Exercise")) {
+                    TextField("name".localized(comment: "Name"), text: $name)
                         .focused($focusedField, equals: .exerciseName)
                     
-                    Toggle("Time based", isOn: $isTimeBased)
+                    Toggle("time_based".localized(comment: "Time-based"), isOn: $isTimeBased)
                         .onChange(of: isTimeBased) { _, value in
                             if value {
                                 isDistanceBased = false
                             }
                         }
                     
-                    Toggle("Distance based", isOn: $isDistanceBased)
+                    Toggle("distance_based".localized(comment: "Distance-based"), isOn: $isDistanceBased)
                         .onChange(of: isDistanceBased) { _, value in
                             if value {
                                 isTimeBased = false
                             }
                         }
                     
-                    TextField("Notes", text: $notes, axis: .vertical)
+                    TextField("notes".localized(comment: "Notes"), text: $notes, axis: .vertical)
                         .lineLimit(3...6)
                         .focused($focusedField, equals: .notes)
                 }
@@ -180,7 +180,7 @@ struct CreateExerciseView: View {
                 fields: [.exerciseName, .notes],
                 focusedField: $focusedField
             )
-            .navigationTitle(isEditing ? "Edit Exercise" : "New Exercise")
+            .navigationTitle(isEditing ? "edit_exercise".localized(comment: "Edit Exercise") : "new_exercise".localized(comment: "New Exercise"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 if isEditing {
@@ -267,6 +267,8 @@ struct AddExerciseView: View {
     @Query(sort: \Exercise.name)
     private var exercises: [Exercise]
     
+    private let weightUnit: Unit = isMetricSystem() ? Unit(symbol: "kg") : Unit(symbol: "lbs")
+    
     @State private var searchText: String = ""
     
     @State private var selectedExercise: Exercise?
@@ -342,11 +344,11 @@ struct AddExerciseView: View {
     private var navigationTitleText: String {
         switch mode {
         case .normal:
-            return "Add Exercise"
+            return "add_exercise".localized(comment: "Add Exercise")
         case .superset:
-            return "Add Superset Exercise"
+            return "add_superset_exercise".localized(comment: "Add Superset Exercise")
         case .edit:
-            return "Edit Exercise"
+            return "edit_exercise".localized(comment: "Edit Exercise")
         }
     }
     
@@ -355,7 +357,7 @@ struct AddExerciseView: View {
             Form {
                 // MARK: - Exercise
                 
-                Section("Exercise") {
+                Section("exercise".localized(comment: "Exercise")) {
                     if let selectedExercise {
                         HStack {
                             VStack(alignment: .leading, spacing: 4) {
@@ -363,11 +365,11 @@ struct AddExerciseView: View {
                                     .font(.headline)
                                 
                                 if selectedExercise.isTimeBased {
-                                    Text("Time based")
+                                    Text("time_based".localized(comment: "Time-based"))
                                         .font(.caption)
                                         .foregroundStyle(.secondary)
                                 } else if selectedExercise.isDistanceBased {
-                                    Text("Distance based")
+                                    Text("distance_based".localized(comment: "Distance-based"))
                                         .font(.caption)
                                         .foregroundStyle(.secondary)
                                 }
@@ -375,12 +377,12 @@ struct AddExerciseView: View {
                             
                             Spacer()
                             
-                            Button("Change") {
+                            Button("change".localized(comment: "Change")) {
                                 self.selectedExercise = nil
                             }
                         }
                     } else {
-                        TextField("Search exercises", text: $searchText)
+                        TextField("search_exercises".localized(comment: "Search exercises"), text: $searchText)
                             .focused($focusedField, equals: .exerciseName)
                         
                         if !filteredExercises.isEmpty {
@@ -396,11 +398,11 @@ struct AddExerciseView: View {
                                         Spacer()
                                         
                                         if exercise.isTimeBased {
-                                            Text("Time")
+                                            Text("time".localized(comment: "Time"))
                                                 .font(.caption)
                                                 .foregroundStyle(.primary.opacity(0.7))
                                         } else if exercise.isDistanceBased {
-                                            Text("Distance")
+                                            Text("distance_label".localized(comment: "Distance"))
                                                 .font(.caption)
                                                 .foregroundStyle(.primary.opacity(0.7))
                                         }
@@ -410,13 +412,13 @@ struct AddExerciseView: View {
                                     Button(role: .destructive) {
                                         deleteExercise(exercise)
                                     } label: {
-                                        Label("Delete", systemImage: "trash")
+                                        Label("delete".localized(comment: "Delete"), systemImage: "trash")
                                     }
                                     
                                     Button {
                                         exerciseToEdit = exercise
                                     } label: {
-                                        Label("Edit", systemImage: "pencil")
+                                        Label("edit".localized(comment: "Edit"), systemImage: "pencil")
                                     }
                                     .tint(.blue)
                                 }
@@ -428,7 +430,7 @@ struct AddExerciseView: View {
                                 selectedExercise = exercise
                             }
                         } label: {
-                            Label("Create New Exercise", systemImage: "plus")
+                            Label("create_new_exercise".localized(comment: "Create New Exercise"), systemImage: "plus")
                         }
                     }
                 }
@@ -436,11 +438,11 @@ struct AddExerciseView: View {
                 // MARK: - Targets
                 
                 if let selectedExercise {
-                    Section("Target") {
+                    Section("target".localized(comment: "Target")) {
                         if isNormalMode {
                             Stepper(value: $sets, in: 1...20) {
                                 HStack {
-                                    Text("Sets")
+                                    Text("sets_label".localized(comment: "Sets"))
                                     Spacer()
                                     Text("\(sets)")
                                         .foregroundStyle(.secondary)
@@ -454,7 +456,7 @@ struct AddExerciseView: View {
                             } label: {
                                 HStack {
                                     HStack(spacing: 4) {
-                                        Text("Duration")
+                                        Text("duration".localized(comment: "Duration"))
                                         Text(formattedDuration(reps))
                                             .font(.subheadline)
                                             .foregroundColor(Color(UIColor.secondaryLabel))
@@ -474,7 +476,7 @@ struct AddExerciseView: View {
                             }
                         } else if selectedExercise.isDistanceBased {
                             HStack {
-                                Text("Distance")
+                                Text("distance_label".localized(comment: "Distance"))
                                 
                                 Spacer()
                                 
@@ -489,7 +491,7 @@ struct AddExerciseView: View {
                         } else {
                             Stepper(value: $reps, in: 1...100) {
                                 HStack {
-                                    Text("Reps")
+                                    Text("reps_label".localized(comment: "Reps"))
                                     Spacer()
                                     Text("\(reps)")
                                         .foregroundStyle(.secondary)
@@ -498,28 +500,28 @@ struct AddExerciseView: View {
                         }
                         
                         HStack {
-                            Text("Weight")
+                            Text("weight_label".localized(comment: "Weight"))
                             
                             Spacer()
                             
-                            TextField("Optional", value: $weight, format: .number)
+                            TextField("optional".localized(comment: "Optional"), value: $weight, format: .number)
                                 .keyboardType(.decimalPad)
                                 .multilineTextAlignment(.trailing)
                                 .focused($focusedField, equals: .exerciseWeight)
                             
-                            Text("kg")
+                            Text(weightUnit.symbol)
                                 .foregroundStyle(.secondary)
                         }
                     }
                     
                     if isNormalMode {
-                        Section("Rest") {
+                        Section("rest_label".localized(comment: "Rest")) {
                             Button {
                                 toggleTimeField(.rest)
                             } label: {
                                 HStack {
                                     HStack(spacing: 4) {
-                                        Text("Rest")
+                                        Text("rest_label".localized(comment: "Rest"))
                                         Text(formattedRest(restSeconds))
                                             .font(.subheadline)
                                             .foregroundColor(Color(UIColor.secondaryLabel))
@@ -539,13 +541,13 @@ struct AddExerciseView: View {
                             }
                         }
                         
-                        Section("Before Next Exercise") {
+                        Section("before_next_exercise".localized(comment: "Before Next Exercise")) {
                             Button {
                                 toggleTimeField(.countdown)
                             } label: {
                                 HStack {
                                     HStack(spacing: 4) {
-                                        Text("Countdown")
+                                        Text("countdown".localized(comment: "Countdown"))
                                         Text(formattedRest(timeBeforeNext))
                                             .font(.subheadline)
                                             .foregroundColor(Color(UIColor.secondaryLabel))
@@ -710,18 +712,18 @@ private struct DurationWheelPicker: View {
     
     var body: some View {
         HStack(spacing: 0) {
-            Picker("Minutes", selection: minutesBinding) {
+            Picker("minutes".localized(comment: "Minutes"), selection: minutesBinding) {
                 ForEach(Self.minuteOptions, id: \.self) { minute in
-                    Text("\(minute) min").tag(minute)
+                    Text("x_min".localized(with: minute, comment: "x min")).tag(minute)
                 }
             }
             .pickerStyle(.wheel)
             .labelsHidden()
             .frame(maxWidth: .infinity)
             
-            Picker("Seconds", selection: secondsBinding) {
+            Picker("seconds".localized(comment: "Seconds"), selection: secondsBinding) {
                 ForEach(Self.secondOptions, id: \.self) { second in
-                    Text("\(second) sec").tag(second)
+                    Text("x_sec".localized(with: second, comment: "x sec")).tag(second)
                 }
             }
             .pickerStyle(.wheel)
@@ -760,24 +762,23 @@ struct CreateTrainingBlockView: View {
         NavigationStack {
             Form {
                 Section {
-                    TextField("Name", text: $name)
+                    TextField("name".localized(comment: "Name"), text: $name)
                         .focused($focusedField, equals: .mesocycleName)
                     
-                    TextField("Notes", text: $notes, axis: .vertical)
+                    TextField("notes".localized(comment: "Notes"), text: $notes, axis: .vertical)
                         .lineLimit(3...6)
                         .focused($focusedField, equals: .notes)
                 } header: {
-                    Text("Program")
+                    Text("program".localized(comment: "Program"))
                 } footer: {
-                    Text("Just a name to group templates under, so their exercise history " +
-                         "is tracked separately from other programs.")
+                    Text("program_name_footer".localized(comment: "Just a name to group templates under, so their exercise history is tracked separately from other programs."))
                 }
             }
             .withTextFieldToolbarDoneWithChevrons(
                 fields: [.mesocycleName, .notes],
                 focusedField: $focusedField
             )
-            .navigationTitle(isEditing ? "Edit Program" : "New Program")
+            .navigationTitle(isEditing ? "edit_program".localized(comment: "Edit Program") : "new_program".localized(comment: "New Program"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
@@ -895,7 +896,7 @@ private struct SupersetExerciseRow: View {
             Button {
                 onUnlink()
             } label: {
-                Label("Unlink", systemImage: "link.badge.minus")
+                Label("unlink".localized(comment: "Unlink"), systemImage: "link.badge.minus")
             }
             .tint(.orange)
         }
@@ -904,7 +905,7 @@ private struct SupersetExerciseRow: View {
     @ViewBuilder
     private func exerciseInfo(_ workoutExercise: WorkoutExercise, alignment: HorizontalAlignment) -> some View {
         VStack(alignment: alignment, spacing: 4) {
-            Text(workoutExercise.exercise?.name ?? "Unknown Exercise")
+            Text(workoutExercise.exercise?.name ?? "unknown_exercise".localized(comment: "Unknown Exercise"))
             
             Text("\(workoutExercise.targetSets) x \(formattedTargetValue(for: workoutExercise))")
                 .font(.caption)
@@ -970,14 +971,14 @@ struct CreateWorkoutTemplateView: View {
                 // MARK: - Workout
                 
                 Section {
-                    TextField("Workout Name", text: $name)
+                    TextField("workout_name".localized(comment: "Workout Name"), text: $name)
                         .focused($focusedField, equals: .workoutName)
                     
-                    TextField("Notes", text: $notes, axis: .vertical)
+                    TextField("notes".localized(comment: "Notes"), text: $notes, axis: .vertical)
                         .lineLimit(3...6)
                         .focused($focusedField, equals: .notes)
                 } header: {
-                    Text("Workout")
+                    Text("workout".localized(comment: "Workout"))
                 }
                 
                 // MARK: - Program
@@ -991,7 +992,7 @@ struct CreateWorkoutTemplateView: View {
                             }
                         } label: {
                             HStack {
-                                Text("No Program")
+                                Text("no_program".localized(comment: "No Program"))
                                     .foregroundStyle(.primary)
                                 
                                 Spacer()
@@ -1038,7 +1039,7 @@ struct CreateWorkoutTemplateView: View {
                                 Button(role: .destructive) {
                                     deleteTrainingBlock(block)
                                 } label: {
-                                    Label("Delete", systemImage: "trash")
+                                    Label("delete".localized(comment: "Delete"), systemImage: "trash")
                                 }
                             }
                         }
@@ -1046,7 +1047,7 @@ struct CreateWorkoutTemplateView: View {
                         Button {
                             showCreateTrainingBlockSheet = true
                         } label: {
-                            Label("Create New Program", systemImage: "plus")
+                            Label("create_new_program".localized(comment: "Create New Program"), systemImage: "plus")
                         }
                     } else {
                         Button {
@@ -1055,20 +1056,20 @@ struct CreateWorkoutTemplateView: View {
                             }
                         } label: {
                             HStack {
-                                Text("Program")
+                                Text("program".localized(comment: "Program"))
                                     .foregroundStyle(.primary)
                                 
                                 Spacer()
                                 
-                                Text(selectedTrainingBlock?.name ?? "None")
+                                Text(selectedTrainingBlock?.name ?? "none".localized(comment: "None"))
                                     .foregroundStyle(.primary)
                             }
                         }
                     }
                 } header: {
-                    Text("Program")
+                    Text("program".localized(comment: "Program"))
                 } footer: {
-                    Text("Optional. Keeps this template's exercise history separate from other programs.")
+                    Text("template_program_footer".localized(comment: "Optional. Keeps this template's exercise history separate from other programs."))
                 }
                 
                 // MARK: - Exercises
@@ -1079,7 +1080,7 @@ struct CreateWorkoutTemplateView: View {
                         case .single(let workoutExercise):
                             HStack {
                                 VStack(alignment: .leading, spacing: 4) {
-                                    Text(workoutExercise.exercise?.name ?? "Unknown Exercise")
+                                    Text(workoutExercise.exercise?.name ?? "unknown_exercise".localized(comment: "Unknown Exercise"))
                                     
                                     Text("\(workoutExercise.targetSets) x \(formattedTargetValue(for: workoutExercise))")
                                         .font(.caption)
@@ -1100,13 +1101,13 @@ struct CreateWorkoutTemplateView: View {
                                 Button(role: .destructive) {
                                     delete(row)
                                 } label: {
-                                    Label("Delete", systemImage: "trash")
+                                    Label("delete".localized(comment: "Delete"), systemImage: "trash")
                                 }
                                 
                                 Button {
                                     exerciseToEdit = workoutExercise
                                 } label: {
-                                    Label("Edit", systemImage: "pencil")
+                                    Label("edit".localized(comment: "Edit"), systemImage: "pencil")
                                 }
                                 .tint(.blue)
                             }
@@ -1121,25 +1122,25 @@ struct CreateWorkoutTemplateView: View {
                                 Button(role: .destructive) {
                                     delete(row)
                                 } label: {
-                                    Label("Delete", systemImage: "trash")
+                                    Label("delete".localized(comment: "Delete"), systemImage: "trash")
                                 }
                             }
                         }
                     }
                     
-                    Button("Add Exercise", systemImage: "plus") {
+                    Button("add_exercise".localized(comment: "Add Exercise"), systemImage: "plus") {
                         showAddExerciseSheet = true
                     }
                     
                 } header: {
-                    Text("Exercises")
+                    Text("exercises".localized(comment: "Exercises"))
                 }
             }
             .withTextFieldToolbarDoneWithChevrons(
                 fields: [.workoutName, .notes],
                 focusedField: $focusedField
             )
-            .navigationTitle(isEditing ? "Edit Template" : "New Template")
+            .navigationTitle(isEditing ? "edit_template".localized(comment: "Edit Template") : "new_template".localized(comment: "New Template"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 if isEditing {
@@ -1407,7 +1408,7 @@ struct AddWorkoutView: View {
         }
         
         return exercises
-            .map { $0.exercise?.name ?? "Unknown Exercise" }
+            .map { $0.exercise?.name ?? "unknown_exercise".localized(comment: "Unknown Exercise") }
             .joined(separator: ", ")
     }
     
@@ -1416,7 +1417,7 @@ struct AddWorkoutView: View {
             Form {
                 // MARK: - Workout Template
                 
-                Section("Workout Template") {
+                Section("workout_template".localized(comment: "Workout Template")) {
                     if let selectedTemplate {
                         HStack {
                             VStack(alignment: .leading, spacing: 4) {
@@ -1438,17 +1439,17 @@ struct AddWorkoutView: View {
                             
                             Spacer()
                             
-                            Button("Change") {
+                            Button("change".localized(comment: "Change")) {
                                 self.selectedTemplate = nil
                             }
                         }
                     } else {
-                        TextField("Search templates", text: $searchText)
+                        TextField("search_templates".localized(comment: "Search templates"), text: $searchText)
                             .focused($focusedField, equals: .searchField)
                         
                         if filteredTemplates.isEmpty {
-                            ContentUnavailableView("No Templates", systemImage: "list.bullet.rectangle",
-                                                   description: Text("Create a workout template to get started.")
+                            ContentUnavailableView("no_templates".localized(comment: "No Templates"), systemImage: "list.bullet.rectangle",
+                                                   description: Text("create_template_prompt".localized(comment: "Create a workout template to get started."))
                             )
                         } else {
                             ForEach(filteredTemplates) { template in
@@ -1483,13 +1484,13 @@ struct AddWorkoutView: View {
                                     Button(role: .destructive) {
                                         deleteTemplate(template)
                                     } label: {
-                                        Label("Delete", systemImage: "trash")
+                                        Label("delete".localized(comment: "Delete"), systemImage: "trash")
                                     }
                                     
                                     Button {
                                         templateToEdit = template
                                     } label: {
-                                        Label("Edit", systemImage: "pencil")
+                                        Label("edit".localized(comment: "Edit"), systemImage: "pencil")
                                     }
                                     .tint(.blue)
                                 }
@@ -1501,7 +1502,7 @@ struct AddWorkoutView: View {
                                 selectedTemplate = template
                             }
                         } label: {
-                            Label("Create New Template", systemImage: "plus")
+                            Label("create_new_template".localized(comment: "Create New Template"), systemImage: "plus")
                         }
                     }
                 }
@@ -1509,21 +1510,21 @@ struct AddWorkoutView: View {
                 // MARK: - Schedule
                 
                 Section {
-                    DatePicker("Start Date", selection: $startDate, displayedComponents: .date)
+                    DatePicker("start_date".localized(comment: "Start Date"), selection: $startDate, displayedComponents: .date)
                     
                     Stepper(value: $numberOfWeeks, in: 1...52) {
                         HStack {
-                            Text("Duration")
+                            Text("duration".localized(comment: "Duration"))
                             
                             Spacer()
                             
-                            Text("\(numberOfWeeks) \(numberOfWeeks == 1 ? "week" : "weeks")")
+                            Text("x_week".localized(with: numberOfWeeks, comment: "x week(s)"))
                                 .foregroundStyle(.secondary)
                         }
                     }
                     
                     HStack {
-                        Text("Repeats")
+                        Text("repeats".localized(comment: "Repeats"))
                         
                         Spacer()
                         
@@ -1533,7 +1534,7 @@ struct AddWorkoutView: View {
                     
                     if let endDate = calculatedEndDate {
                         HStack {
-                            Text("Ends")
+                            Text("ends".localized(comment: "Ends"))
                             
                             Spacer()
                             
@@ -1545,22 +1546,20 @@ struct AddWorkoutView: View {
                     }
                     
                 } header: {
-                    Text("Schedule")
+                    Text("schedule".localized(comment: "Schedule"))
                 } footer: {
+                    let weekday = startDate.formatted(.dateTime.weekday(.wide))
+                    let weeks = "x_week".localized(with: numberOfWeeks, comment: "x week(s)")
+                    
                     if let trainingBlock {
-                        Text("The workout will repeat every \(startDate.formatted(.dateTime.weekday(.wide))) " +
-                             "for \(numberOfWeeks) \(numberOfWeeks == 1 ? "week" : "weeks"). " +
-                             "Tied to the \(trainingBlock.name) program for history tracking."
-                        )
+                        Text("repeat_footer_program".localized(with: weekday, weeks, trainingBlock.name, comment: "The workout will repeat every x for x. Tied to the x program for history tracking."))
                     } else {
-                        Text("The workout will repeat every \(startDate.formatted(.dateTime.weekday(.wide))) " +
-                             "for \(numberOfWeeks) \(numberOfWeeks == 1 ? "week" : "weeks")."
-                        )
+                        Text("repeat_footer".localized(with: weekday, weeks, comment: "The workout will repeat every x for x."))
                     }
                 }
             }
             .withTextFieldToolbarDone(focusedField: $focusedField)
-            .navigationTitle("Add Workout")
+            .navigationTitle("add_workout".localized(comment: "Add Workout"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
@@ -1693,7 +1692,7 @@ struct EditScheduledWorkoutView: View {
                         case .single(let workoutExercise):
                             HStack {
                                 VStack(alignment: .leading, spacing: 4) {
-                                    Text(workoutExercise.exercise?.name ?? "Unknown Exercise")
+                                    Text(workoutExercise.exercise?.name ?? "unknown_exercise".localized(comment: "Unknown Exercise"))
                                     
                                     Text("\(workoutExercise.targetSets) x \(formattedTargetValue(for: workoutExercise))")
                                         .font(.caption)
@@ -1714,13 +1713,13 @@ struct EditScheduledWorkoutView: View {
                                 Button(role: .destructive) {
                                     delete(row)
                                 } label: {
-                                    Label("Delete", systemImage: "trash")
+                                    Label("delete".localized(comment: "Delete"), systemImage: "trash")
                                 }
                                 
                                 Button {
                                     exerciseToEdit = workoutExercise
                                 } label: {
-                                    Label("Edit", systemImage: "pencil")
+                                    Label("edit".localized(comment: "Edit"), systemImage: "pencil")
                                 }
                                 .tint(.blue)
                             }
@@ -1735,22 +1734,22 @@ struct EditScheduledWorkoutView: View {
                                 Button(role: .destructive) {
                                     delete(row)
                                 } label: {
-                                    Label("Delete", systemImage: "trash")
+                                    Label("delete".localized(comment: "Delete"), systemImage: "trash")
                                 }
                             }
                         }
                     }
                     
-                    Button("Add Exercise", systemImage: "plus") {
+                    Button("add_exercise".localized(comment: "Add Exercise"), systemImage: "plus") {
                         showAddExerciseSheet = true
                     }
                 } header: {
-                    Text("Exercises")
+                    Text("exercises".localized(comment: "Exercises"))
                 } footer: {
-                    Text("Changes here only affect this workout and its following occurrences - the template it was created from stays unchanged.")
+                    Text("workout_changes_footer".localized(comment: "Changes here only affect this workout and its following occurrences - the template it was created from stays unchanged."))
                 }
             }
-            .navigationTitle(scheduledWorkout.workoutTemplate?.name ?? "Workout")
+            .navigationTitle(scheduledWorkout.workoutTemplate?.name ?? "workout".localized(comment: "Workout"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
@@ -1897,7 +1896,7 @@ struct CalendarView: View {
                 
                 selectedDayView
             }
-            .navigationTitle("Calendar")
+            .navigationTitle("calendar".localized(comment: "Calendar"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
@@ -1912,7 +1911,7 @@ struct CalendarView: View {
                     }
                 }
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button("Today") {
+                    Button("today".localized(comment: "Today")) {
                         goToToday()
                     }
                     .tint(
@@ -2098,13 +2097,13 @@ struct CalendarView: View {
                             Button(role: .destructive) {
                                 deleteWorkout(scheduledWorkout)
                             } label: {
-                                Label("Delete", systemImage: "trash")
+                                Label("delete".localized(comment: "Delete"), systemImage: "trash")
                             }
                             
                             Button {
                                 workoutToEdit = scheduledWorkout
                             } label: {
-                                Label("Edit", systemImage: "pencil")
+                                Label("edit".localized(comment: "Edit"), systemImage: "pencil")
                             }
                             .tint(.blue)
                         }
@@ -2129,14 +2128,14 @@ struct CalendarView: View {
                 .font(.system(size: 32))
                 .foregroundStyle(.secondary)
             
-            Text("Rest Day")
+            Text("rest_day".localized(comment: "Rest Day"))
                 .font(.headline)
             
-            Text("No workout scheduled")
+            Text("no_workout_scheduled".localized(comment: "No workout scheduled"))
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
             
-            Button("Add Workout", systemImage: "plus") {
+            Button("add_workout".localized(comment: "Add Workout"), systemImage: "plus") {
                 showAddWorkoutSheet = true
             }
             .buttonStyle(.bordered)

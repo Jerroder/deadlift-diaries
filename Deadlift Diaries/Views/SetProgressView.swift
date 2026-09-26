@@ -279,7 +279,7 @@ struct SetProgressView: View {
     
     @ViewBuilder
     private func resetButton() -> some View {
-        Button("Reset") {
+        Button("reset".localized(comment: "Reset")) {
             resetProgress()
         }
     }
@@ -287,7 +287,7 @@ struct SetProgressView: View {
     @ViewBuilder
     private func actionButton() -> some View {
         if isCurrentExerciseTiming {
-            Button(workoutTimer.isPaused ? "Resume" : "Pause") {
+            Button(workoutTimer.isPaused ? "resume".localized(comment: "Resume") : "pause".localized(comment: "Pause")) {
                 if workoutTimer.isPaused {
                     workoutTimer.resume(sendNotification: sendNotification)
                 } else {
@@ -295,15 +295,15 @@ struct SetProgressView: View {
                 }
             }
         } else if isTimeBased && !currentSetCompleted {
-            Button("Start") {
+            Button("start".localized(comment: "Start")) {
                 startSet()
             }
         } else if completedRestIndex >= sets.count && showsTimeBeforeNext && !exercise.beforeNextCompleted {
-            Button("Start next exercise timer") {
+            Button("start_next_exercise_timer".localized(comment: "Start next exercise timer")) {
                 startBeforeNext()
             }
         } else {
-            Button("Start rest") {
+            Button("start_rest".localized(comment: "Start rest")) {
                 startRest()
             }
             .disabled(completedRestIndex >= sets.count)

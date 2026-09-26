@@ -38,7 +38,7 @@ final class PerformedExercise {
     init(from workoutExercise: WorkoutExercise, orderIndex: Int) {
         let isDistanceBased = workoutExercise.exercise?.isDistanceBased ?? false
         
-        self.exerciseName = workoutExercise.exercise?.name ?? "Unknown"
+        self.exerciseName = workoutExercise.exercise?.name ?? "unknown".localized(comment: "Unknown")
         self.targetSets = workoutExercise.targetSets
         self.targetReps = workoutExercise.targetReps
         self.targetDistance = workoutExercise.targetDistance

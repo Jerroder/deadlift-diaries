@@ -96,7 +96,7 @@ struct TimerView: View {
                 if showingRestPicker {
                     Picker("rest_duration".localized(comment: "Rest duration"), selection: $restDuration) {
                         ForEach(Array(stride(from: 5.0, through: 300.0, by: 5.0)), id: \.self) { duration in
-                            Text("\(Int(duration)) seconds".localized(comment: "(xxx) seconds")).tag(duration)
+                            Text("x_seconds".localized(with: Int(duration), comment: "x seconds")).tag(duration)
                         }
                     }
                     .pickerStyle(.wheel)
@@ -129,7 +129,7 @@ struct TimerView: View {
                     if showingDurationPicker {
                         Picker("exercise_duration".localized(comment: "Exercise duration"), selection: $duration) {
                             ForEach(Array(stride(from: 5.0, through: 300.0, by: 5.0)), id: \.self) { duration in
-                                Text("\(Int(duration)) seconds".localized(comment: "(xxx) seconds")).tag(duration)
+                                Text("x_seconds".localized(with: Int(duration), comment: "x seconds")).tag(duration)
                             }
                         }
                         .pickerStyle(.wheel)
@@ -162,7 +162,7 @@ struct TimerView: View {
                 if showingTimeBeforeNextPicker {
                     Picker("time_before_next".localized(comment: "Time before next exercise"), selection: $timeBeforeNext) {
                         ForEach(Array(stride(from: 5.0, through: 300.0, by: 5.0)), id: \.self) { duration in
-                            Text("\(Int(duration)) seconds".localized(comment: "(xxx) seconds")).tag(duration)
+                            Text("x_seconds".localized(with: Int(duration), comment: "x seconds")).tag(duration)
                         }
                     }
                     .pickerStyle(.wheel)
