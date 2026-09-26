@@ -1,9 +1,15 @@
+//
+//  WorkoutExercise.swift
+//  Deadlift Diaries
+//
+//  Created by Jerroder on 2026-09-13.
+//
+
 /* Exercise
     Bench Press
 
 WorkoutExercise
-    Bench Press, 3 x 8 @ 80kg, 2:30 rest, position 1 in Upper A
-*/
+    Bench Press, 3 x 8 @ 80kg, 2:30 rest, position 1 in Upper A */
 
 import SwiftData
 import SwiftUI
@@ -145,9 +151,6 @@ final class WorkoutExercise: Identifiable {
         }
     }
     
-    /// Removes this exercise from its superset, deleting it entirely and leaving its
-    /// sibling as a standalone exercise. Propagates both changes to following workouts
-    /// and to any already-started workout sessions.
     func removeFromSuperset(modelContext: ModelContext) {
         guard let scheduledWorkout, let supersetID else {
             return

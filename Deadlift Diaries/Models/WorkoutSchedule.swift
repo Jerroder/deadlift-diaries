@@ -2,7 +2,7 @@
 //  WorkoutSchedule.swift
 //  Deadlift Diaries
 //
-//  Created by Jerroder on 2026-09-15.
+//  Created by Jerroder on 2026-09-14.
 //
 
 /* Workout "push A"

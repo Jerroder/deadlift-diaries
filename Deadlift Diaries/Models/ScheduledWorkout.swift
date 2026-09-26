@@ -1,4 +1,11 @@
-// Now your calendar is literally a collection of ScheduledWorkout
+//
+//  ScheduledWorkout.swift
+//  Deadlift Diaries
+//
+//  Created by Jerroder on 2026-09-13.
+//
+
+/* CalendarView is literally a collection of ScheduledWorkout */
 
 import SwiftData
 import SwiftUI

@@ -2,6 +2,8 @@
 //  TrainingBlock.swift
 //  Deadlift Diaries
 //
+//  Created by Jerroder on 2026-09-13.
+//
 
 import Foundation
 import SwiftData

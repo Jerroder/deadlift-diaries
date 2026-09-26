@@ -1,4 +1,11 @@
-// "Bench Press" is an Exercise. Nothing more.
+//
+//  Exercise.swift
+//  Deadlift Diaries
+//
+//  Created by Jerroder on 2025-09-25.
+//
+
+/* "Bench Press" is an Exercise. Nothing more. */
 
 import SwiftData
 import SwiftUI

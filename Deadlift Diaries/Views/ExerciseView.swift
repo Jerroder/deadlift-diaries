@@ -1,3 +1,10 @@
+//
+//  ExerciseView.swift
+//  Deadlift Diaries
+//
+//  Created by Jerroder on 2025-06-06.
+//
+
 import SwiftUI
 import SwiftData
 

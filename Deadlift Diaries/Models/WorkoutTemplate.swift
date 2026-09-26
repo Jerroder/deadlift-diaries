@@ -1,4 +1,11 @@
-// The WorkoutTemplate contains WorkoutExercises, not Exercises directly
+//
+//  WorkoutTemplate.swift
+//  Deadlift Diaries
+//
+//  Created by Jerroder on 2026-09-13.
+//
+
+// WorkoutTemplate contains WorkoutExercises, not Exercises directly
 
 import SwiftData
 import SwiftUI

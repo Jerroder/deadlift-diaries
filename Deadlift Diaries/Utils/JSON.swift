@@ -1,5 +1,5 @@
 //
-//  JSONExport.swift
+//  JSON.swift
 //  Deadlift Diaries
 //
 //  Created by Jerroder on 2025-10-06.
