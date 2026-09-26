@@ -5,10 +5,12 @@
       "blur-material" : null,
       "layers" : [
         {
+          "glass" : true,
           "image-name" : "4.2.svg",
           "name" : "4.2"
         },
         {
+          "glass" : true,
           "image-name" : "4.1.svg",
           "name" : "4.1"
         }
@@ -22,12 +24,13 @@
       "specular" : false,
       "translucency" : {
         "enabled" : true,
-        "value" : 0.5
+        "value" : 0.6
       }
     },
     {
       "layers" : [
         {
+          "glass" : true,
           "image-name" : "3.svg",
           "name" : "3",
           "position" : {
@@ -52,6 +55,7 @@
     {
       "layers" : [
         {
+          "glass" : true,
           "image-name" : "2.svg",
           "name" : "2",
           "position" : {
@@ -76,6 +80,7 @@
     {
       "layers" : [
         {
+          "glass" : true,
           "image-name" : "1.svg",
           "name" : "1",
           "position" : {
