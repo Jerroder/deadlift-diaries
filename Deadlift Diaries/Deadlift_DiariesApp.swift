@@ -17,15 +17,17 @@ struct Deadlift_DiariesApp: App {
     init() {
         let isICouldEnabled = UserDefaults.standard.bool(forKey: "isICouldEnabled")
         do {
-            container = try ModelContainer(
-                for: Exercise.self, PerformedExercise.self, PerformedSet.self, ScheduledWorkout.self, TrainingBlock.self, WorkoutExercise.self, WorkoutSchedule.self, WorkoutSession.self, WorkoutTemplate.self,
-                configurations: ModelConfiguration(
-                    cloudKitDatabase: isICouldEnabled ? .automatic : .none
-                )
+            container = try ModelContainer(for: Exercise.self, PerformedExercise.self, PerformedSet.self,
+                                           ScheduledWorkout.self, TrainingBlock.self, WorkoutExercise.self,
+                                           WorkoutSchedule.self, WorkoutSession.self, WorkoutTemplate.self,
+                                           configurations: ModelConfiguration(cloudKitDatabase: isICouldEnabled ?
+                                                                                                .automatic : .none)
             )
         } catch {
             fatalError("Failed to configure ModelContainer: \(error)")
         }
+        
+        Exercise.deduplicateByName(in: ModelContext(container))
     }
     
     var body: some Scene {
