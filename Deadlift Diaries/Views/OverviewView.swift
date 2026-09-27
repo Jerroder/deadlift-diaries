@@ -131,21 +131,26 @@ struct OverviewView: View {
     // MARK: - Weekdays
     
     private func activeWeekdays(for template: WorkoutTemplate) -> [Int] {
-        let schedules = template.workoutTemplates ?? []
-        let now = Date()
+        let calendar = Calendar.current
+        let today = calendar.startOfDay(for: Date())
+        let workouts = template.scheduledWorkouts ?? []
         
-        let active = Set(
-            schedules
-                .filter { $0.startDate <= now && ($0.endDate.map { $0 >= now } ?? true) }
-                .map(\.weekday)
+        let upcomingWeekdays = Set(
+            workouts
+                .filter { $0.scheduledDate >= today }
+                .map { calendar.component(.weekday, from: $0.scheduledDate) }
         )
         
-        if !active.isEmpty {
-            return active.sorted { sortableWeekday($0) < sortableWeekday($1) }
+        if !upcomingWeekdays.isEmpty {
+            return upcomingWeekdays.sorted { sortableWeekday($0) < sortableWeekday($1) }
         }
         
-        if let mostRecent = schedules.max(by: { $0.startDate < $1.startDate }) {
-            return [mostRecent.weekday]
+        if let mostRecentWorkout = workouts.max(by: { $0.scheduledDate < $1.scheduledDate }) {
+            return [calendar.component(.weekday, from: mostRecentWorkout.scheduledDate)]
+        }
+        
+        if let schedule = (template.workoutTemplates ?? []).max(by: { $0.startDate < $1.startDate }) {
+            return [schedule.weekday]
         }
         
         return []
