@@ -111,6 +111,8 @@ final class WorkoutExercise: Identifiable {
             
             if deleted {
                 if let matchingCopy {
+                    unlinkOldSibling(of: matchingCopy, in: following, modelContext: modelContext)
+                    
                     if let session = following.session {
                         matchingCopy.removeFromSessionIfNeeded(session, modelContext: modelContext)
                     }
@@ -123,6 +125,8 @@ final class WorkoutExercise: Identifiable {
             }
             
             if let matchingCopy {
+                let oldSupersetID = matchingCopy.supersetID
+                
                 matchingCopy.exercise = exercise
                 matchingCopy.order = order
                 matchingCopy.targetSets = targetSets
@@ -133,6 +137,11 @@ final class WorkoutExercise: Identifiable {
                 matchingCopy.timeBeforeNext = timeBeforeNext
                 matchingCopy.supersetID = supersetID
                 matchingCopy.supersetPosition = supersetPosition
+                
+                if oldSupersetID != supersetID, let oldSupersetID {
+                    unlinkOldSibling(withSupersetID: oldSupersetID, excluding: matchingCopy,
+                                      in: following, modelContext: modelContext)
+                }
                 
                 // If the following workout's session was already started before this edit,
                 // make sure its performed exercises reflect the change too.
@@ -149,6 +158,32 @@ final class WorkoutExercise: Identifiable {
                 }
             }
         }
+    }
+    
+    private func unlinkOldSibling(withSupersetID oldSupersetID: UUID, excluding exercise: WorkoutExercise,
+                                   in following: ScheduledWorkout, modelContext: ModelContext) {
+        guard let oldSibling = (following.exercises ?? []).first(where: {
+            $0.supersetID == oldSupersetID && $0.id != exercise.id
+        }) else {
+            return
+        }
+        
+        oldSibling.supersetID = nil
+        oldSibling.supersetPosition = nil
+        
+        let maxOrder = (following.exercises ?? []).map(\.order).max() ?? oldSibling.order
+        oldSibling.order = maxOrder + 1
+        
+        oldSibling.syncOwnPerformedExercise(modelContext: modelContext)
+    }
+    
+    private func unlinkOldSibling(of exercise: WorkoutExercise, in following: ScheduledWorkout,
+                                   modelContext: ModelContext) {
+        guard let oldSupersetID = exercise.supersetID else {
+            return
+        }
+        
+        unlinkOldSibling(withSupersetID: oldSupersetID, excluding: exercise, in: following, modelContext: modelContext)
     }
     
     func removeFromSuperset(modelContext: ModelContext) {

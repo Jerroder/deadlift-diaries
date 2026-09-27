@@ -38,6 +38,7 @@ struct ExerciseCard: View {
     let isExpanded: Bool
     let alignment: HorizontalAlignment
     let isLastExercise: Bool
+    var onAddSuperset: (() -> Void)? = nil
     
     @Environment(\.editMode) private var editMode
     @Environment(\.modelContext) private var modelContext
@@ -64,29 +65,39 @@ struct ExerciseCard: View {
     
     var body: some View {
         if editMode?.wrappedValue.isEditing == true {
-            exerciseDetails()
-                .contentShape(Rectangle())
-                .onTapGesture {
-                    if exercise.sourceExercise != nil {
-                        showEditSheet = true
+            HStack(alignment: .center, spacing: 12) {
+                exerciseDetails()
+                    .contentShape(Rectangle())
+                    .onTapGesture {
+                        if exercise.sourceExercise != nil {
+                            showEditSheet = true
+                        }
                     }
-                }
-                .sheet(isPresented: $showEditSheet) {
-                    if let sourceExercise = exercise.sourceExercise {
-                        AddExerciseView(
-                            mode: .edit(sourceExercise),
-                            onAdd: { updated in
-                                exercise.syncTargets(from: updated, modelContext: modelContext)
-                                updated.propagateToFollowingWorkouts(deleted: false, modelContext: modelContext)
-                                try? modelContext.save()
-                            },
-                            onRemoveFromSuperset: sourceExercise.isInSuperset ? {
-                                sourceExercise.removeFromSuperset(modelContext: modelContext)
-                                try? modelContext.save()
-                            } : nil
-                        )
+                
+                if let onAddSuperset {
+                    Button(action: onAddSuperset) {
+                        Image(systemName: "plus")
                     }
+                    .buttonStyle(.borderless)
+                    .padding(.trailing, 12)
                 }
+            }
+            .sheet(isPresented: $showEditSheet) {
+                if let sourceExercise = exercise.sourceExercise {
+                    AddExerciseView(
+                        mode: .edit(sourceExercise),
+                        onAdd: { updated in
+                            exercise.syncTargets(from: updated, modelContext: modelContext)
+                            updated.propagateToFollowingWorkouts(deleted: false, modelContext: modelContext)
+                            try? modelContext.save()
+                        },
+                        onRemoveFromSuperset: sourceExercise.isInSuperset ? {
+                            sourceExercise.removeFromSuperset(modelContext: modelContext)
+                            try? modelContext.save()
+                        } : nil
+                    )
+                }
+            }
         } else {
             exerciseDetails()
             
@@ -224,6 +235,7 @@ struct WorkoutSessionView: View {
     
     @State private var expandedExerciseID: UUID?
     @State private var showAddExerciseSheet: Bool = false
+    @State private var supersetBaseExercise: WorkoutExercise?
     
     private var nextExerciseOrder: Int {
         (session.exercises?.map(\.orderIndex).max() ?? -1) + 1
@@ -240,14 +252,16 @@ struct WorkoutSessionView: View {
             }
         
         var rows: [WorkoutSessionRow] = []
-        var index = 0
+        var consumedIDs: Set<UUID> = []
         
-        while index < exercises.count {
-            let exercise = exercises[index]
+        for exercise in exercises {
+            guard !consumedIDs.contains(exercise.id) else {
+                continue
+            }
             
             guard let supersetID = exercise.supersetID else {
                 rows.append(.exercise(exercise))
-                index += 1
+                consumedIDs.insert(exercise.id)
                 continue
             }
             
@@ -259,10 +273,11 @@ struct WorkoutSessionView: View {
                let second = supersetExercises.first(where: { $0.supersetPosition == .second }) {
                 rows.append(.superset(first: first, second: second))
                 
-                index += supersetExercises.count
+                consumedIDs.insert(first.id)
+                consumedIDs.insert(second.id)
             } else { // Defensive fallback for malformed/incomplete data.
                 rows.append(.exercise(exercise))
-                index += 1
+                consumedIDs.insert(exercise.id)
             }
         }
         
@@ -278,7 +293,10 @@ struct WorkoutSessionView: View {
                 case .exercise(let exercise):
                     ExerciseCard(exercise: exercise,
                                  isExpanded: expandedExerciseID == exercise.id, alignment: .leading,
-                                 isLastExercise: isLastExercise)
+                                 isLastExercise: isLastExercise,
+                                 onAddSuperset: exercise.sourceExercise != nil ? {
+                                     supersetBaseExercise = exercise.sourceExercise
+                                 } : nil)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .contentShape(Rectangle())
                     .listRowSeparator(.hidden)
@@ -335,6 +353,11 @@ struct WorkoutSessionView: View {
                 addExerciseToSession(workoutExercise)
             }
         }
+        .sheet(item: $supersetBaseExercise) { baseExercise in
+            AddExerciseView(mode: .superset(with: baseExercise)) { workoutExercise in
+                addSupersetExercise(workoutExercise, to: baseExercise)
+            }
+        }
     }
     
     private func addExerciseToSession(_ workoutExercise: WorkoutExercise) {
@@ -353,6 +376,32 @@ struct WorkoutSessionView: View {
         session.exercises?.append(performedExercise)
         
         workoutExercise.propagateToFollowingWorkouts(deleted: false, modelContext: modelContext)
+        
+        try? modelContext.save()
+    }
+    
+    private func addSupersetExercise(_ workoutExercise: WorkoutExercise, to baseExercise: WorkoutExercise) {
+        let supersetID = baseExercise.supersetID ?? UUID()
+        
+        baseExercise.supersetID = supersetID
+        baseExercise.supersetPosition = .first
+        
+        workoutExercise.supersetID = supersetID
+        workoutExercise.supersetPosition = .second
+        workoutExercise.order = baseExercise.order
+        
+        if let scheduledWorkout = session.scheduledWorkout {
+            workoutExercise.scheduledWorkout = scheduledWorkout
+            scheduledWorkout.exercises?.append(workoutExercise)
+        }
+        
+        modelContext.insert(workoutExercise)
+        
+        baseExercise.propagateToFollowingWorkouts(deleted: false, modelContext: modelContext)
+        workoutExercise.propagateToFollowingWorkouts(deleted: false, modelContext: modelContext)
+        
+        baseExercise.syncOwnPerformedExercise(modelContext: modelContext)
+        workoutExercise.addToOwnSessionIfNeeded(modelContext: modelContext)
         
         try? modelContext.save()
     }

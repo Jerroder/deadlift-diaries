@@ -238,14 +238,16 @@ struct OverviewView: View {
         }
         
         var rows: [TemplateExerciseRow] = []
-        var index = 0
+        var consumedIDs: Set<UUID> = []
         
-        while index < sorted.count {
-            let exercise = sorted[index]
+        for exercise in sorted {
+            guard !consumedIDs.contains(exercise.id) else {
+                continue
+            }
             
             guard let supersetID = exercise.supersetID else {
                 rows.append(.single(exercise))
-                index += 1
+                consumedIDs.insert(exercise.id)
                 continue
             }
             
@@ -255,10 +257,11 @@ struct OverviewView: View {
                let second = supersetExercises.first(where: { $0.supersetPosition == .second }) {
                 rows.append(.superset(first: first, second: second))
                 
-                index += supersetExercises.count
+                consumedIDs.insert(first.id)
+                consumedIDs.insert(second.id)
             } else { // Defensive fallback for malformed/incomplete data.
                 rows.append(.single(exercise))
-                index += 1
+                consumedIDs.insert(exercise.id)
             }
         }
         
