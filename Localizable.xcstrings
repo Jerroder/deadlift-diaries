@@ -1378,6 +1378,36 @@
         }
       }
     },
+    "edit_workout" : {
+      "comment" : "Edit Workout",
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Training bearbeiten"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Edit Workout"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Editar entrenamiento"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Modifier l'entraînement"
+          }
+        }
+      }
+    },
     "empty_workout" : {
       "comment" : "Empty workout",
       "extractionState" : "manual",
@@ -4584,6 +4614,36 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Nom de l'entraînement"
+          }
+        }
+      }
+    },
+    "workout_name_footer" : {
+      "comment" : "Renaming updates the template and every workout scheduled from it.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Das Umbenennen aktualisiert die Vorlage und jedes Training, das daraus geplant wurde."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Renaming updates the template and every workout scheduled from it."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cambiar el nombre actualiza la plantilla y todos los entrenamientos programados a partir de ella."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Renommer met à jour le modèle et tous les entraînements planifiés à partir de celui-ci."
           }
         }
       }

@@ -1810,6 +1810,15 @@ struct EditScheduledWorkoutView: View {
     @State private var numberOfWeeks: Int = 1
     @State private var hasLoadedNumberOfWeeks: Bool = false
     
+    @State private var name: String
+    
+    @FocusState private var focusedField: FocusableField?
+    
+    init(scheduledWorkout: ScheduledWorkout) {
+        self.scheduledWorkout = scheduledWorkout
+        _name = State(initialValue: scheduledWorkout.workoutTemplate?.name ?? "")
+    }
+    
     private var exercises: [WorkoutExercise] {
         (scheduledWorkout.exercises ?? []).sorted { $0.order < $1.order }
     }
@@ -1879,6 +1888,15 @@ struct EditScheduledWorkoutView: View {
     var body: some View {
         NavigationStack {
             Form {
+                Section {
+                    TextField("workout_name".localized(comment: "Workout Name"), text: $name)
+                        .focused($focusedField, equals: .workoutName)
+                } header: {
+                    Text("workout".localized(comment: "Workout"))
+                } footer: {
+                    Text("workout_name_footer".localized(comment: "Renaming updates the template and every workout scheduled from it."))
+                }
+                
                 if let matchingSchedule {
                     Section {
                         Stepper(value: $numberOfWeeks, in: 1...52) {
@@ -1971,7 +1989,8 @@ struct EditScheduledWorkoutView: View {
                     Text("workout_changes_footer".localized(comment: "Changes here only affect this workout and its following occurrences - the template it was created from stays unchanged."))
                 }
             }
-            .navigationTitle(scheduledWorkout.workoutTemplate?.name ?? "workout".localized(comment: "Workout"))
+            .withTextFieldToolbarDone(focusedField: $focusedField)
+            .navigationTitle("edit_workout".localized(comment: "Edit Workout"))
             .navigationBarTitleDisplayMode(.inline)
             .interactiveDismissDisabled()
             .toolbar {
@@ -1984,10 +2003,16 @@ struct EditScheduledWorkoutView: View {
                 
                 ToolbarItem(placement: .confirmationAction) {
                     Button("", systemImage: "checkmark") {
+                        applyNameChangeIfNeeded()
                         applyNumberOfWeeksChangeIfNeeded()
                         try? modelContext.save()
                         dismiss()
                     }
+                    .disabled(
+                        name
+                            .trimmingCharacters(in: .whitespacesAndNewlines)
+                            .isEmpty
+                    )
                 }
             }
         }
@@ -2078,6 +2103,23 @@ struct EditScheduledWorkoutView: View {
         
         scheduledWorkout.exercises?.removeAll { $0.id == exercise.id }
         modelContext.delete(exercise)
+    }
+    
+    // MARK: - Name
+    
+    private func applyNameChangeIfNeeded() {
+        guard let workoutTemplate = scheduledWorkout.workoutTemplate else {
+            return
+        }
+        
+        let trimmedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        
+        guard !trimmedName.isEmpty, trimmedName != workoutTemplate.name else {
+            return
+        }
+        
+        workoutTemplate.name = trimmedName
+        workoutTemplate.updatedAt = Date()
     }
     
     // MARK: - Number of Weeks
