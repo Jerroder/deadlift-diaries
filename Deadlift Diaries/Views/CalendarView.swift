@@ -2389,10 +2389,18 @@ struct CalendarView: View {
                 }
                 
                 HStack(spacing: 3) {
-                    ForEach(workouts.prefix(3), id: \.id) { _ in
-                        Circle()
-                            .fill(Color.accentColor)
-                            .frame(width: 5, height: 5)
+                    ForEach(workouts.prefix(3), id: \.id) { workout in
+                        if workout.isCompleted {
+                            Image(systemName: "checkmark")
+                                .font(.system(size: 6, weight: .heavy))
+                                .foregroundStyle(Color.accentColor)
+                                .frame(width: 5, height: 5)
+                                .offset(y: 1)
+                        } else {
+                            Circle()
+                                .fill(Color.accentColor)
+                                .frame(width: 5, height: 5)
+                        }
                     }
                 }
                 .frame(height: 5)

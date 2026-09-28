@@ -28,6 +28,10 @@ final class ScheduledWorkout {
 
     // If this scheduled workout has been started/completed
     var session: WorkoutSession?
+    
+    var isCompleted: Bool {
+        session?.isCompleted ?? false
+    }
 
     init(scheduledDate: Date, workoutTemplate: WorkoutTemplate) {
         self.scheduledDate = scheduledDate

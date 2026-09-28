@@ -44,6 +44,14 @@ final class PerformedExercise {
         supersetID != nil
     }
     
+    var isCompleted: Bool {
+        guard let sets, !sets.isEmpty else {
+            return false
+        }
+        
+        return sets.allSatisfy(\.completed)
+    }
+    
     init(from workoutExercise: WorkoutExercise, orderIndex: Int) {
         let isDistanceBased = workoutExercise.exercise?.isDistanceBased ?? false
         

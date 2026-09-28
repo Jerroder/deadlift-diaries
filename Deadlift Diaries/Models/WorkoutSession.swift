@@ -21,6 +21,14 @@ final class WorkoutSession {
 
     @Relationship(deleteRule: .cascade)
     var exercises: [PerformedExercise]? = []
+    
+    var isCompleted: Bool {
+        guard let exercises, !exercises.isEmpty else {
+            return false
+        }
+        
+        return exercises.allSatisfy(\.isCompleted)
+    }
 
     init(scheduledWorkout: ScheduledWorkout? = nil) {
         self.id = UUID()
