@@ -1612,6 +1612,7 @@ struct AddWorkoutView: View {
         
         for _ in 0..<numberOfWeeks {
             let scheduledWorkout = ScheduledWorkout(scheduledDate: scheduledDate, workoutTemplate: workoutTemplate)
+            scheduledWorkout.schedule = schedule
             
             modelContext.insert(scheduledWorkout)
             
@@ -1950,6 +1951,7 @@ struct EditScheduledWorkoutView: View {
                 
                 if !alreadyScheduled {
                     let newWorkout = ScheduledWorkout(scheduledDate: date, workoutTemplate: workoutTemplate)
+                    newWorkout.schedule = schedule
                     modelContext.insert(newWorkout)
                     
                     for templateExercise in workoutTemplate.exercises ?? [] {
@@ -1978,6 +1980,7 @@ struct EditScheduledWorkoutView: View {
             }
             
             for workout in workoutsToRemove {
+                workout.pruneScheduleIfOrphaned(modelContext: modelContext)
                 modelContext.delete(workout)
             }
         }
@@ -2274,6 +2277,7 @@ struct CalendarView: View {
     }
     
     private func deleteWorkout(_ scheduledWorkout: ScheduledWorkout) {
+        scheduledWorkout.pruneScheduleIfOrphaned(modelContext: modelContext)
         modelContext.delete(scheduledWorkout)
         try? modelContext.save()
     }

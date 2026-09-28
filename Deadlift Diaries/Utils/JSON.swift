@@ -61,6 +61,7 @@ struct ScheduledWorkoutDTO: Codable {
     let notes: String?
     let createdAt: Date
     let workoutTemplateID: UUID?
+    let scheduleID: UUID?
 }
 
 struct ExerciseDTO: Codable {
@@ -185,7 +186,8 @@ func exportToJSON(
                 scheduledDate: workout.scheduledDate,
                 notes: workout.notes,
                 createdAt: workout.createdAt,
-                workoutTemplateID: workout.workoutTemplate?.id
+                workoutTemplateID: workout.workoutTemplate?.id,
+                scheduleID: workout.schedule?.id
             )
         },
         exercises: exercises.map { exercise in
@@ -287,6 +289,7 @@ func importExportData(_ exportData: ExportData, into modelContext: ModelContext)
     var trainingBlocksByID: [UUID: TrainingBlock] = [:]
     var workoutTemplatesByID: [UUID: WorkoutTemplate] = [:]
     var scheduledWorkoutsByID: [UUID: ScheduledWorkout] = [:]
+    var workoutSchedulesByID: [UUID: WorkoutSchedule] = [:]
     var workoutExercisesByID: [UUID: WorkoutExercise] = [:]
     var workoutSessionsByID: [UUID: WorkoutSession] = [:]
     var performedExercisesByID: [UUID: PerformedExercise] = [:]
@@ -326,19 +329,6 @@ func importExportData(_ exportData: ExportData, into modelContext: ModelContext)
         modelContext.insert(template)
     }
 
-    for dto in exportData.scheduledWorkouts {
-        guard let workoutTemplate = dto.workoutTemplateID.flatMap({ workoutTemplatesByID[$0] }) else {
-            continue
-        }
-
-        let workout = ScheduledWorkout(scheduledDate: dto.scheduledDate, workoutTemplate: workoutTemplate)
-        workout.id = dto.id
-        workout.notes = dto.notes
-        workout.createdAt = dto.createdAt
-        scheduledWorkoutsByID[dto.id] = workout
-        modelContext.insert(workout)
-    }
-
     for dto in exportData.workoutSchedules {
         guard let workoutTemplate = dto.workoutTemplateID.flatMap({ workoutTemplatesByID[$0] }) else {
             continue
@@ -351,7 +341,22 @@ func importExportData(_ exportData: ExportData, into modelContext: ModelContext)
             workoutTemplate: workoutTemplate
         )
         schedule.id = dto.id
+        workoutSchedulesByID[dto.id] = schedule
         modelContext.insert(schedule)
+    }
+
+    for dto in exportData.scheduledWorkouts {
+        guard let workoutTemplate = dto.workoutTemplateID.flatMap({ workoutTemplatesByID[$0] }) else {
+            continue
+        }
+
+        let workout = ScheduledWorkout(scheduledDate: dto.scheduledDate, workoutTemplate: workoutTemplate)
+        workout.id = dto.id
+        workout.notes = dto.notes
+        workout.createdAt = dto.createdAt
+        workout.schedule = dto.scheduleID.flatMap { workoutSchedulesByID[$0] }
+        scheduledWorkoutsByID[dto.id] = workout
+        modelContext.insert(workout)
     }
 
     for dto in exportData.workoutExercises {

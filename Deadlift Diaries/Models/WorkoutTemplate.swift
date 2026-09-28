@@ -28,7 +28,7 @@ final class WorkoutTemplate {
     @Relationship(deleteRule: .cascade, inverse: \ScheduledWorkout.workoutTemplate)
     var scheduledWorkouts: [ScheduledWorkout]? = []
 
-    @Relationship(inverse: \WorkoutSchedule.workoutTemplate)
+    @Relationship(deleteRule: .cascade, inverse: \WorkoutSchedule.workoutTemplate)
     var workoutTemplates: [WorkoutSchedule]? = []
 
     init(name: String, notes: String? = nil) {

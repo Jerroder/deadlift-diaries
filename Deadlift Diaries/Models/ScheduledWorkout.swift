@@ -20,6 +20,9 @@ final class ScheduledWorkout {
     // The template to use
     var workoutTemplate: WorkoutTemplate?
     
+    // The recurring WorkoutSchedule that generated this occurrence, if any.
+    var schedule: WorkoutSchedule?
+    
     @Relationship(deleteRule: .cascade, inverse: \WorkoutExercise.scheduledWorkout)
     var exercises: [WorkoutExercise]? = []
 
@@ -30,5 +33,17 @@ final class ScheduledWorkout {
         self.scheduledDate = scheduledDate
         self.workoutTemplate = workoutTemplate
         self.createdAt = Date()
+    }
+    
+    func pruneScheduleIfOrphaned(modelContext: ModelContext) {
+        guard let schedule else {
+            return
+        }
+        
+        let remaining = (schedule.scheduledWorkouts ?? []).filter { $0.id != id }
+        
+        if remaining.isEmpty {
+            modelContext.delete(schedule)
+        }
     }
 }

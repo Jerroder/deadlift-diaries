@@ -23,6 +23,9 @@ final class WorkoutSchedule {
 
     var workoutTemplate: WorkoutTemplate?
 
+    @Relationship(inverse: \ScheduledWorkout.schedule)
+    var scheduledWorkouts: [ScheduledWorkout]? = []
+
     init(startDate: Date, endDate: Date? = nil, weekday: Int, workoutTemplate: WorkoutTemplate) {
         self.startDate = startDate
         self.endDate = endDate
