@@ -1342,17 +1342,70 @@ struct AddWorkoutView: View {
     
     @State private var startDate: Date
     @State private var numberOfWeeks: Int = 1
+    @State private var selectedWeekdays: Set<Int>
     
     @FocusState private var focusedField: FocusableField?
     
     init(startDate: Date = Date()) {
         _startDate = State(initialValue: startDate)
+        _selectedWeekdays = State(initialValue: [Calendar.current.component(.weekday, from: startDate)])
     }
     
     // MARK: - Computed Properties
     
-    private var weekday: Int {
-        Calendar.current.component(.weekday, from: startDate)
+    private var orderedWeekdays: [Int] {
+        let calendar = Calendar.current
+        let start = calendar.firstWeekday
+        
+        return (0..<7).map { ((start - 1 + $0) % 7) + 1 }
+    }
+    
+    private func weekdaySymbol(_ weekday: Int) -> String {
+        let symbols = Calendar.current.veryShortWeekdaySymbols
+        
+        guard weekday >= 1, weekday <= symbols.count else {
+            return ""
+        }
+        
+        return symbols[weekday - 1]
+    }
+    
+    private func weekdayName(_ weekday: Int) -> String? {
+        let symbols = Calendar.current.weekdaySymbols
+        
+        guard weekday >= 1, weekday <= symbols.count else {
+            return nil
+        }
+        
+        return symbols[weekday - 1]
+    }
+    
+    private func occurrenceStartDate(for weekday: Int) -> Date {
+        let calendar = Calendar.current
+        let startWeekday = calendar.component(.weekday, from: startDate)
+        let offset = (weekday - startWeekday + 7) % 7
+        
+        return calendar.date(byAdding: .day, value: offset, to: startDate) ?? startDate
+    }
+    
+    private func toggleWeekday(_ weekday: Int) {
+        if selectedWeekdays.contains(weekday) {
+            // Keep at least one day selected.
+            guard selectedWeekdays.count > 1 else {
+                return
+            }
+            
+            selectedWeekdays.remove(weekday)
+        } else {
+            selectedWeekdays.insert(weekday)
+        }
+    }
+    
+    private var selectedWeekdayNamesSummary: String {
+        orderedWeekdays
+            .filter { selectedWeekdays.contains($0) }
+            .compactMap { weekdayName($0) }
+            .joined(separator: ", ")
     }
     
     // Defaults the duration to whatever was used the last time this same
@@ -1388,7 +1441,13 @@ struct AddWorkoutView: View {
     }
     
     private var calculatedEndDate: Date? {
-        Calendar.current.date(byAdding: .weekOfYear, value: numberOfWeeks - 1, to: startDate)
+        let calendar = Calendar.current
+        
+        let endDates = selectedWeekdays.compactMap { weekday in
+            calendar.date(byAdding: .weekOfYear, value: numberOfWeeks - 1, to: occurrenceStartDate(for: weekday))
+        }
+        
+        return endDates.max()
     }
     
     private var trainingBlock: TrainingBlock? {
@@ -1520,14 +1579,34 @@ struct AddWorkoutView: View {
                         }
                     }
                     
-                    HStack {
-                        Text("repeats".localized(comment: "Repeats"))
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("repeats_on".localized(comment: "Repeats On"))
                         
-                        Spacer()
-                        
-                        Text(startDate.formatted(.dateTime.weekday(.wide)))
-                            .foregroundStyle(.secondary)
+                        HStack {
+                            ForEach(orderedWeekdays, id: \.self) { weekday in
+                                let isSelected = selectedWeekdays.contains(weekday)
+                                
+                                Button {
+                                    toggleWeekday(weekday)
+                                } label: {
+                                    Text(weekdaySymbol(weekday))
+                                        .font(.subheadline.weight(.semibold))
+                                        .frame(width: 32, height: 32)
+                                        .background(
+                                            Circle()
+                                                .fill(isSelected ? Color.accentColor : Color.secondary.opacity(0.15))
+                                        )
+                                        .foregroundStyle(isSelected ? Color.white : Color.primary)
+                                }
+                                .buttonStyle(.plain)
+                                
+                                if weekday != orderedWeekdays.last {
+                                    Spacer()
+                                }
+                            }
+                        }
                     }
+                    .padding(.vertical, 4)
                     
                     if let endDate = calculatedEndDate {
                         HStack {
@@ -1545,7 +1624,7 @@ struct AddWorkoutView: View {
                 } header: {
                     Text("schedule".localized(comment: "Schedule"))
                 } footer: {
-                    let weekday = startDate.formatted(.dateTime.weekday(.wide))
+                    let weekday = selectedWeekdayNamesSummary
                     let weeks = "x_week".localized(with: numberOfWeeks, comment: "x week(s)")
                     
                     if let trainingBlock {
@@ -1569,7 +1648,7 @@ struct AddWorkoutView: View {
                     Button("", systemImage: "checkmark") {
                         saveWorkout()
                     }
-                    .disabled(selectedTemplate == nil)
+                    .disabled(selectedTemplate == nil || selectedWeekdays.isEmpty)
                 }
             }
         }
@@ -1593,39 +1672,43 @@ struct AddWorkoutView: View {
     // MARK: - Save
     
     private func saveWorkout() {
-        guard let workoutTemplate = selectedTemplate else {
+        guard let workoutTemplate = selectedTemplate, !selectedWeekdays.isEmpty else {
             return
         }
         
         let calendar = Calendar.current
         
-        guard let endDate = calendar.date(byAdding: .day, value: (numberOfWeeks - 1) * 7, to: startDate) else {
-            return
-        }
-        
-        let schedule = WorkoutSchedule(startDate: startDate, endDate: endDate,
-                                       weekday: weekday, workoutTemplate: workoutTemplate)
-        
-        modelContext.insert(schedule)
-        
-        var scheduledDate = startDate
-        
-        for _ in 0..<numberOfWeeks {
-            let scheduledWorkout = ScheduledWorkout(scheduledDate: scheduledDate, workoutTemplate: workoutTemplate)
-            scheduledWorkout.schedule = schedule
+        for weekday in selectedWeekdays {
+            let weekdayStartDate = occurrenceStartDate(for: weekday)
             
-            modelContext.insert(scheduledWorkout)
-            
-            for templateExercise in workoutTemplate.exercises ?? [] {
-                guard let copy = templateExercise.makeCopy(for: scheduledWorkout) else {
-                    continue
-                }
-                
-                modelContext.insert(copy)
-                scheduledWorkout.exercises?.append(copy)
+            guard let endDate = calendar.date(byAdding: .day, value: (numberOfWeeks - 1) * 7, to: weekdayStartDate) else {
+                continue
             }
             
-            scheduledDate = calendar.date(byAdding: .day, value: 7, to: scheduledDate)!
+            let schedule = WorkoutSchedule(startDate: weekdayStartDate, endDate: endDate,
+                                           weekday: weekday, workoutTemplate: workoutTemplate)
+            
+            modelContext.insert(schedule)
+            
+            var scheduledDate = weekdayStartDate
+            
+            for _ in 0..<numberOfWeeks {
+                let scheduledWorkout = ScheduledWorkout(scheduledDate: scheduledDate, workoutTemplate: workoutTemplate)
+                scheduledWorkout.schedule = schedule
+                
+                modelContext.insert(scheduledWorkout)
+                
+                for templateExercise in workoutTemplate.exercises ?? [] {
+                    guard let copy = templateExercise.makeCopy(for: scheduledWorkout) else {
+                        continue
+                    }
+                    
+                    modelContext.insert(copy)
+                    scheduledWorkout.exercises?.append(copy)
+                }
+                
+                scheduledDate = calendar.date(byAdding: .day, value: 7, to: scheduledDate)!
+            }
         }
         
         do {

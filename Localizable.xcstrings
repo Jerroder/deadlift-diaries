@@ -2788,6 +2788,36 @@
         }
       }
     },
+    "repeats_on": {
+      "comment": "Repeats On",
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wiederholt sich an"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Repeats On"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Se repite el"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Se répète le"
+          }
+        }
+      }
+    },
     "reps": {
       "comment": "Reps:",
       "extractionState": "manual",
