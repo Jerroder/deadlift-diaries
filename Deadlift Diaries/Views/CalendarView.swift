@@ -253,8 +253,8 @@ struct AddExerciseView: View {
     
     @State private var selectedExercise: Exercise?
     
-    @State private var sets: Int = 3
-    @State private var reps: Int = 8
+    @State private var sets: Int = 5
+    @State private var reps: Int = 5
     @State private var distance: Int = 0
     @State private var restSeconds: Int
     @State private var timeBeforeNext: Int
@@ -868,6 +868,7 @@ struct CreateWorkoutTemplateView: View {
     @Environment(\.modelContext) private var modelContext
     
     let existingTemplate: WorkoutTemplate?
+    let duplicateFrom: WorkoutTemplate?
     
     // MARK: - Workout
     
@@ -901,16 +902,70 @@ struct CreateWorkoutTemplateView: View {
         existingTemplate != nil
     }
     
+    private var isDuplicating: Bool {
+        duplicateFrom != nil
+    }
+    
     private let originalExerciseIDs: Set<UUID>
     
-    init(existingTemplate: WorkoutTemplate? = nil, onCreate: @escaping (WorkoutTemplate) -> Void) {
+    init(existingTemplate: WorkoutTemplate? = nil, duplicateFrom: WorkoutTemplate? = nil, onCreate: @escaping (WorkoutTemplate) -> Void) {
         self.existingTemplate = existingTemplate
+        self.duplicateFrom = duplicateFrom
         self.onCreate = onCreate
-        _name = State(initialValue: existingTemplate?.name ?? "")
-        _notes = State(initialValue: existingTemplate?.notes ?? "")
-        _selectedTrainingBlock = State(initialValue: existingTemplate?.trainingBlock)
-        _workoutExercises = State(initialValue: existingTemplate?.exercises ?? [])
+        
+        if let duplicateFrom {
+            _name = State(initialValue: "template_copy_name".localized(with: duplicateFrom.name, comment: "%@ Copy"))
+            _notes = State(initialValue: duplicateFrom.notes ?? "")
+            _selectedTrainingBlock = State(initialValue: duplicateFrom.trainingBlock)
+            _workoutExercises = State(initialValue: Self.duplicatedExercises(from: duplicateFrom))
+        } else {
+            _name = State(initialValue: existingTemplate?.name ?? "")
+            _notes = State(initialValue: existingTemplate?.notes ?? "")
+            _selectedTrainingBlock = State(initialValue: existingTemplate?.trainingBlock)
+            _workoutExercises = State(initialValue: existingTemplate?.exercises ?? [])
+        }
+        
         originalExerciseIDs = Set(existingTemplate?.exercises?.map(\.id) ?? [])
+    }
+    
+    private static func duplicatedExercises(from template: WorkoutTemplate) -> [WorkoutExercise] {
+        let sourceExercises = (template.exercises ?? []).sorted {
+            if $0.order != $1.order {
+                return $0.order < $1.order
+            }
+            
+            return ($0.supersetPosition?.rawValue ?? 0) < ($1.supersetPosition?.rawValue ?? 0)
+        }
+        
+        var supersetIDMap: [UUID: UUID] = [:]
+        
+        return sourceExercises.compactMap { source in
+            guard let exercise = source.exercise else {
+                return nil
+            }
+            
+            let newSupersetID = source.supersetID.map { oldSupersetID in
+                supersetIDMap[oldSupersetID] ?? {
+                    let generated = UUID()
+                    supersetIDMap[oldSupersetID] = generated
+                    return generated
+                }()
+            }
+            
+            return WorkoutExercise(
+                exercise: exercise,
+                order: source.order,
+                targetSets: source.targetSets,
+                targetReps: source.targetReps,
+                targetDistance: source.targetDistance,
+                targetWeight: source.targetWeight,
+                restSeconds: source.restSeconds,
+                timeBeforeNext: source.timeBeforeNext,
+                notes: source.notes,
+                supersetID: newSupersetID,
+                supersetPosition: source.supersetPosition
+            )
+        }
     }
     
     var body: some View {
@@ -1092,10 +1147,14 @@ struct CreateWorkoutTemplateView: View {
                 fields: [.workoutName, .notes],
                 focusedField: $focusedField
             )
-            .navigationTitle(isEditing ? "edit_template".localized(comment: "Edit Template") : "new_template".localized(comment: "New Template"))
+            .navigationTitle(
+                isEditing ? "edit_template".localized(comment: "Edit Template")
+                : isDuplicating ? "duplicate_template".localized(comment: "Duplicate Template")
+                : "new_template".localized(comment: "New Template")
+            )
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                if isEditing {
+                if isEditing || isDuplicating {
                     ToolbarItem(placement: .cancellationAction) {
                         Button("", systemImage: "xmark") {
                             dismiss()
@@ -1337,6 +1396,7 @@ struct AddWorkoutView: View {
     @State private var searchText: String = ""
     @State private var selectedTemplate: WorkoutTemplate?
     @State private var templateToEdit: WorkoutTemplate?
+    @State private var templateToDuplicate: WorkoutTemplate?
     
     // MARK: - Schedule
     
@@ -1549,6 +1609,13 @@ struct AddWorkoutView: View {
                                         Label("edit".localized(comment: "Edit"), systemImage: "pencil")
                                     }
                                     .tint(.blue)
+                                    
+                                    Button {
+                                        templateToDuplicate = template
+                                    } label: {
+                                        Label("duplicate".localized(comment: "Duplicate"), systemImage: "plus.square.on.square")
+                                    }
+                                    .tint(.orange)
                                 }
                             }
                         }
@@ -1658,6 +1725,11 @@ struct AddWorkoutView: View {
         .sheet(item: $templateToEdit) { template in
             CreateWorkoutTemplateView(existingTemplate: template) { updated in
                 selectedTemplate = updated
+            }
+        }
+        .sheet(item: $templateToDuplicate) { template in
+            CreateWorkoutTemplateView(duplicateFrom: template) { created in
+                selectedTemplate = created
             }
         }
     }

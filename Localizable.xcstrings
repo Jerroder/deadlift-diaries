@@ -1108,6 +1108,36 @@
         }
       }
     },
+    "duplicate_template" : {
+      "comment" : "Duplicate Template",
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vorlage duplizieren"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Duplicate Template"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Duplicar plantilla"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dupliquer le modèle"
+          }
+        }
+      }
+    },
     "duration" : {
       "comment" : "Duration",
       "extractionState" : "manual",
@@ -3804,6 +3834,36 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Modèle"
+          }
+        }
+      }
+    },
+    "template_copy_name" : {
+      "comment" : "%@ Copy",
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ Kopie"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ Copy"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ Copia"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ Copie"
           }
         }
       }
