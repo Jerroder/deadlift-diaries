@@ -893,6 +893,7 @@ struct CreateWorkoutTemplateView: View {
     
     @State private var supersetBaseExercise: WorkoutExercise?
     @State private var exerciseToEdit: WorkoutExercise?
+    @State private var editMode: EditMode = .inactive
     
     @FocusState private var focusedField: FocusableField?
     
@@ -1136,14 +1137,25 @@ struct CreateWorkoutTemplateView: View {
                             }
                         }
                     }
+                    .onMove(perform: moveExerciseRows)
                     
                     Button("add_exercise".localized(comment: "Add Exercise"), systemImage: "plus") {
                         showAddExerciseSheet = true
                     }
                     
                 } header: {
-                    Text("exercises".localized(comment: "Exercises"))
+                    HStack {
+                        Text("exercises".localized(comment: "Exercises"))
+                        
+                        Spacer()
+                        
+                        if templateExerciseRows.count > 1 {
+                            EditButton()
+                                .textCase(nil)
+                        }
+                    }
                 }
+                .environment(\.editMode, $editMode)
             }
             .withTextFieldToolbarDoneWithChevrons(
                 fields: [.workoutName, .notes],
@@ -1323,18 +1335,24 @@ struct CreateWorkoutTemplateView: View {
     }
     
     private func renumberExercises() {
-        var order = 0
-        
-        for row in templateExerciseRows {
+        applyOrder(to: templateExerciseRows)
+    }
+    
+    private func moveExerciseRows(from source: IndexSet, to destination: Int) {
+        var rows = templateExerciseRows
+        rows.move(fromOffsets: source, toOffset: destination)
+        applyOrder(to: rows)
+    }
+    
+    private func applyOrder(to rows: [TemplateExerciseRow]) {
+        for (index, row) in rows.enumerated() {
             switch row {
             case .single(let exercise):
-                exercise.order = order
-                order += 1
+                exercise.order = index
                 
             case .superset(let first, let second):
-                first.order = order
-                second.order = order
-                order += 1
+                first.order = index
+                second.order = index
             }
         }
     }
@@ -1806,6 +1824,7 @@ struct EditScheduledWorkoutView: View {
     @State private var showAddExerciseSheet: Bool = false
     @State private var supersetBaseExercise: WorkoutExercise?
     @State private var exerciseToEdit: WorkoutExercise?
+    @State private var editMode: EditMode = .inactive
     
     @State private var numberOfWeeks: Int = 1
     @State private var hasLoadedNumberOfWeeks: Bool = false
@@ -1979,15 +1998,26 @@ struct EditScheduledWorkoutView: View {
                             }
                         }
                     }
+                    .onMove(perform: moveExerciseRows)
                     
                     Button("add_exercise".localized(comment: "Add Exercise"), systemImage: "plus") {
                         showAddExerciseSheet = true
                     }
                 } header: {
-                    Text("exercises".localized(comment: "Exercises"))
+                    HStack {
+                        Text("exercises".localized(comment: "Exercises"))
+                        
+                        Spacer()
+                        
+                        if exerciseRows.count > 1 {
+                            EditButton()
+                                .textCase(nil)
+                        }
+                    }
                 } footer: {
                     Text("workout_changes_footer".localized(comment: "Changes here only affect this workout and its following occurrences - the template it was created from stays unchanged."))
                 }
+                .environment(\.editMode, $editMode)
             }
             .withTextFieldToolbarDone(focusedField: $focusedField)
             .navigationTitle("edit_workout".localized(comment: "Edit Workout"))
@@ -2103,6 +2133,33 @@ struct EditScheduledWorkoutView: View {
         
         scheduledWorkout.exercises?.removeAll { $0.id == exercise.id }
         modelContext.delete(exercise)
+    }
+    
+    private func moveExerciseRows(from source: IndexSet, to destination: Int) {
+        var rows = exerciseRows
+        rows.move(fromOffsets: source, toOffset: destination)
+        
+        for (index, row) in rows.enumerated() {
+            switch row {
+            case .single(let exercise):
+                reorder(exercise, to: index)
+                
+            case .superset(let first, let second):
+                reorder(first, to: index)
+                reorder(second, to: index)
+            }
+        }
+    }
+    
+    private func reorder(_ exercise: WorkoutExercise, to newOrder: Int) {
+        guard exercise.order != newOrder else {
+            return
+        }
+        
+        exercise.order = newOrder
+        
+        exercise.propagateToFollowingWorkouts(deleted: false, modelContext: modelContext)
+        exercise.syncOwnPerformedExercise(modelContext: modelContext)
     }
     
     // MARK: - Name
