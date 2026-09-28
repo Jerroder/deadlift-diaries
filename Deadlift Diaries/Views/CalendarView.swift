@@ -1005,6 +1005,7 @@ struct CreateWorkoutTemplateView: View {
                                         .foregroundStyle(.secondary)
                                 }
                             }
+                            .contentShape(Rectangle())
                         }
                         
                         ForEach(trainingBlocks) { block in
@@ -1026,6 +1027,7 @@ struct CreateWorkoutTemplateView: View {
                                                 .foregroundStyle(.secondary)
                                         }
                                     }
+                                    .contentShape(Rectangle())
                                 }
                                 .buttonStyle(.plain)
                                 
