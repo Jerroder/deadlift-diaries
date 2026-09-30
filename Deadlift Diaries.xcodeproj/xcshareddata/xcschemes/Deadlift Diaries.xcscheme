@@ -70,7 +70,6 @@
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "465E04C62DE1FCCC00CD70D8"
             BuildableName = "Deadlift Diaries.app"
-            BlueprintName = "Deadlift Diaries"
             ReferencedContainer = "container:Deadlift Diaries.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>

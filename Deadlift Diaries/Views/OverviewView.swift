@@ -35,6 +35,7 @@ struct OverviewView: View {
                             Section {
                                 ForEach(sortedTemplates(in: block)) { template in
                                     workoutRow(template)
+                                        .listRowBackground(block.color.opacity(0.14))
                                 }
                             } header: {
                                 blockHeader(block)
@@ -57,10 +58,16 @@ struct OverviewView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button {
-                        showCreateTrainingBlockSheet = true
-                    } label: {
-                        Image(systemName: "plus")
+                    if #available(iOS 26.0, *) {
+                        Button("", systemImage: "plus") {
+                            showCreateTrainingBlockSheet = true
+                        }
+                        .buttonStyle(.glassProminent)
+                    } else {
+                        Button("", systemImage: "plus") {
+                            showCreateTrainingBlockSheet = true
+                        }
+                        .buttonStyle(.borderedProminent)
                     }
                 }
             }

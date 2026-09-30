@@ -35,9 +35,17 @@ struct ScheduledWorkoutCard: View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 12) {
                 VStack(alignment: .leading, spacing: 3) {
-                    Text(workoutTemplate?.name ?? "workout".localized(comment: "Workout"))
-                        .font(.headline)
-                        .foregroundStyle(.primary)
+                    HStack(alignment: .firstTextBaseline, spacing: 4) {
+                        Text(workoutTemplate?.name ?? "workout".localized(comment: "Workout"))
+                            .font(.headline)
+                            .foregroundStyle(.primary)
+                        
+                        if let trainingBlock = workoutTemplate?.trainingBlock {
+                            Text("(\(trainingBlock.name))")
+                                .font(.subheadline)
+                                .foregroundStyle(trainingBlock.color)
+                        }
+                    }
                     
                     if let notes = workoutTemplate?.notes, !notes.isEmpty {
                         Text(notes)
@@ -692,6 +700,7 @@ struct CreateTrainingBlockView: View {
     
     @State private var name: String
     @State private var notes: String
+    @State private var color: Color
     
     @FocusState private var focusedField: FocusableField?
     
@@ -704,6 +713,7 @@ struct CreateTrainingBlockView: View {
         self.onCreate = onCreate
         _name = State(initialValue: existingBlock?.name ?? "")
         _notes = State(initialValue: existingBlock?.notes ?? "")
+        _color = State(initialValue: existingBlock?.color ?? Color(hex: TrainingBlock.defaultColorHex))
     }
     
     var body: some View {
@@ -716,6 +726,8 @@ struct CreateTrainingBlockView: View {
                     TextField("notes".localized(comment: "Notes"), text: $notes, axis: .vertical)
                         .lineLimit(3...6)
                         .focused($focusedField, equals: .notes)
+                    
+                    ColorPicker("color".localized(comment: "Color"), selection: $color, supportsOpacity: false)
                 } header: {
                     Text("program".localized(comment: "Program"))
                 } footer: {
@@ -762,6 +774,7 @@ struct CreateTrainingBlockView: View {
         if let existingBlock {
             existingBlock.name = trimmedName
             existingBlock.notes = trimmedNotes
+            existingBlock.colorHex = color.toHex()
             
             do {
                 try modelContext.save()
@@ -786,7 +799,8 @@ struct CreateTrainingBlockView: View {
             name: trimmedName,
             startDate: Date(),
             orderIndex: existingBlocks.count,
-            notes: trimmedNotes
+            notes: trimmedNotes,
+            colorHex: color.toHex()
         )
         
         modelContext.insert(trainingBlock)
@@ -1561,9 +1575,9 @@ struct AddWorkoutView: View {
                                     .font(.headline)
                                 
                                 if let trainingBlock = selectedTemplate.trainingBlock {
-                                    Text(trainingBlock.name)
+                                    Text("(\(trainingBlock.name))")
                                         .font(.caption)
-                                        .foregroundStyle(.secondary)
+                                        .foregroundStyle(trainingBlock.color)
                                 }
                                 
                                 if let notes = selectedTemplate.notes {
@@ -1602,7 +1616,7 @@ struct AddWorkoutView: View {
                                             if let trainingBlock = template.trainingBlock {
                                                 Text("(\(trainingBlock.name))")
                                                     .font(.caption)
-                                                    .foregroundStyle(.primary)
+                                                    .foregroundStyle(trainingBlock.color)
                                             }
                                         }
                                         
@@ -2447,15 +2461,17 @@ struct CalendarView: View {
                 
                 HStack(spacing: 3) {
                     ForEach(workouts.prefix(3), id: \.id) { workout in
+                        let workoutColor = workout.workoutTemplate?.trainingBlock?.color ?? .accentColor
+                        
                         if workout.isCompleted {
                             Image(systemName: "checkmark")
                                 .font(.system(size: 6, weight: .heavy))
-                                .foregroundStyle(Color.accentColor)
+                                .foregroundStyle(workoutColor)
                                 .frame(width: 5, height: 5)
                                 .offset(y: 1)
                         } else {
                             Circle()
-                                .fill(Color.accentColor)
+                                .fill(workoutColor)
                                 .frame(width: 5, height: 5)
                         }
                     }
@@ -2634,35 +2650,3 @@ struct CalendarView: View {
     }
 }
 
-// MARK: - Color
-
-private extension Color {
-    init(hex: String) {
-        let hex = hex.trimmingCharacters(in: CharacterSet.alphanumerics.inverted)
-        
-        var int: UInt64 = 0
-        Scanner(string: hex).scanHexInt64(&int)
-        
-        let r: Double
-        let g: Double
-        let b: Double
-        
-        switch hex.count {
-        case 6:
-            r = Double((int >> 16) & 0xFF) / 255
-            g = Double((int >> 8) & 0xFF) / 255
-            b = Double(int & 0xFF) / 255
-            
-        default:
-            r = 0
-            g = 0
-            b = 0
-        }
-        
-        self.init(
-            red: r,
-            green: g,
-            blue: b
-        )
-    }
-}

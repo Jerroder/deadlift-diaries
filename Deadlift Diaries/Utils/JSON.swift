@@ -18,6 +18,8 @@ struct TrainingBlockDTO: Codable {
     let endDate: Date?
     let orderIndex: Int
     let notes: String
+    // Optional so backups created before programs had colors still import fine.
+    let colorHex: String?
 }
 
 struct WorkoutTemplateDTO: Codable {
@@ -139,7 +141,8 @@ func exportToJSON(
                 startDate: block.startDate,
                 endDate: block.endDate,
                 orderIndex: block.orderIndex,
-                notes: block.notes
+                notes: block.notes,
+                colorHex: block.colorHex
             )
         },
         workoutTemplates: workoutTemplates.map { template in
@@ -312,7 +315,8 @@ func importExportData(_ exportData: ExportData, into modelContext: ModelContext)
             startDate: dto.startDate,
             endDate: dto.endDate,
             orderIndex: dto.orderIndex,
-            notes: dto.notes
+            notes: dto.notes,
+            colorHex: dto.colorHex ?? TrainingBlock.defaultColorHex
         )
         block.id = dto.id
         trainingBlocksByID[dto.id] = block
