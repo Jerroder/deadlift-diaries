@@ -7,40 +7,10 @@
 
 import SwiftUI
 
-struct TextFieldToolbarDone: ViewModifier {
-    var focusedField: FocusState<FocusableField?>.Binding
-
-    func body(content: Content) -> some View {
-        if #available(iOS 26.0, *) {
-            content
-                .toolbar {
-                    ToolbarItemGroup(placement: .keyboard) {
-                        Spacer()
-                        
-                        Button {
-                            focusedField.wrappedValue = nil
-                        } label: {
-                            Image(systemName: "checkmark")
-                                .padding(15)
-                        }
-                        .buttonStyle(.plain)
-                        .glassEffect(.regular.interactive())
-                        .padding(.bottom, 15)
-                    }
-                    .sharedBackgroundVisibility(.hidden)
-                }
-        } else {
-            content
-                .toolbar {
-                    ToolbarItemGroup(placement: .keyboard) {
-                        Spacer()
-                        Button("done".localized(comment: "Done")) {
-                            focusedField.wrappedValue = nil
-                        }
-                    }
-                }
-        }
-    }
+private var keyboardToolbarWidth: CGFloat {
+    let scene = UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }.first
+    let width = scene?.screen.bounds.width ?? 390
+    return width - 32
 }
 
 struct TextFieldToolbarDoneWithChevrons: ViewModifier {
@@ -75,44 +45,49 @@ struct TextFieldToolbarDoneWithChevrons: ViewModifier {
         if #available(iOS 26.0, *) {
             content
                 .toolbar {
-                    ToolbarItemGroup(placement: .keyboard) {
-                        Button {
-                            if let currentIndex, canGoUp {
-                                focusedField.wrappedValue = fields[currentIndex - 1]
+                    ToolbarItem(placement: .keyboard) {
+                        HStack(spacing: 0) {
+                            Button {
+                                if let currentIndex, canGoUp {
+                                    focusedField.wrappedValue = fields[currentIndex - 1]
+                                }
+                            } label: {
+                                Image(systemName: "chevron.up")
+                                    .padding(.horizontal, 7)
+                                    .padding(.vertical, 12.5)
+                                    .contentShape(Rectangle())
                             }
-                        } label: {
-                            Image(systemName: "chevron.up")
-                                .padding(15)
-                        }
-                        .disabled(!canGoUp)
-                        .buttonStyle(.plain)
-                        .glassEffect(.regular.interactive())
-                        .padding(.bottom, 15)
-                        
-                        Button {
-                            if let currentIndex, canGoDown {
-                                focusedField.wrappedValue = fields[currentIndex + 1]
+                            .disabled(!canGoUp)
+
+                            Button {
+                                if let currentIndex, canGoDown {
+                                    focusedField.wrappedValue = fields[currentIndex + 1]
+                                }
+                            } label: {
+                                Image(systemName: "chevron.down")
+                                    .offset(y: 1)
+                                    .padding(.horizontal, 23)
+                                    .padding(.vertical, 12.5)
+                                    .contentShape(Rectangle())
                             }
-                        } label: {
-                            Image(systemName: "chevron.down")
-                                .padding(15)
-                        }
-                        .disabled(!canGoDown)
-                        .buttonStyle(.plain)
-                        .glassEffect(.regular.interactive())
-                        .padding(.bottom, 15)
-                        
-                        Spacer()
-                        
-                        Button {
-                            focusedField.wrappedValue = nil
-                        } label: {
-                            Image(systemName: "checkmark")
-                                .padding(15)
+                            .disabled(!canGoDown)
+
+                            Spacer()
+
+                            Button {
+                                focusedField.wrappedValue = nil
+                            } label: {
+                                Image(systemName: "checkmark")
+                                    .padding(.horizontal, 7)
+                                    .padding(.vertical, 12.5)
+                                    .contentShape(Rectangle())
+                            }
                         }
                         .buttonStyle(.plain)
-                        .glassEffect(.regular.interactive())
-                        .padding(.bottom, 15)
+                        .padding(.horizontal, 6)
+                        .frame(width: keyboardToolbarWidth)
+                        .glassEffect(.regular.interactive(), in: .capsule)
+                        .padding(.bottom, 20)
                     }
                     .sharedBackgroundVisibility(.hidden)
                 }
@@ -131,12 +106,6 @@ struct TextFieldToolbarDoneWithChevrons: ViewModifier {
 }
 
 extension View {
-    func withTextFieldToolbarDone(focusedField: FocusState<FocusableField?>.Binding) -> some View {
-        self.modifier(
-            TextFieldToolbarDone(focusedField: focusedField)
-        )
-    }
-
     func withTextFieldToolbarDoneWithChevrons(fields: [FocusableField], focusedField: FocusState<FocusableField?>.Binding) -> some View {
         self.modifier(
             TextFieldToolbarDoneWithChevrons(fields: fields, focusedField: focusedField)

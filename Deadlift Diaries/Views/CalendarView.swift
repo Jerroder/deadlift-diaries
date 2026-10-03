@@ -574,7 +574,10 @@ struct AddExerciseView: View {
                     }
                 }
             }
-            .withTextFieldToolbarDone(focusedField: $focusedField)
+            .withTextFieldToolbarDoneWithChevrons(
+                fields: [.exerciseName, .exerciseWeight],
+                focusedField: $focusedField
+            )
             .navigationTitle(navigationTitleText)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -1735,7 +1738,10 @@ struct AddWorkoutView: View {
                     }
                 }
             }
-            .withTextFieldToolbarDone(focusedField: $focusedField)
+            .withTextFieldToolbarDoneWithChevrons(
+                fields: [.searchField],
+                focusedField: $focusedField
+            )
             .navigationTitle("add_workout".localized(comment: "Add Workout"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -2033,7 +2039,10 @@ struct EditScheduledWorkoutView: View {
                 }
                 .environment(\.editMode, $editMode)
             }
-            .withTextFieldToolbarDone(focusedField: $focusedField)
+            .withTextFieldToolbarDoneWithChevrons(
+                fields: [.workoutName],
+                focusedField: $focusedField
+            )
             .navigationTitle("edit_workout".localized(comment: "Edit Workout"))
             .navigationBarTitleDisplayMode(.inline)
             .interactiveDismissDisabled()
