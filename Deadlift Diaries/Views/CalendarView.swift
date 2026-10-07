@@ -452,7 +452,7 @@ struct AddExerciseView: View {
                                     HStack(spacing: 4) {
                                         Text("duration".localized(comment: "Duration"))
                                         Spacer()
-                                        Text(formattedDuration(reps))
+                                        Text(formattedSeconds(reps))
                                             .font(.subheadline)
                                             .foregroundColor(Color(UIColor.secondaryLabel))
                                         Image(systemName: expandedTimeField == .duration ? "chevron.up" : "chevron.down")

@@ -418,36 +418,6 @@
         }
       }
     },
-    "color" : {
-      "comment" : "Color",
-      "extractionState" : "manual",
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Farbe"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Color"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Color"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Couleur"
-          }
-        }
-      }
-    },
     "change" : {
       "comment" : "Change",
       "extractionState" : "manual",
@@ -504,6 +474,36 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Tchou Tchou"
+          }
+        }
+      }
+    },
+    "color" : {
+      "comment" : "Color",
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Farbe"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Color"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Color"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Couleur"
           }
         }
       }
@@ -3148,32 +3148,32 @@
         }
       }
     },
-    "rest_x_sec" : {
-      "comment" : "Rest: x sec",
+    "rest_x" : {
+      "comment" : "Rest: x",
       "extractionState" : "manual",
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Pause: %lld Sek."
+            "value" : "Pause: %(variableName)@"
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Rest: %lld sec"
+            "value" : "Rest: %1$(variableName)@"
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Descanso: %lld seg"
+            "value" : "Descanso: %(variableName)@"
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Repos : %lld sec"
+            "value" : "Repos : %(variableName)@"
           }
         }
       }

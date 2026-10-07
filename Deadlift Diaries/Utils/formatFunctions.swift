@@ -18,28 +18,13 @@ func formattedSeconds(_ seconds: Int) -> String {
     return String(format: "%02d:%02d", minutes, remainingSeconds)
 }
 
-func formattedDuration(_ seconds: Int) -> String {
-    if seconds < 60 {
-        return "\(seconds)s"
-    }
-    
-    let minutes = seconds / 60
-    let remaining = seconds % 60
-    
-    if remaining == 0 {
-        return "\(minutes)m"
-    }
-    
-    return "\(minutes)m \(remaining)s"
-}
-
 func formattedTargetValue(for workoutExercise: WorkoutExercise) -> String {
     guard let exercise = workoutExercise.exercise else {
         return "\(workoutExercise.targetReps)"
     }
     
     if exercise.isTimeBased {
-        return formattedDuration(workoutExercise.targetReps)
+        return formattedSeconds(workoutExercise.targetReps)
     } else if exercise.isDistanceBased {
         return "\(workoutExercise.targetDistance) \(distanceUnit().symbol)"
     } else {

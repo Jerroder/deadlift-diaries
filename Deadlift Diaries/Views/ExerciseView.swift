@@ -160,7 +160,7 @@ struct ExerciseCard: View {
                 .foregroundColor(Color(UIColor.secondaryLabel))
             
             if let rest = exercise.sourceExercise?.restSeconds, alignment == .leading {
-                Text("rest_x_sec".localized(with: rest, comment: "Rest: x sec"))
+                Text("rest_x".localized(with: formattedSeconds(rest), comment: "Rest: x"))
                     .font(.subheadline)
                     .foregroundColor(Color(UIColor.secondaryLabel))
             }
