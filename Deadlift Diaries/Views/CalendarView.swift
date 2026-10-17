@@ -2509,12 +2509,12 @@ struct CalendarView: View {
                         if workout.isCompleted {
                             Image(systemName: "checkmark")
                                 .font(.system(size: 6, weight: .heavy))
-                                .foregroundStyle(workoutColor)
+                                .foregroundStyle(isPastDay ? workoutColor.opacity(0.6) : workoutColor)
                                 .frame(width: 5, height: 5)
                                 .offset(y: 1)
                         } else {
                             Circle()
-                                .fill(workoutColor)
+                                .fill(isPastDay ? workoutColor.opacity(0.6) : workoutColor)
                                 .frame(width: 5, height: 5)
                         }
                     }
