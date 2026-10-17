@@ -261,6 +261,7 @@ struct ProgressBarView: View {
             }
             
             currentSetIndex = restoredSetIndex
+            mirrorToSupersetPartner()
         }
     }
     
@@ -314,6 +315,7 @@ struct ProgressBarView: View {
             }
             
             exercise.beforeNextCompleted = false
+            mirrorToSupersetPartner()
         }
     }
     
@@ -332,6 +334,7 @@ struct ProgressBarView: View {
             }
             
             exercise.beforeNextCompleted = false
+            mirrorToSupersetPartner()
         }
     }
     
@@ -348,11 +351,27 @@ struct ProgressBarView: View {
             }
             
             exercise.beforeNextCompleted.toggle()
+            mirrorToSupersetPartner()
         }
+    }
+    
+    private func commitWorkoutTimerIfFirstExercise() {
+        guard let session = exercise.workoutSession, session.isFirstExercise(exercise) else {
+            return
+        }
+        
+        session.commitTimer()
     }
     
     private func resetProgress() {
         workoutTimer.stop()
+        
+        if let session = exercise.workoutSession,
+           session.isFirstExercise(exercise),
+           currentSetIndex == 0,
+           session.completedAt == nil {
+            session.resetTimer()
+        }
         
         withTransaction(Transaction(animation: nil)) {
             currentSetIndex = 0
@@ -366,6 +385,29 @@ struct ProgressBarView: View {
             if !isTimeBased {
                 completeCurrentSet()
             }
+            
+            mirrorToSupersetPartner()
+        }
+    }
+    
+    // The second exercise of a superset has no progress bar of its own, so it follows this one.
+    private func mirrorToSupersetPartner() {
+        guard exercise.supersetPosition == .first,
+              let supersetID = exercise.supersetID,
+              let partner = exercise.workoutSession?.exercises?.first(where: {
+                  $0.supersetID == supersetID && $0.id != exercise.id
+              }) else {
+            return
+        }
+        
+        let partnerSets = (partner.sets ?? []).sorted { $0.setNumber < $1.setNumber }
+        
+        for (index, partnerSet) in partnerSets.enumerated() {
+            if sets.indices.contains(index) {
+                partnerSet.completed = sets[index].completed
+            } else {
+                partnerSet.completed = sets.allSatisfy(\.completed)
+            }
         }
     }
     
@@ -375,6 +417,7 @@ struct ProgressBarView: View {
         }
         
         sets[currentSetIndex].completed = true
+        mirrorToSupersetPartner()
     }
     
     // Times the working portion of a time-based set (e.g. a 60 second plank).
@@ -393,11 +436,14 @@ struct ProgressBarView: View {
             }
             
             sets[finishedSetIndex].completed = true
+            mirrorToSupersetPartner()
             
             if autoStartRestAfterSet && finishedSetIndex + 1 < sets.count {
                 startRest()
             }
         }
+        
+        commitWorkoutTimerIfFirstExercise()
         
         workoutTimer.start(
             phase: .workingSet,
@@ -430,8 +476,11 @@ struct ProgressBarView: View {
                 }
             } else {
                 sets[nextSetIndex].completed = true
+                mirrorToSupersetPartner()
             }
         }
+        
+        commitWorkoutTimerIfFirstExercise()
         
         workoutTimer.start(
             phase: .rest,

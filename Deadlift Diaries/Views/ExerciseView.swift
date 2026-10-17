@@ -284,6 +284,34 @@ struct WorkoutSessionView: View {
         return rows
     }
     
+    // Mirrors when the Start button in ProgressBarView is disabled: every set is done
+    // and no "before next exercise" countdown is left.
+    private func isFinished(_ exercise: PerformedExercise, isLastExercise: Bool) -> Bool {
+        guard exercise.isCompleted else {
+            return false
+        }
+        
+        let hasPendingBeforeNext = !isLastExercise
+            && (exercise.sourceExercise?.timeBeforeNext ?? 0) > 0
+            && !exercise.beforeNextCompleted
+        
+        return !hasPendingBeforeNext
+    }
+    
+    // The workout ends when the last row is done.
+    private var isLastRowCompleted: Bool {
+        switch workoutRows.last {
+        case .exercise(let exercise):
+            return exercise.isCompleted
+            
+        case .superset(let first, let second):
+            return first.isCompleted && second.isCompleted
+            
+        case nil:
+            return false
+        }
+    }
+    
     var body: some View {
         List {
             ForEach(workoutRows) { row in
@@ -300,6 +328,7 @@ struct WorkoutSessionView: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .contentShape(Rectangle())
                     .listRowSeparator(.hidden)
+                    .opacity(isFinished(exercise, isLastExercise: isLastExercise) ? 0.5 : 1)
                     .onTapGesture {
                         toggleExercise(exercise)
                     }
@@ -308,14 +337,50 @@ struct WorkoutSessionView: View {
                     SupersetCard(first: first, second: second, isLastExercise: isLastExercise,
                                  expandedExerciseID: $expandedExerciseID)
                         .listRowSeparator(.hidden)
+                        .opacity(isFinished(first, isLastExercise: isLastExercise) && second.isCompleted ? 0.5 : 1)
                 }
             }
             .onDelete(perform: deleteRow)
             .onMove(perform: moveRow)
         }
-        .navigationTitle("workout".localized(comment: "Workout"))
+        .navigationTitle(session.scheduledWorkout?.workoutTemplate?.name ?? "workout".localized(comment: "Workout"))
         .listStyle(.plain)
+        .onAppear {
+            if session.isTimerCommitted {
+                session.resumeTimer()
+            } else {
+                session.provisionalTimerStart = Date()
+            }
+        }
+        .onDisappear {
+            if session.isTimerCommitted {
+                session.pauseTimer()
+                try? modelContext.save()
+            } else {
+                session.provisionalTimerStart = nil
+            }
+        }
+        .onChange(of: isLastRowCompleted) { _, isCompleted in
+            if isCompleted {
+                session.markCompleted()
+            } else {
+                session.markIncomplete()
+            }
+            
+            try? modelContext.save()
+        }
         .toolbar{
+            ToolbarItem(placement: .principal) {
+                TimelineView(.periodic(from: .now, by: 1)) { context in
+                    HStack {
+                        Text(session.scheduledWorkout?.workoutTemplate?.name ?? "")
+                        Text(formattedElapsedTime(session.timerElapsedSeconds(at: context.date)))
+                            .font(.headline)
+                            .monospacedDigit()
+                    }
+                }
+            }
+            
             ToolbarItemGroup(placement: .navigationBarTrailing) {
                 EditButton()
             }

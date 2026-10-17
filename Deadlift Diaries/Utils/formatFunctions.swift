@@ -18,6 +18,19 @@ func formattedSeconds(_ seconds: Int) -> String {
     return String(format: "%02d:%02d", minutes, remainingSeconds)
 }
 
+func formattedElapsedTime(_ seconds: Double) -> String {
+    let totalSeconds = max(0, Int(seconds))
+    let hours = totalSeconds / 3600
+    let minutes = (totalSeconds % 3600) / 60
+    let remainingSeconds = totalSeconds % 60
+    
+    if hours > 0 {
+        return String(format: "%d:%02d:%02d", hours, minutes, remainingSeconds)
+    }
+    
+    return String(format: "%02d:%02d", minutes, remainingSeconds)
+}
+
 func formattedTargetValue(for workoutExercise: WorkoutExercise) -> String {
     guard let exercise = workoutExercise.exercise else {
         return "\(workoutExercise.targetReps)"
