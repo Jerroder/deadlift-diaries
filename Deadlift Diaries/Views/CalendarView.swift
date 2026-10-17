@@ -2275,6 +2275,7 @@ struct CalendarView: View {
     private var scheduledWorkouts: [ScheduledWorkout]
     
     @State private var displayedMonth: Date = Date()
+    @State private var slideForward = true
     @State private var selectedDate: Date = Date()
     
     @State private var showAddWorkoutSheet: Bool = false
@@ -2310,6 +2311,15 @@ struct CalendarView: View {
                 calendarGrid
                     .padding(.horizontal)
                     .padding(.bottom, 12)
+                    .contentShape(Rectangle())
+                    .gesture(
+                        DragGesture(minimumDistance: 30)
+                            .onEnded { value in
+                                let vertical = value.translation.height
+                                guard abs(vertical) > abs(value.translation.width) else { return }
+                                changeMonth(by: vertical < 0 ? 1 : -1)
+                            }
+                    )
                 
                 Divider()
                 
@@ -2380,12 +2390,17 @@ struct CalendarView: View {
                     .font(.headline)
             }
             
-            Spacer()
-            
-            Text(displayedMonth.formatted(.dateTime.month(.wide).year()))
-                .font(.headline)
-            
-            Spacer()
+            ZStack {
+                Text(displayedMonth.formatted(.dateTime.month(.wide).year()))
+                    .font(.headline)
+                    .id(monthKey)
+                    .transition(.asymmetric(
+                        insertion: .offset(x: slideForward ? UIScreen.main.bounds.width : -UIScreen.main.bounds.width),
+                        removal: .offset(x: slideForward ? -UIScreen.main.bounds.width : UIScreen.main.bounds.width)
+                    ))
+            }
+            .frame(maxWidth: .infinity)
+            .zIndex(-1)
             
             Button {
                 changeMonth(by: 1)
@@ -2405,17 +2420,30 @@ struct CalendarView: View {
             
             weekdayHeader
             
-            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 4), count: 7), spacing: 8) {
-                ForEach(Array(monthDays.enumerated()), id: \.offset) { _, date in
-                    if let date {
-                        dayCell(date)
-                    } else {
-                        Color.clear
-                            .frame(height: 48)
+            ZStack(alignment: .top) {
+                LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 4), count: 7), spacing: 8) {
+                    ForEach(Array(monthDays.enumerated()), id: \.offset) { _, date in
+                        if let date {
+                            dayCell(date)
+                        } else {
+                            Color.clear
+                                .frame(height: 48)
+                        }
                     }
                 }
+                .id(monthKey)
+                .transition(.asymmetric(
+                    insertion: .move(edge: slideForward ? .bottom : .top).combined(with: .opacity),
+                    removal: .move(edge: slideForward ? .top : .bottom).combined(with: .opacity)
+                ))
             }
+            .clipped()
         }
+    }
+    
+    private var monthKey: Int {
+        let components = calendar.dateComponents([.year, .month], from: displayedMonth)
+        return (components.year ?? 0) * 12 + (components.month ?? 0)
     }
     
     private var weekdayHeader: some View {
@@ -2438,16 +2466,17 @@ struct CalendarView: View {
         
         let isCurrentMonth = calendar.isDate(date, equalTo: displayedMonth, toGranularity: .month)
         
+        let isPastDay = date < calendar.startOfDay(for: Date())
+        
         let workouts = workouts(on: date)
         
         return Button {
-            withAnimation(.easeInOut(duration: 0.15)) {
-                selectedDate = date
-                
-                // Optional: automatically move to that month
-                if !isCurrentMonth {
-                    displayedMonth = date
+            if isCurrentMonth {
+                withAnimation(.easeInOut(duration: 0.15)) {
+                    selectedDate = date
                 }
+            } else {
+                setMonth(date, selecting: date)
             }
         } label: {
             VStack(spacing: 4) {
@@ -2456,7 +2485,12 @@ struct CalendarView: View {
                 )
                 .font(.body)
                 .fontWeight(isToday || isSelected ? .semibold : .regular)
-                .foregroundStyle(isSelected ? Color.white : isCurrentMonth ? Color.primary : Color.secondary.opacity(0.5))
+                .foregroundStyle(
+                    isSelected ? Color.white :
+                    !isCurrentMonth ? Color.secondary.opacity(0.3) :
+                    isPastDay ? Color.primary.opacity(0.6) :
+                    Color.primary
+                )
                 .frame(width: 42, height: 42)
                 .background {
                     if isSelected {
@@ -2646,15 +2680,30 @@ struct CalendarView: View {
             return
         }
         
-        withAnimation(.easeInOut(duration: 0.2)) {
-            displayedMonth = newMonth
+        setMonth(newMonth)
+    }
+    
+    /// Sets the slide direction first (without animation) so both the outgoing
+    /// and incoming grids use it, then animates the month change.
+    private func setMonth(_ newMonth: Date, selecting date: Date? = nil) {
+        slideForward = newMonth > displayedMonth
+        DispatchQueue.main.async {
+            withAnimation(.easeInOut(duration: 0.3)) {
+                displayedMonth = newMonth
+                if let date { selectedDate = date }
+            }
         }
     }
     
     private func goToToday() {
-        withAnimation(.easeInOut(duration: 0.2)) {
-            displayedMonth = Date()
-            selectedDate = Date()
+        if !calendar.isDate(displayedMonth, equalTo: Date(), toGranularity: .month) {
+            slideForward = Date() > displayedMonth
+        }
+        DispatchQueue.main.async {
+            withAnimation(.easeInOut(duration: 0.3)) {
+                displayedMonth = Date()
+                selectedDate = Date()
+            }
         }
     }
 }
