@@ -355,21 +355,31 @@ struct ProgressBarView: View {
         }
     }
     
-    private func commitWorkoutTimerIfFirstExercise() {
-        guard let session = exercise.workoutSession, session.isFirstExercise(exercise) else {
-            return
+    private func commitWorkoutTimer() {
+        exercise.workoutSession?.commitTimer()
+    }
+    
+    // Rep-based exercises auto-complete their first set when opened, so that one doesn't count.
+    private func hasProgressInOtherExercises(of session: WorkoutSession) -> Bool {
+        (session.exercises ?? []).contains { other in
+            guard other.id != exercise.id, other.supersetID == nil || other.supersetID != exercise.supersetID else {
+                return false
+            }
+            
+            let completedCount = (other.sets ?? []).filter(\.completed).count
+            let freeSets = (other.sourceExercise?.exercise?.isTimeBased ?? false) ? 0 : 1
+            
+            return completedCount > freeSets
         }
-        
-        session.commitTimer()
     }
     
     private func resetProgress() {
         workoutTimer.stop()
         
         if let session = exercise.workoutSession,
-           session.isFirstExercise(exercise),
            currentSetIndex == 0,
-           session.completedAt == nil {
+           session.completedAt == nil,
+           !hasProgressInOtherExercises(of: session) {
             session.resetTimer()
         }
         
@@ -443,7 +453,7 @@ struct ProgressBarView: View {
             }
         }
         
-        commitWorkoutTimerIfFirstExercise()
+        commitWorkoutTimer()
         
         workoutTimer.start(
             phase: .workingSet,
@@ -480,7 +490,7 @@ struct ProgressBarView: View {
             }
         }
         
-        commitWorkoutTimerIfFirstExercise()
+        commitWorkoutTimer()
         
         workoutTimer.start(
             phase: .rest,
