@@ -69,6 +69,7 @@ struct ScheduledWorkoutCard: View {
     
     struct WorkoutExerciseRow: View {
         let workoutExercise: WorkoutExercise
+        var onShowHistory: (() -> Void)? = nil
         
         private var exerciseName: String {
             workoutExercise.exercise?.name ?? "unknown_exercise".localized(comment: "Unknown Exercise")
@@ -93,6 +94,15 @@ struct ScheduledWorkoutCard: View {
                 .padding(.vertical, 6)
                 
                 Spacer()
+                
+                if let onShowHistory {
+                    Button(action: onShowHistory) {
+                        Image(systemName: "chart.line.uptrend.xyaxis")
+                            .foregroundStyle(Color.accentColor)
+                    }
+                    .buttonStyle(.borderless)
+                    .frame(maxHeight: .infinity)
+                }
             }
         }
         

@@ -19,6 +19,13 @@ struct OverviewView: View {
     
     @State private var showCreateTrainingBlockSheet: Bool = false
     @State private var trainingBlockToEdit: TrainingBlock?
+    @State private var historyTarget: HistoryTarget?
+    
+    private struct HistoryTarget: Identifiable {
+        let id = UUID()
+        let exercise: Exercise
+        let trainingBlock: TrainingBlock?
+    }
     
     private var unassignedTemplates: [WorkoutTemplate] {
         allWorkoutTemplates.filter { $0.trainingBlock == nil }
@@ -78,6 +85,18 @@ struct OverviewView: View {
         .sheet(item: $trainingBlockToEdit) { block in
             CreateTrainingBlockView(existingBlock: block) { _ in }
         }
+        .sheet(item: $historyTarget) { target in
+            NavigationStack {
+                ExerciseHistoryView(exercise: target.exercise, trainingBlock: target.trainingBlock)
+                    .toolbar {
+                        ToolbarItem(placement: .confirmationAction) {
+                            Button("", systemImage: "checkmark") {
+                                historyTarget = nil
+                            }
+                        }
+                    }
+            }
+        }
     }
     
     // MARK: - Program Header
@@ -115,10 +134,17 @@ struct OverviewView: View {
                     ForEach(rows) { row in
                         switch row {
                         case .single(let exercise):
-                            ScheduledWorkoutCard.WorkoutExerciseRow(workoutExercise: exercise)
+                            ScheduledWorkoutCard.WorkoutExerciseRow(
+                                workoutExercise: exercise,
+                                onShowHistory: historyAction(for: exercise, in: template)
+                            )
                             
                         case .superset(let first, let second):
-                            OverviewSupersetRow(first: first, second: second)
+                            OverviewSupersetRow(
+                                first: first,
+                                second: second,
+                                onShowHistory: { historyAction(for: $0, in: template) }
+                            )
                         }
                     }
                 }
@@ -132,6 +158,16 @@ struct OverviewView: View {
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
             }
+        }
+    }
+    
+    private func historyAction(for workoutExercise: WorkoutExercise, in template: WorkoutTemplate) -> (() -> Void)? {
+        guard let exercise = workoutExercise.exercise else {
+            return nil
+        }
+        
+        return {
+            historyTarget = HistoryTarget(exercise: exercise, trainingBlock: template.trainingBlock)
         }
     }
     
@@ -294,6 +330,7 @@ struct OverviewView: View {
 private struct OverviewSupersetRow: View {
     let first: WorkoutExercise
     let second: WorkoutExercise
+    var onShowHistory: (WorkoutExercise) -> (() -> Void)? = { _ in nil }
 
     var body: some View {
         HStack(alignment: .top, spacing: 16) {
@@ -314,22 +351,33 @@ private struct OverviewSupersetRow: View {
                 exerciseInfo(second)
             }
             .padding(.vertical, 6)
-
-            Spacer()
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
     }
 
     @ViewBuilder
     private func exerciseInfo(_ workoutExercise: WorkoutExercise) -> some View {
-        VStack(alignment: .leading, spacing: 3) {
-            Text(workoutExercise.exercise?.name ?? "unknown_exercise".localized(comment: "Unknown Exercise"))
-                .font(.body)
-                .fontWeight(.medium)
-                .foregroundStyle(.primary)
+        HStack(spacing: 8) {
+            VStack(alignment: .leading, spacing: 3) {
+                Text(workoutExercise.exercise?.name ?? "unknown_exercise".localized(comment: "Unknown Exercise"))
+                    .font(.body)
+                    .fontWeight(.medium)
+                    .foregroundStyle(.primary)
 
-            Text(targetDescription(for: workoutExercise))
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
+                Text(targetDescription(for: workoutExercise))
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+            }
+            
+            Spacer()
+            
+            if let action = onShowHistory(workoutExercise) {
+                Button(action: action) {
+                    Image(systemName: "chart.line.uptrend.xyaxis")
+                        .foregroundStyle(Color.accentColor)
+                }
+                .buttonStyle(.borderless)
+            }
         }
     }
 
