@@ -263,6 +263,11 @@ struct ProgressBarView: View {
             currentSetIndex = restoredSetIndex
             mirrorToSupersetPartner()
         }
+        .onChange(of: completedRestIndex) {
+            if !isTimeBased && !isCurrentExerciseTiming {
+                currentSetIndex = restoredSetIndex
+            }
+        }
     }
     
     @ViewBuilder
@@ -491,6 +496,12 @@ struct ProgressBarView: View {
         }
         
         commitWorkoutTimer()
+        
+        // The data is the source of truth: this view may have been recreated
+        // (e.g. the card collapsed and re-expanded) so its @State can be stale.
+        if !isTimeBased {
+            currentSetIndex = restoredSetIndex
+        }
         
         workoutTimer.start(
             phase: .rest,

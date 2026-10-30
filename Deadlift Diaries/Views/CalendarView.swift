@@ -2437,10 +2437,11 @@ struct CalendarView: View {
                             dayCell(date)
                         } else {
                             Color.clear
-                                .frame(height: 48)
+                                .frame(height: 52)
                         }
                     }
                 }
+                .padding(.top, 3)
                 .id(monthKey)
                 .transition(.asymmetric(
                     insertion: .move(edge: slideForward ? .bottom : .top).combined(with: .opacity),
@@ -2489,7 +2490,7 @@ struct CalendarView: View {
                 setMonth(date, selecting: date)
             }
         } label: {
-            VStack(spacing: 4) {
+            VStack(spacing: 0) {
                 Text(
                     date.formatted(.dateTime.day())
                 )
@@ -2530,9 +2531,10 @@ struct CalendarView: View {
                     }
                 }
                 .frame(height: 5)
+                .padding(.top, 2)
             }
             .frame(maxWidth: .infinity)
-            .frame(height: 48)
+            .frame(height: 52, alignment: .top)
         }
         .buttonStyle(.plain)
     }

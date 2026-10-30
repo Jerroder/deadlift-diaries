@@ -133,9 +133,6 @@ struct TimerView: View {
                 if showingRestPicker {
                     DurationWheelPicker(totalSeconds: $restDuration)
                         .disabled(isTimerRunning)
-                        .onChange(of: restDuration) { _, _ in
-                            rebuildPerformedExercise()
-                        }
                 }
 
                 if isTimeBased {
@@ -171,9 +168,6 @@ struct TimerView: View {
                     if showingDurationPicker {
                         DurationWheelPicker(totalSeconds: $duration)
                             .disabled(isTimerRunning)
-                            .onChange(of: duration) { _, _ in
-                                rebuildPerformedExercise()
-                            }
                     }
                 }
 
@@ -209,13 +203,19 @@ struct TimerView: View {
                 if showingTimeBeforeNextPicker {
                     DurationWheelPicker(totalSeconds: $timeBeforeNext)
                         .disabled(isTimerRunning)
-                        .onChange(of: timeBeforeNext) { _, newValue in
-                            rebuildPerformedExercise()
-                        }
                 }
 
                 ProgressBarView(exercise: performedExercise, isLastExercise: false)
                     .id(performedExercise.id)
+            }
+            .onChange(of: restDuration) { _, _ in
+                rebuildPerformedExercise()
+            }
+            .onChange(of: duration) { _, _ in
+                rebuildPerformedExercise()
+            }
+            .onChange(of: timeBeforeNext) { _, _ in
+                rebuildPerformedExercise()
             }
             .navigationTitle("timer".localized(comment: "Timer"))
             .sheet(isPresented: $showingSettingsSheet) {
