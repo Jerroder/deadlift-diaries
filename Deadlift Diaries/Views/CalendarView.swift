@@ -1581,32 +1581,7 @@ struct AddWorkoutView: View {
                 // MARK: - Workout Template
                 
                 Section("workout_template".localized(comment: "Workout Template")) {
-                    if let selectedTemplate {
-                        HStack {
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text(selectedTemplate.name)
-                                    .font(.headline)
-                                
-                                if let trainingBlock = selectedTemplate.trainingBlock {
-                                    Text("(\(trainingBlock.name))")
-                                        .font(.caption)
-                                        .foregroundStyle(trainingBlock.color)
-                                }
-                                
-                                if let notes = selectedTemplate.notes {
-                                    Text(notes)
-                                        .font(.caption)
-                                        .foregroundStyle(.secondary)
-                                }
-                            }
-                            
-                            Spacer()
-                            
-                            Button("change".localized(comment: "Change")) {
-                                self.selectedTemplate = nil
-                            }
-                        }
-                    } else {
+                    Group {
                         TextField("search_templates".localized(comment: "Search templates"), text: $searchText)
                             .focused($focusedField, equals: .searchField)
                         
@@ -1676,10 +1651,65 @@ struct AddWorkoutView: View {
                         }
                     }
                 }
-                
-                // MARK: - Schedule
-                
-                Section {
+            }
+            .withTextFieldToolbarDoneWithChevrons(
+                fields: [.searchField],
+                focusedField: $focusedField
+            )
+            .navigationTitle("add_workout".localized(comment: "Add Workout"))
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("", systemImage: "xmark") {
+                        dismiss()
+                    }
+                }
+            }
+            .navigationDestination(item: $selectedTemplate) { template in
+                scheduleForm(for: template)
+            }
+        }
+        .onChange(of: selectedTemplate) { _, newValue in
+            updateNumberOfWeeks(for: newValue)
+        }
+        .sheet(item: $templateToEdit) { template in
+            CreateWorkoutTemplateView(existingTemplate: template) { updated in
+                selectedTemplate = updated
+            }
+        }
+        .sheet(item: $templateToDuplicate) { template in
+            CreateWorkoutTemplateView(duplicateFrom: template) { created in
+                selectedTemplate = created
+            }
+        }
+    }
+    
+    // MARK: - Schedule Form
+    
+    private func scheduleForm(for template: WorkoutTemplate) -> some View {
+        Form {
+            Section("workout_template".localized(comment: "Workout Template")) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(template.name)
+                        .font(.headline)
+                    
+                    if let trainingBlock = template.trainingBlock {
+                        Text("(\(trainingBlock.name))")
+                            .font(.caption)
+                            .foregroundStyle(trainingBlock.color)
+                    }
+                    
+                    if let notes = template.notes {
+                        Text(notes)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+            }
+            
+            // MARK: - Schedule
+            
+            Section {
                     DatePicker("start_date".localized(comment: "Start Date"), selection: $startDate, displayedComponents: .date)
                     
                     Stepper(value: $numberOfWeeks, in: 1...52) {
@@ -1747,39 +1777,15 @@ struct AddWorkoutView: View {
                         Text("repeat_footer".localized(with: weekday, weeks, comment: "The workout will repeat every x for x."))
                     }
                 }
-            }
-            .withTextFieldToolbarDoneWithChevrons(
-                fields: [.searchField],
-                focusedField: $focusedField
-            )
-            .navigationTitle("add_workout".localized(comment: "Add Workout"))
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("", systemImage: "xmark") {
-                        dismiss()
-                    }
+        }
+        .navigationTitle("add_workout".localized(comment: "Add Workout"))
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .confirmationAction) {
+                Button("", systemImage: "checkmark") {
+                    saveWorkout()
                 }
-                
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("", systemImage: "checkmark") {
-                        saveWorkout()
-                    }
-                    .disabled(selectedTemplate == nil || selectedWeekdays.isEmpty)
-                }
-            }
-        }
-        .onChange(of: selectedTemplate) { _, newValue in
-            updateNumberOfWeeks(for: newValue)
-        }
-        .sheet(item: $templateToEdit) { template in
-            CreateWorkoutTemplateView(existingTemplate: template) { updated in
-                selectedTemplate = updated
-            }
-        }
-        .sheet(item: $templateToDuplicate) { template in
-            CreateWorkoutTemplateView(duplicateFrom: template) { created in
-                selectedTemplate = created
+                .disabled(selectedWeekdays.isEmpty)
             }
         }
     }

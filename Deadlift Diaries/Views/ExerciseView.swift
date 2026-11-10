@@ -55,7 +55,7 @@ struct ExerciseCard: View {
     
     private var targetText: String {
         if linkedExercise?.isTimeBased == true {
-            return "duration_x_sec".localized(with: exercise.targetReps, comment: "Duration: x sec")
+            return "duration_x_sec".localized(with: formattedSeconds(exercise.targetReps), comment: "Duration: x sec")
         } else if linkedExercise?.isDistanceBased == true {
             return "distance_x".localized(with: exercise.targetDistance, distanceUnit().symbol, comment: "Distance: x m")
         } else {
