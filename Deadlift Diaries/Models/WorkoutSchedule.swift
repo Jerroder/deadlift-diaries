@@ -21,6 +21,8 @@ final class WorkoutSchedule {
 
     var weekday: Int = 0
 
+    var groupID: UUID?
+
     var workoutTemplate: WorkoutTemplate?
 
     @Relationship(inverse: \ScheduledWorkout.schedule)

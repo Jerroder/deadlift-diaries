@@ -1799,6 +1799,7 @@ struct AddWorkoutView: View {
         }
         
         let calendar = Calendar.current
+        let groupID = UUID()
         
         for weekday in selectedWeekdays {
             let weekdayStartDate = occurrenceStartDate(for: weekday)
@@ -1809,6 +1810,7 @@ struct AddWorkoutView: View {
             
             let schedule = WorkoutSchedule(startDate: weekdayStartDate, endDate: endDate,
                                            weekday: weekday, workoutTemplate: workoutTemplate)
+            schedule.groupID = groupID
             
             modelContext.insert(schedule)
             
@@ -2291,6 +2293,12 @@ struct CalendarView: View {
     @State private var showAddWorkoutSheet: Bool = false
     @State private var showingSettingsSheet: Bool = false
     @State private var workoutToEdit: ScheduledWorkout?
+    @State private var workoutToDelete: ScheduledWorkout?
+    
+    @State private var pendingDeletions: [ScheduledWorkout] = []
+    @State private var undoTask: Task<Void, Never>?
+    
+    @Environment(\.scenePhase) private var scenePhase
     
     private var calendar: Calendar {
         var calendar = Calendar.current
@@ -2298,8 +2306,17 @@ struct CalendarView: View {
         return calendar
     }
     
+    private var pendingDeletionIDs: Set<UUID> {
+        Set(pendingDeletions.map(\.id))
+    }
+    
+    private var visibleWorkouts: [ScheduledWorkout] {
+        let hidden = pendingDeletionIDs
+        return hidden.isEmpty ? scheduledWorkouts : scheduledWorkouts.filter { !hidden.contains($0.id) }
+    }
+    
     private func workouts(on date: Date) -> [ScheduledWorkout] {
-        scheduledWorkouts.filter {
+        visibleWorkouts.filter {
             calendar.isDate($0.scheduledDate, inSameDayAs: date)
         }
     }
@@ -2387,6 +2404,44 @@ struct CalendarView: View {
         .sheet(item: $workoutToEdit) { scheduledWorkout in
             EditScheduledWorkoutView(scheduledWorkout: scheduledWorkout)
         }
+        .overlay(alignment: .bottom) {
+            if !pendingDeletions.isEmpty {
+                undoBanner
+                    .padding(.horizontal)
+                    .padding(.bottom, 12)
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
+            }
+        }
+        .animation(.easeInOut(duration: 0.2), value: pendingDeletions.isEmpty)
+        .onChange(of: scenePhase) { _, newPhase in
+            if newPhase != .active {
+                commitPendingDeletions()
+            }
+        }
+        .onDisappear {
+            commitPendingDeletions()
+        }
+    }
+    
+    // MARK: - Undo Banner
+    
+    private var undoBanner: some View {
+        HStack {
+            Text("workouts_deleted_format".localized(with: pendingDeletions.count, comment: "%d workouts deleted"))
+                .font(.subheadline)
+            
+            Spacer()
+            
+            Button("undo".localized(comment: "Undo")) {
+                undoDeletion()
+            }
+            .fontWeight(.semibold)
+        }
+        .padding(.horizontal, 20)
+        .padding(.vertical, 18)
+        .frame(minHeight: 64)
+        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 14))
+        .shadow(radius: 6, y: 2)
     }
     
     // MARK: - Month Header
@@ -2584,17 +2639,47 @@ struct CalendarView: View {
                         } label: {
                             ScheduledWorkoutCard(scheduledWorkout: scheduledWorkout)
                         }
+                        .background {
+                            if workoutToDelete?.id == scheduledWorkout.id {
+                                Color.clear
+                                    .confirmationDialog(
+                                        "delete_series_title".localized(comment: "Delete Scheduled Workouts"),
+                                        isPresented: Binding(
+                                            get: { workoutToDelete?.id == scheduledWorkout.id },
+                                            set: { if !$0 { workoutToDelete = nil } }
+                                        ),
+                                        titleVisibility: .visible
+                                    ) {
+                                        Button("delete_this_workout".localized(comment: "Delete This Workout"), role: .destructive) {
+                                            queueDeletion([scheduledWorkout])
+                                        }
+                                        
+                                        Button("delete_this_and_following".localized(comment: "Delete This and Following"), role: .destructive) {
+                                            queueDeletion(followingWorkouts(of: scheduledWorkout))
+                                        }
+                                        
+                                        Button("delete_entire_series".localized(comment: "Delete Entire Series"), role: .destructive) {
+                                            queueDeletion(seriesWorkouts(of: scheduledWorkout))
+                                        }
+                                        
+                                        Button("cancel".localized(comment: "Cancel"), role: .cancel) {}
+                                    } message: {
+                                        Text("delete_series_message".localized(comment: "Completed workouts are always kept."))
+                                    }
+                            }
+                        }
                         .listRowSeparator(.hidden)
                         .listRowInsets(EdgeInsets(top: 12, leading: 30, bottom: 16, trailing: 24))
                         .listRowBackground(RoundedRectangle(cornerRadius: 16)
                             .fill(Color(uiColor: .secondarySystemBackground))
                             .padding(.horizontal, 14))
                         .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-                            Button(role: .destructive) {
-                                deleteWorkout(scheduledWorkout)
+                            Button(role: scheduledWorkout.schedule == nil ? .destructive : nil) {
+                                requestDeletion(of: scheduledWorkout)
                             } label: {
                                 Label("delete".localized(comment: "Delete"), systemImage: "trash")
                             }
+                            .tint(.red)
                             
                             Button {
                                 workoutToEdit = scheduledWorkout
@@ -2611,9 +2696,87 @@ struct CalendarView: View {
         .frame(maxHeight: .infinity)
     }
     
-    private func deleteWorkout(_ scheduledWorkout: ScheduledWorkout) {
-        scheduledWorkout.pruneScheduleIfOrphaned(modelContext: modelContext)
-        modelContext.delete(scheduledWorkout)
+    private func requestDeletion(of workout: ScheduledWorkout) {
+        if workout.schedule == nil {
+            queueDeletion([workout])
+        } else {
+            // Wait for the swipe row to close, otherwise the dialog is dismissed as the row reloads.
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+                workoutToDelete = workout
+            }
+        }
+    }
+    
+    private func followingWorkouts(of workout: ScheduledWorkout) -> [ScheduledWorkout] {
+        let siblings = workout.schedule?.scheduledWorkouts ?? [workout]
+        return siblings.filter { $0.id == workout.id || ($0.scheduledDate >= workout.scheduledDate && !$0.isCompleted) }
+    }
+    
+    private func seriesWorkouts(of workout: ScheduledWorkout) -> [ScheduledWorkout] {
+        guard let schedule = workout.schedule else {
+            return [workout]
+        }
+        
+        let schedules: [WorkoutSchedule]
+        if let groupID = schedule.groupID {
+            schedules = Set(scheduledWorkouts.compactMap(\.schedule).filter { $0.groupID == groupID }).map { $0 }
+        } else {
+            schedules = [schedule]
+        }
+        
+        return schedules
+            .flatMap { $0.scheduledWorkouts ?? [] }
+            .filter { $0.id == workout.id || !$0.isCompleted }
+    }
+    
+    private func queueDeletion(_ workouts: [ScheduledWorkout]) {
+        commitPendingDeletions()
+        
+        pendingDeletions = workouts
+        
+        undoTask = Task {
+            try? await Task.sleep(for: .seconds(6))
+            
+            guard !Task.isCancelled else {
+                return
+            }
+            
+            commitPendingDeletions()
+        }
+    }
+    
+    private func undoDeletion() {
+        undoTask?.cancel()
+        undoTask = nil
+        pendingDeletions = []
+    }
+    
+    private func commitPendingDeletions() {
+        undoTask?.cancel()
+        undoTask = nil
+        
+        guard !pendingDeletions.isEmpty else {
+            return
+        }
+        
+        let workouts = pendingDeletions
+        let schedules = workouts.compactMap(\.schedule)
+        let deletedIDs = Set(workouts.map(\.id))
+        
+        pendingDeletions = []
+        
+        for workout in workouts {
+            modelContext.delete(workout)
+        }
+        
+        for schedule in Set(schedules) {
+            let remaining = (schedule.scheduledWorkouts ?? []).filter { !deletedIDs.contains($0.id) }
+            
+            if remaining.isEmpty {
+                modelContext.delete(schedule)
+            }
+        }
+        
         try? modelContext.save()
     }
     

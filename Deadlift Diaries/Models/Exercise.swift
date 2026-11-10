@@ -47,11 +47,13 @@ extension Exercise {
         var didMerge = false
         
         for exercise in allExercises {
-            let key = exercise.name.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+            let name = exercise.name.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
             
-            guard !key.isEmpty else {
+            guard !name.isEmpty else {
                 continue
             }
+            
+            let key = "\(name)|\(exercise.isTimeBased)|\(exercise.isDistanceBased)"
             
             guard let canonical = canonicalByName[key] else {
                 canonicalByName[key] = exercise

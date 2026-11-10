@@ -256,8 +256,8 @@ struct ProgressBarView: View {
             }
         }
         .onAppear {
-            if !isTimeBased {
-                completeCurrentSet()
+            if !isTimeBased && sets.allSatisfy({ !$0.completed }) {
+                sets.first?.completed = true
             }
             
             currentSetIndex = restoredSetIndex
@@ -480,6 +480,11 @@ struct ProgressBarView: View {
             let nextSetIndex = finishedSetIndex + 1
             
             guard sets.indices.contains(nextSetIndex) else {
+                return
+            }
+            
+            if !isTimeBased && sets[nextSetIndex].completed {
+                currentSetIndex = nextSetIndex
                 return
             }
             
