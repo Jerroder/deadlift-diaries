@@ -312,6 +312,56 @@ struct WorkoutSessionView: View {
         }
     }
     
+    private func isRowFinished(_ row: WorkoutSessionRow) -> Bool {
+        let isLast = row.id == workoutRows.last?.id
+        
+        switch row {
+        case .exercise(let exercise):
+            return isFinished(exercise, isLastExercise: isLast)
+            
+        case .superset(let first, let second):
+            return isFinished(first, isLastExercise: isLast) && second.isCompleted
+        }
+    }
+    
+    private func containsExpanded(_ row: WorkoutSessionRow) -> Bool {
+        switch row {
+        case .exercise(let exercise):
+            return expandedExerciseID == exercise.id
+            
+        case .superset(let first, let second):
+            return expandedExerciseID == first.id || expandedExerciseID == second.id
+        }
+    }
+    
+    private var finishedRowIDs: [UUID] {
+        workoutRows.filter { isRowFinished($0) }.map(\.id)
+    }
+    
+    private func advanceIfExpandedRowFinished(newlyFinished: Set<UUID>) {
+        let rows = workoutRows
+        
+        guard let index = rows.firstIndex(where: { containsExpanded($0) }),
+              newlyFinished.contains(rows[index].id) else {
+            return
+        }
+        
+        let nextRow = rows[(index + 1)...].first { !isRowFinished($0) }
+        
+        withAnimation {
+            switch nextRow {
+            case .exercise(let exercise):
+                expandedExerciseID = exercise.id
+                
+            case .superset(let first, _):
+                expandedExerciseID = first.id
+                
+            case nil:
+                expandedExerciseID = nil
+            }
+        }
+    }
+    
     var body: some View {
         List {
             ForEach(workoutRows) { row in
@@ -359,6 +409,9 @@ struct WorkoutSessionView: View {
             } else {
                 session.provisionalTimerStart = nil
             }
+        }
+        .onChange(of: finishedRowIDs) { oldIDs, newIDs in
+            advanceIfExpandedRowFinished(newlyFinished: Set(newIDs).subtracting(oldIDs))
         }
         .onChange(of: isLastRowCompleted) { _, isCompleted in
             if isCompleted {

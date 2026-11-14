@@ -213,7 +213,7 @@ struct ProgressChartCard: View {
                     HStack(spacing: 4) {
                         Image(systemName: improvement >= 0 ? "arrow.up.right" : "arrow.down.right")
                             .font(.caption)
-                        Text("\(abs(improvement), specifier: "%.1f")%")
+                        Text(abs(improvement) / 100, format: .percent.precision(.fractionLength(1)))
                             .font(.caption)
                     }
                     .foregroundColor(improvement >= 0 ? .green : .red)
