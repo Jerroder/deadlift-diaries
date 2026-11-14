@@ -40,9 +40,7 @@ struct ExerciseHistoryView: View {
                 guard let date = performed.workoutSession?.scheduledWorkout?.scheduledDate
                         ?? performed.workoutSession?.startedAt else { return nil }
 
-                let allSets = performed.sets ?? []
-                let completedSets = allSets.filter(\.completed)
-                let sets = completedSets.isEmpty ? allSets : completedSets
+                let sets = (performed.sets ?? []).filter(\.completed)
 
                 guard !sets.isEmpty else { return nil }
 
